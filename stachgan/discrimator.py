@@ -16,17 +16,17 @@ class Discriminator(nn.Module):
 
         self.features = nn.Sequential(
             nn.ReflectionPad2d(padding=1),
-            nn.Conv2d(self.image_channels, self.filters, kernel_size=3),
+            nn.Conv2d(self.image_channels, self.filters, kernel_size=3, bias=False),
             nn.BatchNorm2d(self.filters),
             nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True),
 
             nn.ReflectionPad2d(padding=1),
-            nn.Conv2d(self.filters, self.filters * 2, kernel_size=3),
+            nn.Conv2d(self.filters, self.filters * 2, kernel_size=3, bias=False),
             nn.BatchNorm2d(self.filters * 2),
             nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True),
 
             nn.ReflectionPad2d(padding=1),
-            nn.Conv2d(self.filters * 2, self.filters * 4, kernel_size=3),
+            nn.Conv2d(self.filters * 2, self.filters * 4, kernel_size=3, bias=False),
             nn.BatchNorm2d(self.filters * 4),
             nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True),
         )

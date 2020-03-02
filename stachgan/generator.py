@@ -28,7 +28,8 @@ class Generator(nn.Module):
                 int(self.filters * math.pow(2, self.length)),
                 kernel_size=4,
                 stride=1,
-                padding=0
+                padding=0,
+                bias=False
             ),
             nn.BatchNorm2d(int(self.filters * math.pow(2, self.length))),
             nn.ReLU(inplace=True)
@@ -41,7 +42,8 @@ class Generator(nn.Module):
                 int(self.filters * math.pow(2, self.length - block_idx - 1)),
                 kernel_size=(4, 4),
                 stride=2,
-                padding=1
+                padding=1,
+                bias=False
             ),
             nn.BatchNorm2d(int(self.filters * math.pow(2, self.length - block_idx - 1))),
             nn.ReLU(inplace=True)
@@ -49,8 +51,15 @@ class Generator(nn.Module):
 
     def last_block(self):
         return nn.Sequential(
-            nn.ConvTranspose2d(self.filters, self.image_channels, kernel_size=4, stride=2, padding=1),
-            nn.Tanh(),
+            nn.ConvTranspose2d(
+                self.filters,
+                self.image_channels, 
+                kernel_size=4, 
+                stride=2,
+                padding=1,
+                bias=False
+            ),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
