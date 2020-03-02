@@ -1,24 +1,24 @@
 import os
+
 from argparse import ArgumentParser
+
+import torch
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger
 
 from stachgan import StachGAN
 
-import torch
-
-
 def main(hparams):
     model = StachGAN(hparams)
 
-    # comet_logger = CometLogger(
-    #     api_key=os.environ["COMET_KEY"],
-    #     workspace=os.environ["COMET_WORKSPACE"],  # Optional
-    #     project_name="research-project-gan",  # Optional
-    #     rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-    #     experiment_name="default"  # Optional
-    # )
+    comet_logger = CometLogger(
+        api_key=os.environ["COMET_KEY"],
+        workspace=os.environ["COMET_WORKSPACE"],  # Optional
+        project_name="research-project-gan",  # Optional
+        rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
+        experiment_name="default"  # Optional
+    )
 
     trainer = Trainer(
         min_nb_epochs=hparams.min_nb_epochs,
@@ -27,9 +27,9 @@ def main(hparams):
         nb_gpu_nodes=hparams.nodes,
         accumulate_grad_batches=hparams.accumulate_grad_batches,
         early_stop_callback=False,
-        # logger=comet_logger
+        logger=comet_logger
     )
-    
+
     trainer.fit(model)
 
 

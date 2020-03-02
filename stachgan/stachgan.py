@@ -9,12 +9,13 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
+
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 
-from .discrimator import Discriminator
-from .generator import Generator
+from .discrimator import Discriminator, SimpleDiscriminator
+from .generator import Generator, SimpleGenerator
 
 
 
@@ -31,110 +32,91 @@ class StachGAN(pl.LightningModule):
         self.image_height = self.hparams.image_height
         self.alternation_interval = self.hparams.alternation_interval
         self.batch_size = self.hparams.batch_size
-        self.noise = self.hparams.noise
+        self.noise_size = self.hparams.noise_size
         self.learning_rate = self.hparams.learning_rate
         self.beta1 = self.hparams.beta1
 
-        self.generator = Generator(self.hparams)
-        self.discriminator = Discriminator(self.hparams)
+        self.generator = SimpleGenerator(self.hparams)
+        self.discriminator = SimpleDiscriminator(self.hparams)
         self.adversial_loss = nn.BCELoss()
+
+        # image cache so both optimizer optimize on the same images
+        self.real_images = None
+        self.fake_images = None
+
 
     def forward(self, x):
         return self.generator.forward(x)
 
     def generator_loss(self, fake_images):
-        fake = torch.ones(fake_images.shape[0], 1)
+        fake_labels = torch.ones(fake_images.shape[0])
 
         if self.on_gpu:
-            fake = fake.cuda(fake_images.device.index)
+            fake_labels = fake_labels.cuda(fake_images.device.index)
 
-        fake_images = self.discriminator(fake_images)
-        return self.adversial_loss(fake_images, fake)
+        fake_images = self.discriminator(fake_images).view(-1)
+
+        return self.adversial_loss(fake_images, fake_labels)
 
     def discriminator_loss(self, real_images, fake_images):
-        real = torch.ones(real_images.shape[0], 1)
-        fake = torch.zeros(fake_images.shape[0], 1)
+        real_labels = torch.ones(real_images.shape[0])
+        fake_labels = torch.zeros(fake_images.shape[0])
 
         if self.on_gpu:
-            real = real.cuda(real_images.device.index)
-            fake = fake.cuda(fake_images.device.index)
+            real_labels = real_labels.cuda(real_images.device.index)
+            fake_labels = fake_labels.cuda(fake_images.device.index)
 
-        return (self.adversial_loss(self.discriminator(real_images), real)
-                + self.adversial_loss(self.discriminator(fake_images), fake)) / 2
+        real_loss = self.adversial_loss(self.discriminator(real_images).view(-1), real_labels)
+        fake_loss = self.adversial_loss(self.discriminator(fake_images).view(-1), fake_labels)
 
-    # def generator_loss(self, fake_images):
-    #     fake = torch.ones(fake_images.shape[0])
-
-    #     if self.on_gpu:
-    #         fake = fake.cuda(fake_images.device.index)
-
-    #     fake_images = self.discriminator(fake_images).view(-1)
-
-    #     return (fake - fake_images).mean()
-
-
-    # def discriminator_loss(self, real_images, fake_images):
-    #     real = torch.ones(real_images.shape[0])
-    #     # fake = torch.zeros(fake_images.shape[0])
-
-    #     if self.on_gpu:
-    #         real = real.cuda(real_images.device.index)
-    #         # fake = fake.cuda(fake_images.device.index)
-
-    #     real_images = self.discriminator(real_images).view(-1)
-    #     fake_images = self.discriminator(fake_images).view(-1)
-
-    #     return (real - real_images + fake_images).mean()
+        return (real_loss + fake_loss) / 2
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_images, _ = batch
+        self.real_images = real_images
 
-        if optimizer_idx == 0:  # Train discriminator
+        if optimizer_idx == 0:  # Train generator
+            noise = torch.randn(real_images.shape[0], self.noise_size, 1, 1)
+            if self.on_gpu:
+                noise = noise.cuda(real_images.device.index)
+
+            self.fake_images = self.generator(noise)
+
+            loss = self.generator_loss(self.fake_images)
+            logs = {"generator_loss": loss}
+            return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
+
+        if optimizer_idx == 1:  # Train discriminator
             loss = 0
 
-            for i in range(self.alternation_interval):
-                self.discriminator.train()
-                self.generator.eval()
-
-                noise = torch.randn(real_images.shape[0], self.noise, 1, 1)
-                if self.on_gpu:
-                    noise = noise.cuda(real_images.device.index)
-
-                fake_images = self.generator(noise).detach()
-
-                loss += self.discriminator_loss(real_images, fake_images)
+            for _ in range(self.alternation_interval):
+                loss += self.discriminator_loss(self.real_images, self.fake_images.detach())
 
             loss /= self.alternation_interval
             logs = {"discriminator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
         
-        if optimizer_idx == 1:  # Train generator
-            self.discriminator.eval()
-            self.generator.train()
 
-            noise = torch.randn(real_images.shape[0], self.noise, 1, 1)
-            if self.on_gpu:
-                noise = noise.cuda(real_images.device.index)
-
-            fake_images = self.generator(noise)
-            loss = self.generator_loss(fake_images)
-
-            if batch_idx % 50 == 0:
-                grid = torchvision.utils.make_grid(fake_images[:6])
-                
-                # for tensorboard
-                self.logger.experiment.add_image("example_images", grid, 0)
-                # for others
-                # self.logger.experiment.log_image(grid[0].detach().cpu().numpy())
-
-            logs = {"generator_loss": loss}
-            return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
     def configure_optimizers(self):
         return [
-            optim.Adam(self.discriminator.parameters(), lr=self.learning_rate, betas=(self.beta1, 0.999)),
             optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, 0.999)),
-        ], []
+            optim.Adam(self.discriminator.parameters(), lr=self.learning_rate, betas=(self.beta1, 0.999))
+        ]
+
+    def on_epoch_end(self):
+        self.generator.eval()
+        grid = torchvision.utils.make_grid(self.fake_images[:6], nrow=3)
+        
+        # for tensorboard
+        # self.logger.experiment.add_image("example_images", grid, 0)
+
+        # for comet.ml
+        self.logger.experiment.log_image(
+            grid.detach().cpu().numpy(),
+            name="Fake Images",
+            image_channels="first"
+        )
 
     @pl.data_loader
     def train_dataloader(self):
@@ -161,17 +143,16 @@ class StachGAN(pl.LightningModule):
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=1, help="Generated image shape channels")
-        system_group.add_argument("-iw", "--image-width", type=int, default=32, help="Generated image shape width")
-        system_group.add_argument("-ih", "--image-height", type=int, default=32, help="Generated image shape height")
+        system_group.add_argument("-iw", "--image-width", type=int, default=64, help="Generated image shape width")
+        system_group.add_argument("-ih", "--image-height", type=int, default=64, help="Generated image shape height")
         system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=2e-4, help="Learning rate of both optimizers")
-        system_group.add_argument("-z", "--noise", type=int, default=100, help="Length of the noise vector")
+        system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the discriminator for each training step of the generator")
         system_group.add_argument("-b1", "--beta1", type=float, default=0.5, help="Momentum term beta1")
 
         discriminator_group = parser.add_argument_group("Discriminator")
         discriminator_group.add_argument("-dlrs", "--discriminator-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the discriminator")
-        discriminator_group.add_argument("-ddr", "--discriminator-dropout-rate", type=float, default=0.2, help="Dropout rate in the discriminator")
         discriminator_group.add_argument("-df", "--discriminator-filters", type=int, default=2, help="Filters in the discriminator (are multiplied with different powers of 2)")
         discriminator_group.add_argument("-dld", "--discriminator-latent-dim", type=int, default=256, help="Size of the latent dimensions in the generator (are multiplied with different powers of 2)")
 
