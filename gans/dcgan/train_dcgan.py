@@ -1,16 +1,15 @@
 import os
-
 from argparse import ArgumentParser
 
 import torch
-
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger
 
-from stachgan import StachGAN
+from gans.dcgan import DCGAN
+
 
 def main(hparams):
-    model = StachGAN(hparams)
+    model = DCGAN(hparams)
 
     comet_logger = CometLogger(
         api_key=os.environ["COMET_KEY"],
@@ -40,6 +39,6 @@ if __name__ == '__main__':
     parser.add_argument('--gpus', type=str, default=1)
     parser.add_argument('--nodes', type=int, default=1)
 
-    parser = StachGAN.add_model_specific_args(parser)
+    parser = DCGAN.add_model_specific_args(parser)
 
     main(parser.parse_args())

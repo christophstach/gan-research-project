@@ -1,1 +1,0 @@
-from .stachgan import StachGAN

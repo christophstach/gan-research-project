@@ -1,28 +1,21 @@
 import os
-
-from collections import OrderedDict
 from argparse import ArgumentParser
+from collections import OrderedDict
 
 import pytorch_lightning as pl
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-import torch.nn as nn
-
-from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 
-from .discrimator import Discriminator, SimpleDiscriminator
-from .generator import Generator, SimpleGenerator
+from gans.dcgan.models.discrimator import Discriminator
+from gans.dcgan.models.generator import Generator
 
 
-
-from PIL import Image
-
-
-class StachGAN(pl.LightningModule):
+class DCGAN(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
 
@@ -36,14 +29,13 @@ class StachGAN(pl.LightningModule):
         self.learning_rate = self.hparams.learning_rate
         self.beta1 = self.hparams.beta1
 
-        self.generator = SimpleGenerator(self.hparams)
-        self.discriminator = SimpleDiscriminator(self.hparams)
+        self.generator = Generator(self.hparams)
+        self.discriminator = Discriminator(self.hparams)
         self.adversial_loss = nn.BCELoss()
 
         # image cache so both optimizer optimize on the same images
         self.real_images = None
         self.fake_images = None
-
 
     def forward(self, x):
         return self.generator.forward(x)
@@ -95,8 +87,6 @@ class StachGAN(pl.LightningModule):
             loss /= self.alternation_interval
             logs = {"discriminator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
-        
-
 
     def configure_optimizers(self):
         return [
@@ -107,7 +97,7 @@ class StachGAN(pl.LightningModule):
     def on_epoch_end(self):
         self.generator.eval()
         grid = torchvision.utils.make_grid(self.fake_images[:6], nrow=3)
-        
+
         # for tensorboard
         # self.logger.experiment.add_image("example_images", grid, 0)
 
@@ -153,11 +143,11 @@ class StachGAN(pl.LightningModule):
 
         discriminator_group = parser.add_argument_group("Discriminator")
         discriminator_group.add_argument("-dlrs", "--discriminator-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the discriminator")
-        discriminator_group.add_argument("-df", "--discriminator-filters", type=int, default=2, help="Filters in the discriminator (are multiplied with different powers of 2)")
-        discriminator_group.add_argument("-dld", "--discriminator-latent-dim", type=int, default=256, help="Size of the latent dimensions in the generator (are multiplied with different powers of 2)")
+        discriminator_group.add_argument("-df", "--discriminator-filters", type=int, default=64, help="Filters in the discriminator (are multiplied with different powers of 2)")
+        discriminator_group.add_argument("-dl", "--discriminator-length", type=int, default=3, help="Length of the discriminator or number of down sampling blocks")
 
         generator_group = parser.add_argument_group("Generator")
-        generator_group.add_argument("-gf", "--generator-filters", type=int, default=4, help="Filters in the generator (are multiplied with different powers of 2)")
-        generator_group.add_argument("-gl", "--generator-length", type=int, default=2, help="Length of the generator or number of up sampling blocks (also determines the size of the output image)")
+        generator_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Filters in the generator (are multiplied with different powers of 2)")
+        generator_group.add_argument("-gl", "--generator-length", type=int, default=3, help="Length of the generator or number of up sampling blocks (also determines the size of the output image)")
 
         return parser
