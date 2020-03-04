@@ -26,20 +26,19 @@ class WGAN(pl.LightningModule):
         self.batch_size = self.hparams.batch_size
         self.noise_size = self.hparams.noise_size
         self.learning_rate = self.hparams.learning_rate
-        self.beta1 = self.hparams.beta1
+        self.weight_clipping = self.hparams.weight_clipping
 
         self.generator = SimpleGenerator(self.hparams)
         self.discriminator = SimpleDiscriminator(self.hparams)
-
-        # image cache so both optimizer optimize on the same images
-        self.real_images = None
-        self.fake_images = None
 
     def forward(self, x):
         return self.generator.forward(x)
 
     def adversial_loss(self, y_hat, y):
         return F.binary_cross_entropy(y_hat, y)
+
+    def wasserstein_loss(self, y_hat, y):
+        return self.adversial_loss(y_hat, y)
 
     def generator_loss(self, fake_images):
         fake_labels = torch.ones(fake_images.shape[0])
@@ -49,7 +48,7 @@ class WGAN(pl.LightningModule):
 
         fake_images = self.discriminator(fake_images).view(-1)
 
-        return self.adversial_loss(fake_images, fake_labels)
+        return self.wasserstein_loss(fake_images, fake_labels)
 
     def discriminator_loss(self, real_images, fake_images):
         real_labels = torch.ones(real_images.shape[0])
@@ -59,40 +58,59 @@ class WGAN(pl.LightningModule):
             real_labels = real_labels.cuda(real_images.device.index)
             fake_labels = fake_labels.cuda(fake_images.device.index)
 
-        real_loss = self.adversial_loss(self.discriminator(real_images).view(-1), real_labels)
-        fake_loss = self.adversial_loss(self.discriminator(fake_images).view(-1), fake_labels)
+        real_loss = self.wasserstein_loss(self.discriminator(real_images).view(-1), real_labels)
+        fake_loss = self.wasserstein_loss(self.discriminator(fake_images).view(-1), fake_labels)
 
         return (real_loss + fake_loss) / 2
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_images, _ = batch
-        self.real_images = real_images
 
         if optimizer_idx == 0:  # Train generator
             noise = torch.randn(real_images.shape[0], self.noise_size, 1, 1)
             if self.on_gpu:
                 noise = noise.cuda(real_images.device.index)
 
-            self.fake_images = self.generator(noise)
+            fake_images = self.generator(noise)
 
-            loss = self.generator_loss(self.fake_images)
+            loss = self.generator_loss(fake_images)
             logs = {"generator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
         if optimizer_idx == 1:  # Train discriminator
-            loss = 0
+            noise = torch.randn(real_images.shape[0], self.noise_size, 1, 1)
+            if self.on_gpu:
+                noise = noise.cuda(real_images.device.index)
 
-            for _ in range(self.alternation_interval):
-                loss += self.discriminator_loss(self.real_images, self.fake_images.detach())
+            fake_images = self.generator(noise)
+            loss = self.discriminator_loss(real_images, fake_images.detach())
 
-            loss /= self.alternation_interval
             logs = {"discriminator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
+    def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
+        optimizer.step()
+        optimizer.zero_grad()
+
+        # update generator opt every {self.alternation_interval} steps
+        if optimizer_idx == 0:
+            if batch_idx % self.alternation_interval == 0:
+                optimizer.step()
+                optimizer.zero_grad()
+
+        # update discriminator opt every step
+        if optimizer_idx == 1:
+            optimizer.step()
+
+            for weight in self.discriminator.parameters():
+                weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
+
+            optimizer.zero_grad()
+
     def configure_optimizers(self):
         return [
-            optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, 0.999)),
-            optim.Adam(self.discriminator.parameters(), lr=self.learning_rate, betas=(self.beta1, 0.999))
+            optim.RMSprop(self.generator.parameters(), lr=self.learning_rate),
+            optim.RMSprop(self.discriminator.parameters(), lr=self.learning_rate)
         ]
 
     def on_epoch_end(self):
@@ -137,15 +155,15 @@ class WGAN(pl.LightningModule):
         system_group.add_argument("-iw", "--image-width", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-ih", "--image-height", type=int, default=64, help="Generated image shape height")
         system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
-        system_group.add_argument("-lr", "--learning-rate", type=float, default=2e-4, help="Learning rate of both optimizers")
+        system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00005, help="Learning rate of both optimizers")
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        system_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the discriminator for each training step of the generator")
-        system_group.add_argument("-b1", "--beta1", type=float, default=0.5, help="Momentum term beta1")
+        system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the discriminator is trained for each training step of the generator")
 
         discriminator_group = parser.add_argument_group("Discriminator")
         discriminator_group.add_argument("-dlrs", "--discriminator-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the discriminator")
         discriminator_group.add_argument("-df", "--discriminator-filters", type=int, default=64, help="Filters in the discriminator (are multiplied with different powers of 2)")
         discriminator_group.add_argument("-dl", "--discriminator-length", type=int, default=3, help="Length of the discriminator or number of down sampling blocks")
+        discriminator_group.add_argument("-c", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
         generator_group = parser.add_argument_group("Generator")
         generator_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Filters in the generator (are multiplied with different powers of 2)")

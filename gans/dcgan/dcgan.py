@@ -80,14 +80,25 @@ class DCGAN(pl.LightningModule):
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
         if optimizer_idx == 1:  # Train discriminator
-            loss = 0
+            loss = self.discriminator_loss(self.real_images, self.fake_images.detach())
 
-            for _ in range(self.alternation_interval):
-                loss += self.discriminator_loss(self.real_images, self.fake_images.detach())
-
-            loss /= self.alternation_interval
             logs = {"discriminator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
+
+    def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
+        optimizer.step()
+        optimizer.zero_grad()
+
+        # update generator opt every {self.alternation_interval} steps
+        if optimizer_idx == 0:
+            if batch_idx % self.alternation_interval == 0:
+                optimizer.step()
+                optimizer.zero_grad()
+
+        # update discriminator opt every step
+        if optimizer_idx == 1:
+            optimizer.step()
+            optimizer.zero_grad()
 
     def configure_optimizers(self):
         return [
