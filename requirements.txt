@@ -1,5 +1,7 @@
+torchvision
+torch
 pytorch-lightning
 comet_ml
 numpy
 matplotlib
-Pillow==6.2.0
+Pillow

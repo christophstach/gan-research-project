@@ -4,18 +4,18 @@ from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger
 
-from gans.dcgan import DCGAN
+from gans.wgan import WGAN
 
 
 def main(hparams):
-    model = DCGAN(hparams)
+    model = WGAN(hparams)
 
     comet_logger = CometLogger(
         api_key=os.environ["COMET_KEY"],
         workspace=os.environ["COMET_WORKSPACE"],  # Optional
         project_name="research-project-gan",  # Optional
         rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-        experiment_name="DCGAN"  # Optional
+        experiment_name="Wasserstein GAN"  # Optional
     )
 
     trainer = Trainer(
@@ -36,6 +36,6 @@ if __name__ == '__main__':
     parser.add_argument('--gpus', type=str, default=1)
     parser.add_argument('--nodes', type=int, default=1)
 
-    parser = DCGAN.add_model_specific_args(parser)
+    parser = WGAN.add_model_specific_args(parser)
 
     main(parser.parse_args())

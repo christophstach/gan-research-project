@@ -11,10 +11,10 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 
-from gans.dcgan.models import SimpleGenerator, SimpleDiscriminator
+from gans.wgan.models import SimpleGenerator, SimpleDiscriminator
 
 
-class DCGAN(pl.LightningModule):
+class WGAN(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
 
