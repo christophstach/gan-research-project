@@ -34,34 +34,16 @@ class WGAN(pl.LightningModule):
     def forward(self, x):
         return self.generator.forward(x)
 
-    def adversial_loss(self, y_hat, y):
-        return F.binary_cross_entropy(y_hat, y)
-
-    def wasserstein_loss(self, y_hat, y):
-        return self.adversial_loss(y_hat, y)
-
     def generator_loss(self, fake_images):
-        fake_labels = torch.ones(fake_images.shape[0])
+        fake_loss = -torch.mean(self.discriminator(fake_images))
 
-        if self.on_gpu:
-            fake_labels = fake_labels.cuda(fake_images.device.index)
-
-        fake_images = self.discriminator(fake_images).view(-1)
-
-        return self.wasserstein_loss(fake_images, fake_labels)
+        return fake_loss
 
     def discriminator_loss(self, real_images, fake_images):
-        real_labels = torch.ones(real_images.shape[0])
-        fake_labels = torch.zeros(fake_images.shape[0])
+        real_loss = -torch.mean(self.discriminator(real_images))
+        fake_loss = torch.mean(self.discriminator(fake_images))
 
-        if self.on_gpu:
-            real_labels = real_labels.cuda(real_images.device.index)
-            fake_labels = fake_labels.cuda(fake_images.device.index)
-
-        real_loss = self.wasserstein_loss(self.discriminator(real_images).view(-1), real_labels)
-        fake_loss = self.wasserstein_loss(self.discriminator(fake_images).view(-1), fake_labels)
-
-        return (real_loss + fake_loss) / 2
+        return real_loss + fake_loss
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_images, _ = batch
