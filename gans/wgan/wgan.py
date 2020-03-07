@@ -4,14 +4,17 @@ from collections import OrderedDict
 
 import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 
-from gans.wgan.models import SimpleGenerator, SimpleDiscriminator
+from gans.wgan.models import Generator, Critic
+
+
+def custom_collate(data):
+    return data
 
 
 class WGAN(pl.LightningModule):
@@ -25,66 +28,90 @@ class WGAN(pl.LightningModule):
         self.alternation_interval = self.hparams.alternation_interval
         self.batch_size = self.hparams.batch_size
         self.noise_size = self.hparams.noise_size
+        self.y_size = self.hparams.y_size
         self.learning_rate = self.hparams.learning_rate
         self.weight_clipping = self.hparams.weight_clipping
+        self.sampling_interval = self.hparams.sampling_interval
+        self.dataloader_num_workers = self.hparams.dataloader_num_workers
 
-        self.generator = SimpleGenerator(self.hparams)
-        self.discriminator = SimpleDiscriminator(self.hparams)
+        self.generator = Generator(self.hparams)
+        self.critic = Critic(self.hparams)
 
-    def forward(self, x):
-        return self.generator.forward(x)
+        self.real_images = None
+        self.fake_images = None
+        self.y = None
 
-    def generator_loss(self, fake_images):
-        fake_loss = -torch.mean(self.discriminator(fake_images))
+    def forward(self, x, y):
+        return self.generator.forward(x, y)
 
-        return fake_loss
+    def generator_loss(self, fake_images, y):
+        return -torch.mean(self.critic(fake_images, y))
 
-    def discriminator_loss(self, real_images, fake_images):
-        real_loss = -torch.mean(self.discriminator(real_images))
-        fake_loss = torch.mean(self.discriminator(fake_images))
-
-        return real_loss + fake_loss
+    def critic_loss(self, real_images, fake_images, y):
+        return torch.mean(self.critic(real_images, y)) - torch.mean(self.critic(fake_images, y))
 
     def training_step(self, batch, batch_idx, optimizer_idx):
-        real_images, _ = batch
+        self.real_images, self.y = batch
 
         if optimizer_idx == 0:  # Train generator
-            noise = torch.randn(real_images.shape[0], self.noise_size, 1, 1)
+            noise = torch.randn(self.real_images.shape[0], self.noise_size, 1, 1)
             if self.on_gpu:
-                noise = noise.cuda(real_images.device.index)
+                noise = noise.cuda(self.real_images.device.index)
 
-            fake_images = self.generator(noise)
+            self.fake_images = self.generator(noise, self.y)
 
-            loss = self.generator_loss(fake_images)
+            loss = self.generator_loss(self.fake_images, self.y)
             logs = {"generator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
-        if optimizer_idx == 1:  # Train discriminator
-            noise = torch.randn(real_images.shape[0], self.noise_size, 1, 1)
+        if optimizer_idx == 1:  # Train critic
+            noise = torch.randn(self.real_images.shape[0], self.noise_size, 1, 1)
             if self.on_gpu:
-                noise = noise.cuda(real_images.device.index)
+                noise = noise.cuda(self.real_images.device.index)
 
-            fake_images = self.generator(noise)
-            loss = self.discriminator_loss(real_images, fake_images.detach())
+            self.fake_images = self.generator(noise, self.y)
+            loss = self.critic_loss(self.real_images, self.fake_images.detach(), self.y)
 
-            logs = {"discriminator_loss": loss}
+            self.log_generated_images(batch_idx)
+            logs = {"critic_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
+
+    def log_generated_images(self, batch_idx):
+        if self.logger:
+            if batch_idx % self.sampling_interval:
+                noise = torch.randn(self.y_size, self.noise_size, 1, 1)
+                y = torch.tensor(range(self.y_size))
+                if self.on_gpu:
+                    noise = noise.cuda(self.real_images.device.index)
+                    y = y.cuda(self.real_images.device.index)
+
+                fake_images = self.generator.forward(noise, y)
+                grid = torchvision.utils.make_grid(fake_images, nrow=int(self.y_size / 2))
+
+                # for tensorboard
+                # self.logger.experiment.add_image("example_images", grid, 0)
+
+                # for comet.ml
+                self.logger.experiment.log_image(
+                    grid.detach().cpu().numpy(),
+                    name="Generated Images",
+                    image_channels="first"
+                )
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         optimizer.step()
         optimizer.zero_grad()
 
         # update generator opt every {self.alternation_interval} steps
-        if optimizer_idx == 0:
-            if batch_idx % self.alternation_interval == 0:
-                optimizer.step()
-                optimizer.zero_grad()
+        if optimizer_idx == 0 and batch_idx % self.alternation_interval == 0:
+            optimizer.step()
+            optimizer.zero_grad()
 
-        # update discriminator opt every step
+        # update critic opt every step
         if optimizer_idx == 1:
             optimizer.step()
 
-            for weight in self.discriminator.parameters():
+            for weight in self.critic.parameters():
                 weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
 
             optimizer.zero_grad()
@@ -92,22 +119,8 @@ class WGAN(pl.LightningModule):
     def configure_optimizers(self):
         return [
             optim.RMSprop(self.generator.parameters(), lr=self.learning_rate),
-            optim.RMSprop(self.discriminator.parameters(), lr=self.learning_rate)
+            optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
         ]
-
-    def on_epoch_end(self):
-        self.generator.eval()
-        grid = torchvision.utils.make_grid(self.fake_images[:6], nrow=3)
-
-        # for tensorboard
-        # self.logger.experiment.add_image("example_images", grid, 0)
-
-        # for comet.ml
-        self.logger.experiment.log_image(
-            grid.detach().cpu().numpy(),
-            name="Fake Images",
-            image_channels="first"
-        )
 
     @pl.data_loader
     def train_dataloader(self):
@@ -121,6 +134,7 @@ class WGAN(pl.LightningModule):
                     transforms.ToTensor(),
                 ])
             ),
+            num_workers=self.dataloader_num_workers,
             batch_size=self.batch_size
         )
 
@@ -128,24 +142,28 @@ class WGAN(pl.LightningModule):
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser])
         train_group = parser.add_argument_group("Training")
-        train_group.add_argument("-mine", "--min_nb_epochs", type=int, default=1, help="Minimum number of epochs to train")
-        train_group.add_argument("-mane", "--max_nb_epochs", type=int, default=20, help="Maximum number of epochs to train")
+        train_group.add_argument("-mine", "--min_epochs", type=int, default=1, help="Minimum number of epochs to train")
+        train_group.add_argument("-maxe", "--max_epochs", type=int, default=5, help="Maximum number of epochs to train")
         train_group.add_argument("-acb", "--accumulate_grad_batches", type=int, default=1, help="Accumulate gradient batches")
+        train_group.add_argument("-si", "--sampling-interval", type=int, default=100, help="Log a generated sample sample very $n batches")
+        train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=1, help="Generated image shape channels")
-        system_group.add_argument("-iw", "--image-width", type=int, default=64, help="Generated image shape width")
-        system_group.add_argument("-ih", "--image-height", type=int, default=64, help="Generated image shape height")
+        system_group.add_argument("-iw", "--image-width", type=int, default=32, help="Generated image shape width")
+        system_group.add_argument("-ih", "--image-height", type=int, default=32, help="Generated image shape height")
         system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00005, help="Learning rate of both optimizers")
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the discriminator is trained for each training step of the generator")
+        system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
+        system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
+        system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
 
-        discriminator_group = parser.add_argument_group("Discriminator")
-        discriminator_group.add_argument("-dlrs", "--discriminator-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the discriminator")
-        discriminator_group.add_argument("-df", "--discriminator-filters", type=int, default=64, help="Filters in the discriminator (are multiplied with different powers of 2)")
-        discriminator_group.add_argument("-dl", "--discriminator-length", type=int, default=3, help="Length of the discriminator or number of down sampling blocks")
-        discriminator_group.add_argument("-c", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
+        critic_group = parser.add_argument_group("Critic")
+        critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
+        critic_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Filters in the critic (are multiplied with different powers of 2)")
+        critic_group.add_argument("-cl", "--critic-length", type=int, default=2, help="Length of the critic or number of down sampling blocks")
+        critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         generator_group = parser.add_argument_group("Generator")
         generator_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Filters in the generator (are multiplied with different powers of 2)")

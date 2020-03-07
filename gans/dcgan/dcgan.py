@@ -65,13 +65,12 @@ class DCGAN(pl.LightningModule):
         return (real_loss + fake_loss) / 2
 
     def training_step(self, batch, batch_idx, optimizer_idx):
-        real_images, _ = batch
-        self.real_images = real_images
+        self.real_images, _ = batch
 
         if optimizer_idx == 0:  # Train generator
-            noise = torch.randn(real_images.shape[0], self.noise_size, 1, 1)
+            noise = torch.randn(self.real_images.shape[0], self.noise_size, 1, 1)
             if self.on_gpu:
-                noise = noise.cuda(real_images.device.index)
+                noise = noise.cuda(self.real_images.device.index)
 
             self.fake_images = self.generator(noise)
 
