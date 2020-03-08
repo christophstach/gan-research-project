@@ -75,7 +75,7 @@ class WGAN(pl.LightningModule):
     def on_epoch_end(self):
         if self.logger:
             num_images = self.y_size if self.y_size > 0 else 6
-            noise = torch.randn(self.num_images, self.noise_size, 1, 1)
+            noise = torch.randn(num_images, self.noise_size, 1, 1)
             y = torch.tensor(range(num_images))
 
             if self.on_gpu:
