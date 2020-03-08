@@ -168,7 +168,7 @@ class WGAN(pl.LightningModule):
         critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         generator_group = parser.add_argument_group("Generator")
-        generator_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Filters in the generator (are multiplied with different powers of 2)")
+        generator_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Filters in the generator (are multiplied with different powers of 2)")
         generator_group.add_argument("-gl", "--generator-length", type=int, default=3, help="Length of the generator or number of up sampling blocks (also determines the size of the output image)")
 
         return parser
