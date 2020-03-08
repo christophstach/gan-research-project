@@ -13,10 +13,6 @@ from torchvision.datasets import MNIST
 from gans.wgan.models import Generator, Critic
 
 
-def custom_collate(data):
-    return data
-
-
 class WGAN(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
@@ -99,82 +95,77 @@ class WGAN(pl.LightningModule):
                 image_channels="first"
             )
 
-
-def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
-    optimizer.step()
-    optimizer.zero_grad()
-
-    # update generator opt every {self.alternation_interval} steps
-    if optimizer_idx == 0 and batch_idx % self.alternation_interval == 0:
+    def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         optimizer.step()
         optimizer.zero_grad()
 
-    # update critic opt every step
-    if optimizer_idx == 1:
-        optimizer.step()
+        # update generator opt every {self.alternation_interval} steps
+        if optimizer_idx == 0 and batch_idx % self.alternation_interval == 0:
+            optimizer.step()
+            optimizer.zero_grad()
 
-        for weight in self.critic.parameters():
-            weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
+        # update critic opt every step
+        if optimizer_idx == 1:
+            optimizer.step()
 
-        optimizer.zero_grad()
+            for weight in self.critic.parameters():
+                weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
 
+            optimizer.zero_grad()
 
-def configure_optimizers(self):
-    return [
-        optim.RMSprop(self.generator.parameters(), lr=self.learning_rate),
-        optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
-    ]
+    def configure_optimizers(self):
+        return [
+            optim.RMSprop(self.generator.parameters(), lr=self.learning_rate),
+            optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
+        ]
 
+    def prepare_data(self):
+        # download only
+        MNIST(os.getcwd(), train=True, download=True)
 
-def prepare_data(self):
-    # download only
-    MNIST(os.getcwd(), train=True, download=True)
+    def train_dataloader(self):
+        # no download, just transform
+        transform = transforms.Compose([
+            transforms.Resize((self.image_width, self.image_height)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5], [0.5])
+        ])
 
+        return DataLoader(
+            MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform),
+            num_workers=self.dataloader_num_workers,
+            batch_size=self.batch_size
+        )
 
-def train_dataloader(self):
-    # no download, just transform
-    transform = transforms.Compose([
-        transforms.Resize((self.image_width, self.image_height)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.5], [0.5])
-    ])
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = ArgumentParser(parents=[parent_parser])
+        train_group = parser.add_argument_group("Training")
+        train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
+        train_group.add_argument("-maxe", "--max-epochs", type=int, default=5, help="Maximum number of epochs to train")
+        train_group.add_argument("-acb", "--accumulate_grad_batches", type=int, default=1, help="Accumulate gradient batches")
+        train_group.add_argument("-si", "--sampling-interval", type=int, default=1000, help="Log a generated sample sample very $n batches")
+        train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
 
-    return DataLoader(
-        MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform),
-        num_workers=self.dataloader_num_workers,
-        batch_size=self.batch_size
-    )
+        system_group = parser.add_argument_group("System")
+        system_group.add_argument("-ic", "--image-channels", type=int, default=1, help="Generated image shape channels")
+        system_group.add_argument("-iw", "--image-width", type=int, default=32, help="Generated image shape width")
+        system_group.add_argument("-ih", "--image-height", type=int, default=32, help="Generated image shape height")
+        system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
+        system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00005, help="Learning rate of both optimizers")
+        system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
+        system_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
+        system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
+        system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
 
+        critic_group = parser.add_argument_group("Critic")
+        critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
+        critic_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Filters in the critic (are multiplied with different powers of 2)")
+        critic_group.add_argument("-cl", "--critic-length", type=int, default=2, help="Length of the critic or number of down sampling blocks")
+        critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-@staticmethod
-def add_model_specific_args(parent_parser):
-    parser = ArgumentParser(parents=[parent_parser])
-    train_group = parser.add_argument_group("Training")
-    train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
-    train_group.add_argument("-maxe", "--max-epochs", type=int, default=5, help="Maximum number of epochs to train")
-    train_group.add_argument("-acb", "--accumulate_grad_batches", type=int, default=1, help="Accumulate gradient batches")
-    train_group.add_argument("-si", "--sampling-interval", type=int, default=1000, help="Log a generated sample sample very $n batches")
-    train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
+        generator_group = parser.add_argument_group("Generator")
+        generator_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Filters in the generator (are multiplied with different powers of 2)")
+        generator_group.add_argument("-gl", "--generator-length", type=int, default=3, help="Length of the generator or number of up sampling blocks (also determines the size of the output image)")
 
-    system_group = parser.add_argument_group("System")
-    system_group.add_argument("-ic", "--image-channels", type=int, default=1, help="Generated image shape channels")
-    system_group.add_argument("-iw", "--image-width", type=int, default=32, help="Generated image shape width")
-    system_group.add_argument("-ih", "--image-height", type=int, default=32, help="Generated image shape height")
-    system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
-    system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00005, help="Learning rate of both optimizers")
-    system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-    system_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
-    system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
-    system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
-
-    critic_group = parser.add_argument_group("Critic")
-    critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
-    critic_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Filters in the critic (are multiplied with different powers of 2)")
-    critic_group.add_argument("-cl", "--critic-length", type=int, default=2, help="Length of the critic or number of down sampling blocks")
-    critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
-
-    generator_group = parser.add_argument_group("Generator")
-    generator_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Filters in the generator (are multiplied with different powers of 2)")
-    generator_group.add_argument("-gl", "--generator-length", type=int, default=3, help="Length of the generator or number of up sampling blocks (also determines the size of the output image)")
-
-    return parser
+        return parser
