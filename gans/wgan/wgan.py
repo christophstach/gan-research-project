@@ -44,7 +44,7 @@ class WGAN(pl.LightningModule):
         return -torch.mean(self.critic(fake_images, y))
 
     def critic_loss(self, real_images, fake_images, y):
-        return torch.mean(self.critic(real_images, y)) - torch.mean(self.critic(fake_images, y))
+        return -(torch.mean(self.critic(real_images, y)) - torch.mean(self.critic(fake_images, y)))
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         self.real_images, self.y = batch
@@ -142,7 +142,7 @@ class WGAN(pl.LightningModule):
         parser = ArgumentParser(parents=[parent_parser])
         train_group = parser.add_argument_group("Training")
         train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
-        train_group.add_argument("-maxe", "--max-epochs", type=int, default=5, help="Maximum number of epochs to train")
+        train_group.add_argument("-maxe", "--max-epochs", type=int, default=50, help="Maximum number of epochs to train")
         train_group.add_argument("-acb", "--accumulate_grad_batches", type=int, default=1, help="Accumulate gradient batches")
         train_group.add_argument("-si", "--sampling-interval", type=int, default=1000, help="Log a generated sample sample very $n batches")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
