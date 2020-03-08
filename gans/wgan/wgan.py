@@ -155,7 +155,7 @@ class WGAN(pl.LightningModule):
         system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00005, help="Learning rate of both optimizers")
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        system_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
+        system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
 

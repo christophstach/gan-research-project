@@ -18,19 +18,18 @@ class Critic(nn.Module):
         self.y_size = self.hparams.y_size
         self.y_embedding_size = self.hparams.y_embedding_size if self.y_size > 0 else 0
 
-        self.features = nn.Sequential(
+        self.main = nn.Sequential(
             self.first_block(),
-            *[self.middle_block(block_idx) for block_idx in range(self.length)]
+            *[self.middle_block(block_idx) for block_idx in range(self.length)],
+            self.last_block()
         )
 
-        self.y_embedding = nn.Embedding(num_embeddings=self.y_size, embedding_dim=self.y_embedding_size)
-
-        self.classifier = self.last_block()
+        self.y_embedding = nn.Embedding(num_embeddings=self.y_size, embedding_dim=self.image_width * self.image_height)
 
     def first_block(self):
         return nn.Sequential(
             nn.Conv2d(
-                self.image_channels,
+                self.image_channels + 1 if self.y_size > 0 else self.image_channels,
                 self.filters,
                 kernel_size=4,
                 stride=2,
@@ -66,15 +65,14 @@ class Critic(nn.Module):
         )
 
     def forward(self, x, y):
-        x = self.features(x)
-        # x = x.view(x.size(0), -1)
-
         if self.y_size > 0:
             y = self.y_embedding(y)
+            # reshape embedding  so it can be used as a image layer and fed into the classifier
+            y = y.view(x.size(0), -1, x.size(2), x.size(3))
             data = torch.cat((x, y), dim=1)
         else:
             data = x
 
-        data = self.classifier(data)
+        data = self.main(data)
 
         return data

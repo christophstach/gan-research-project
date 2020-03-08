@@ -71,7 +71,8 @@ class Generator(nn.Module):
         # For Conditional GAN add additional data to the original input data
         if self.y_size > 0:
             y = self.y_embedding(y)
-            y = y.view(y.shape[0], y.shape[1], 1, 1)
+            # reshape embedding  so it can be added on top of the noise vector
+            y = y.view(x.size(0), -1, x.size(2), x.size(3))
             data = torch.cat((x, y), dim=1)
         else:
             data = x
