@@ -70,33 +70,32 @@ class WGAN(pl.LightningModule):
                 noise = noise.cuda(self.real_images.device.index)
 
             self.fake_images = self.generator(noise, self.y)
-            loss = self.critic_loss(self.real_images, self.fake_images.detach(), self.y)
 
-            self.log_generated_images(batch_idx)
+            loss = self.critic_loss(self.real_images, self.fake_images.detach(), self.y)
             logs = {"critic_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
-    def log_generated_images(self, batch_idx):
+    # Logs an image for each class defined as noise size
+    def on_epoch_end(self):
         if self.logger:
-            if batch_idx % self.sampling_interval:
-                noise = torch.randn(self.y_size, self.noise_size, 1, 1)
-                y = torch.tensor(range(self.y_size))
-                if self.on_gpu:
-                    noise = noise.cuda(self.real_images.device.index)
-                    y = y.cuda(self.real_images.device.index)
+            noise = torch.randn(self.y_size, self.noise_size, 1, 1)
+            y = torch.tensor(range(self.y_size))
+            if self.on_gpu:
+                noise = noise.cuda(self.real_images.device.index)
+                y = y.cuda(self.real_images.device.index)
 
-                fake_images = self.generator.forward(noise, y)
-                grid = torchvision.utils.make_grid(fake_images, nrow=int(self.y_size / 2))
+            fake_images = self.generator.forward(noise, y)
+            grid = torchvision.utils.make_grid(fake_images, nrow=int(self.y_size / 2))
 
-                # for tensorboard
-                # self.logger.experiment.add_image("example_images", grid, 0)
+            # for tensorboard
+            # self.logger.experiment.add_image("example_images", grid, 0)
 
-                # for comet.ml
-                self.logger.experiment.log_image(
-                    grid.detach().cpu().numpy(),
-                    name="Generated Images",
-                    image_channels="first"
-                )
+            # for comet.ml
+            self.logger.experiment.log_image(
+                grid.detach().cpu().numpy(),
+                name="generated images",
+                image_channels="first"
+            )
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         optimizer.step()
@@ -122,18 +121,20 @@ class WGAN(pl.LightningModule):
             optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
         ]
 
-    @pl.data_loader
+    def prepare_data(self):
+        # download only
+        MNIST(os.getcwd(), train=True, download=True)
+
     def train_dataloader(self):
+        # no download, just transform
+        transform = transforms.Compose([
+            transforms.Resize((self.image_width, self.image_height)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5], [0.5])
+        ])
+
         return DataLoader(
-            MNIST(
-                os.getcwd() + "/.datasets",
-                train=True,
-                download=True,
-                transform=transforms.Compose([
-                    transforms.Resize((self.image_width, self.image_height)),
-                    transforms.ToTensor(),
-                ])
-            ),
+            MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform),
             num_workers=self.dataloader_num_workers,
             batch_size=self.batch_size
         )
@@ -145,7 +146,7 @@ class WGAN(pl.LightningModule):
         train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=5, help="Maximum number of epochs to train")
         train_group.add_argument("-acb", "--accumulate_grad_batches", type=int, default=1, help="Accumulate gradient batches")
-        train_group.add_argument("-si", "--sampling-interval", type=int, default=100, help="Log a generated sample sample very $n batches")
+        train_group.add_argument("-si", "--sampling-interval", type=int, default=1000, help="Log a generated sample sample very $n batches")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
 
         system_group = parser.add_argument_group("System")
@@ -155,7 +156,7 @@ class WGAN(pl.LightningModule):
         system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00005, help="Learning rate of both optimizers")
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
+        system_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
         system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
 

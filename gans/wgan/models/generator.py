@@ -64,7 +64,7 @@ class Generator(nn.Module):
                 stride=1,
                 padding=1
             ),
-            nn.Sigmoid(),
+            nn.Tanh(),
         )
 
     def forward(self, x, y):

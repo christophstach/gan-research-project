@@ -55,29 +55,22 @@ class Critic(nn.Module):
 
     def last_block(self):
         return nn.Sequential(
-            nn.Linear(int(self.image_width * self.image_height * int(self.filters * math.pow(2, self.length)) / math.pow(2, self.length + 4) + self.y_embedding_size), 512),
-            nn.BatchNorm1d(512),
-            nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True),
-
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True),
-
-            nn.Linear(256, 128),
-            nn.BatchNorm1d(128),
-            nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True),
-
-            nn.Linear(128, 1)
+            nn.Conv2d(
+                int(self.filters * math.pow(2, self.length)),
+                1,
+                kernel_size=4,
+                stride=1,
+                padding=0,
+                bias=False
+            )
         )
 
     def forward(self, x, y):
+        x = self.features(x)
+        # x = x.view(x.size(0), -1)
+
         if self.y_size > 0:
             y = self.y_embedding(y)
-
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-
-        if self.y_size > 0:
             data = torch.cat((x, y), dim=1)
         else:
             data = x
