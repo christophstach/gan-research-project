@@ -8,7 +8,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST
+from torchvision.datasets import CIFAR10
 
 from gans.wgan.models import Generator, Critic
 
@@ -122,7 +122,7 @@ class WGAN(pl.LightningModule):
 
     def prepare_data(self):
         # download only
-        MNIST(os.getcwd(), train=True, download=True)
+        CIFAR10(os.getcwd() + "/.datasets", train=True, download=True)
 
     def train_dataloader(self):
         # no download, just transform
@@ -133,7 +133,7 @@ class WGAN(pl.LightningModule):
         ])
 
         return DataLoader(
-            MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform),
+            CIFAR10(os.getcwd() + "/.datasets", train=True, download=False, transform=transform),
             num_workers=self.dataloader_num_workers,
             batch_size=self.batch_size
         )
@@ -149,7 +149,7 @@ class WGAN(pl.LightningModule):
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
 
         system_group = parser.add_argument_group("System")
-        system_group.add_argument("-ic", "--image-channels", type=int, default=1, help="Generated image shape channels")
+        system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         system_group.add_argument("-iw", "--image-width", type=int, default=32, help="Generated image shape width")
         system_group.add_argument("-ih", "--image-height", type=int, default=32, help="Generated image shape height")
         system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
