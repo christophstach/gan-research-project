@@ -129,7 +129,9 @@ class WGAN(pl.LightningModule):
         transform = transforms.Compose([
             transforms.Resize((self.image_width, self.image_height)),
             transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5])
+            # transform the image range from [0, 1] to [-1, 1] to have it in the range of tanh and to perform a more effective back-propagation
+            # https://www.semanticscholar.org/paper/Efficient-BackProp-LeCun-Bottou/b87274e6d9aa4e6ba5148898aa92941617d2b6ed
+            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
 
         return DataLoader(

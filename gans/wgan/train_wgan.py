@@ -10,7 +10,7 @@ from gans.wgan import WGAN
 def main(hparams):
     model = WGAN(hparams)
 
-    use_logger = True
+    use_logger = False
 
     if use_logger:
         comet_logger = CometLogger(
