@@ -46,6 +46,10 @@ class WGAN(pl.LightningModule):
     def critic_loss(self, real_images, fake_images, y):
         return -(torch.mean(self.critic(real_images, y)) - torch.mean(self.critic(fake_images, y)))
 
+    def clip_weights(self):
+        for weight in self.critic.parameters():
+            weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
+
     def training_step(self, batch, batch_idx, optimizer_idx):
         self.real_images, self.y = batch
 
@@ -107,10 +111,7 @@ class WGAN(pl.LightningModule):
         # update critic opt every step
         if optimizer_idx == 1:
             optimizer.step()
-
-            for weight in self.critic.parameters():
-                weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
-
+            self.clip_weights()
             optimizer.zero_grad()
 
     def configure_optimizers(self):
