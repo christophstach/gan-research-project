@@ -34,7 +34,6 @@ class WGAN(pl.LightningModule):
         self.y_size = self.hparams.y_size
         self.learning_rate = self.hparams.learning_rate
         self.weight_clipping = self.hparams.weight_clipping
-        self.sampling_interval = self.hparams.sampling_interval
         self.dataloader_num_workers = self.hparams.dataloader_num_workers
 
         self.generator = Generator(self.hparams)
@@ -175,7 +174,6 @@ class WGAN(pl.LightningModule):
         train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         train_group.add_argument("-acb", "--accumulate-grad-batches", type=int, default=1, help="Accumulate gradient batches")
-        train_group.add_argument("-si", "--sampling-interval", type=int, default=1000, help="Log a generated sample sample very $n batches")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
 
         system_group = parser.add_argument_group("System")
