@@ -11,7 +11,7 @@ def main(hparams):
     model = WGAN(hparams)
 
     if hparams.logger == "none":
-        logger = None
+        logger = False
     elif hparams.logger == "comet.ml":
         logger = CometLogger(
             api_key=os.environ["COMET_KEY"],
@@ -33,6 +33,7 @@ def main(hparams):
         nb_gpu_nodes=hparams.nodes,
         accumulate_grad_batches=hparams.accumulate_grad_batches,
         early_stop_callback=False,
+        checkpoint_callback=False,
         logger=logger
     )
 
