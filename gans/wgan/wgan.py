@@ -131,7 +131,7 @@ class WGAN(pl.LightningModule):
         # download only
         if self.dataset == "mnist":
             MNIST(os.getcwd() + "/.datasets", train=True, download=True)
-        elif self.dataset == "fahsion_mnist":
+        elif self.dataset == "fashion_mnist":
             FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True)
         elif self.dataset == "cifar10":
             CIFAR10(os.getcwd() + "/.datasets", train=True, download=True)
@@ -155,7 +155,7 @@ class WGAN(pl.LightningModule):
 
         if self.dataset == "mnist":
             dataset = MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
-        elif self.dataset == "fahsion_mnist":
+        elif self.dataset == "fashion_mnist":
             dataset = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
         elif self.dataset == "cifar10":
             dataset = CIFAR10(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
