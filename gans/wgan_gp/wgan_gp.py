@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
-from gans.wgan.models import Generator, Critic
+from gans.wgan_gp.models import Generator, Critic
 
 
 class WGANGP(pl.LightningModule):
@@ -53,7 +53,7 @@ class WGANGP(pl.LightningModule):
         return -torch.mean(self.critic(fake_images, y))
 
     def critic_loss(self, real_images, fake_images, y):
-        return -(torch.mean(self.critic(real_images, y)) - torch.mean(self.critic(fake_images, y)))
+        return -torch.mean(self.critic(real_images, y)) + torch.mean(self.critic(fake_images, y))
 
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
