@@ -8,7 +8,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
 from gans.wgan.models import Generator, Critic
 
@@ -18,6 +18,13 @@ class WGAN(pl.LightningModule):
         super().__init__()
 
         self.hparams = hparams
+        self.dataset = self.hparams.dataset
+
+        if self.dataset == "mnist" or self.dataset == "fashion_mnist":
+            self.hparams.image_channels = 1
+        elif self.dataset == "cifar10":
+            self.hparams.image_channels = 3
+
         self.image_channels = self.hparams.image_channels
         self.image_width = self.hparams.image_width
         self.image_height = self.hparams.image_height
@@ -122,20 +129,41 @@ class WGAN(pl.LightningModule):
 
     def prepare_data(self):
         # download only
-        CIFAR10(os.getcwd() + "/.datasets", train=True, download=True)
+        if self.dataset == "mnist":
+            MNIST(os.getcwd() + "/.datasets", train=True, download=True)
+        elif self.dataset == "fahsion_mnist":
+            FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True)
+        elif self.dataset == "cifar10":
+            CIFAR10(os.getcwd() + "/.datasets", train=True, download=True)
+        else:
+            raise NotImplementedError("Custom dataset is not implemented yet")
 
     def train_dataloader(self):
         # no download, just transform
+        if self.image_channels == 1:
+            normalization = transforms.Normalize(mean=[0.5], std=[0.5])
+        elif self.image_channels == 3:
+            normalization = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+
         transform = transforms.Compose([
             transforms.Resize((self.image_width, self.image_height)),
             transforms.ToTensor(),
             # transform the image range from [0, 1] to [-1, 1] to have it in the range of tanh and to perform a more effective back-propagation
             # https://www.semanticscholar.org/paper/Efficient-BackProp-LeCun-Bottou/b87274e6d9aa4e6ba5148898aa92941617d2b6ed
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            normalization
         ])
 
+        if self.dataset == "mnist":
+            dataset = MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
+        elif self.dataset == "fahsion_mnist":
+            dataset = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
+        elif self.dataset == "cifar10":
+            dataset = CIFAR10(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
+        else:
+            raise NotImplementedError("Custom dataset is not implemented yet")
+
         return DataLoader(
-            CIFAR10(os.getcwd() + "/.datasets", train=True, download=False, transform=transform),
+            dataset,
             num_workers=self.dataloader_num_workers,
             batch_size=self.batch_size
         )

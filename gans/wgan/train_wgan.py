@@ -18,7 +18,7 @@ def main(hparams):
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
             project_name="research-project-gan",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-            experiment_name="Wasserstein GAN"  # Optional
+            experiment_name="Wasserstein GAN (" + hparams.dataset + ")"  # Optional
         )
     elif hparams.logger == "tensorboard":
         # not implemented yet
@@ -42,7 +42,8 @@ def main(hparams):
 
 if __name__ == "__main__":
     parser = ArgumentParser(add_help=False)
-    parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard"])
+    parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard"], required=True)
+    parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist"], required=True)
     parser.add_argument("--gpus", type=str)
     parser.add_argument("--nodes", type=int, default=1)
 
