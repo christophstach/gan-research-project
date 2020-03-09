@@ -58,15 +58,15 @@ class WGANGP(pl.LightningModule):
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
-        alpha = torch.randn(real_images.size(0), 1, 1, 1, requires_grad=True)
+        epsilon = torch.randn(real_images.size(0), 1, 1, 1, requires_grad=True)
         grad_outputs = torch.ones(real_images.size(0), requires_grad=True)
 
         if self.on_gpu:
-            alpha = alpha.cuda(self.real_images.device.index)
+            epsilon = epsilon.cuda(self.real_images.device.index)
             grad_outputs = grad_outputs.cuda(self.real_images.device.index)
 
         # Get random interpolation between real and fake samples
-        interpolates = alpha * real_images + ((1 - alpha) * fake_images)
+        interpolates = epsilon * real_images + ((1 - epsilon) * fake_images)
 
         # Get gradient w.r.t. interpolates
         gradients, = torch.autograd.grad(
