@@ -70,14 +70,11 @@ class WGANGP(pl.LightningModule):
         d_interpolates = self.critic(interpolates, y)
 
         # Get gradient w.r.t. interpolates
-        gradients = torch.autograd.grad(
+        gradients, = torch.autograd.grad(
             outputs=d_interpolates,
             inputs=interpolates,
-            grad_outputs=fake,
-            create_graph=True,
-            retain_graph=True,
-            only_inputs=True,
-        )[0]
+            grad_outputs=fake
+        )
 
         gradients = gradients.view(gradients.size(0), -1)
         return ((gradients.norm(2, dim=1) - 1) ** 2).mean()

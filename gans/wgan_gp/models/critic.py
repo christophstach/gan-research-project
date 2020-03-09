@@ -73,4 +73,4 @@ class Critic(nn.Module):
 
         data = self.main(data)
 
-        return data
+        return data.squeeze()
