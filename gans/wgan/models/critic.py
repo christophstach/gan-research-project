@@ -35,7 +35,7 @@ class Critic(nn.Module):
                 stride=2,
                 padding=1
             ),
-            nn.BatchNorm2d(self.filters),
+            # nn.BatchNorm2d(self.filters),
             nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True)
         )
 
