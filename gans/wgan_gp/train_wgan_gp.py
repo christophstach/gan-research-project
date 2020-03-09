@@ -18,7 +18,7 @@ def main(hparams):
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
             project_name="research-project-gan",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-            experiment_name="Wasserstein GAN (" + hparams.dataset + ")"  # Optional
+            experiment_name="Wasserstein GAN+GP (" + hparams.dataset + ")"  # Optional
         )
     elif hparams.logger == "tensorboard":
         # not implemented yet
