@@ -110,22 +110,23 @@ class WGANGP(pl.LightningModule):
             logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
             return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
-    def validation_step(self, batch, batch_idx):
-        real_images, y = batch
+    # def validation_step(self, batch, batch_idx):
 
-        # noise = torch.randn(real_images.size(0), self.noise_size, 1, 1)
-        # if self.on_gpu:
-        # noise = noise.cuda(self.real_images.device.index)
+    # real_images, y = batch
 
-        # fake_images = self.generator(noise, y)
+    # noise = torch.randn(real_images.size(0), self.noise_size, 1, 1)
+    # if self.on_gpu:
+    # noise = noise.cuda(self.real_images.device.index)
 
-        # prediction = self.inception_model(fake_images)
+    # fake_images = self.generator(noise, y)
 
-        return OrderedDict({})
+    # prediction = self.inception_model(fake_images)
 
-    def validation_epoch_end(self, outputs: list):
-        logs = {}
-        return {"log": logs}
+    # return OrderedDict({})
+
+    # def validation_epoch_end(self, outputs: list):
+    # logs = {}
+    # return {"log": logs}
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
