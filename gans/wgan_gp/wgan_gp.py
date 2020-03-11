@@ -192,7 +192,7 @@ class WGANGP(pl.LightningModule):
             train_set = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
             test_set = FashionMNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         elif self.dataset == "cifar10":
-            train_set = CIFAR10(os.getcwd() + "/.datasets", train=True, download=True, transform=transforms)
+            train_set = CIFAR10(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
             test_set = CIFAR10(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
