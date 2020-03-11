@@ -203,8 +203,8 @@ class WGANGP(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
 
-    def test_dataloader(self):
-        return DataLoader(self.test_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
+    # def test_dataloader(self):
+    #    return DataLoader(self.test_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
