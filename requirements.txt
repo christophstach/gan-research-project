@@ -5,3 +5,4 @@ comet_ml
 numpy
 matplotlib
 Pillow
+jupyter

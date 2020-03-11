@@ -79,7 +79,8 @@ class WGANGP(pl.LightningModule):
             outputs=self.critic(interpolates, y),
             inputs=interpolates,
             grad_outputs=grad_outputs,
-            create_graph=True
+            create_graph=True,
+            only_inputs=True
         )
         gradients = gradients.view(gradients.size(0), -1)
         return ((gradients.norm(2, dim=1) - 1) ** 2).mean()
