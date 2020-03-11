@@ -42,7 +42,7 @@ class DCGAN(pl.LightningModule):
         return F.binary_cross_entropy(y_hat, y)
 
     def generator_loss(self, fake_images):
-        fake_labels = torch.ones(fake_images.shape[0])
+        fake_labels = torch.ones(fake_images.size(0))
 
         if self.on_gpu:
             fake_labels = fake_labels.cuda(fake_images.device.index)
@@ -52,8 +52,8 @@ class DCGAN(pl.LightningModule):
         return self.adversial_loss(fake_images, fake_labels)
 
     def discriminator_loss(self, real_images, fake_images):
-        real_labels = torch.ones(real_images.shape[0])
-        fake_labels = torch.zeros(fake_images.shape[0])
+        real_labels = torch.ones(real_images.size(0))
+        fake_labels = torch.zeros(fake_images.size(0))
 
         if self.on_gpu:
             real_labels = real_labels.cuda(real_images.device.index)
@@ -68,7 +68,7 @@ class DCGAN(pl.LightningModule):
         self.real_images, _ = batch
 
         if optimizer_idx == 0:  # Train generator
-            noise = torch.randn(self.real_images.shape[0], self.noise_size, 1, 1)
+            noise = torch.randn(self.real_images.size(0), self.noise_size, 1, 1)
             if self.on_gpu:
                 noise = noise.cuda(self.real_images.device.index)
 

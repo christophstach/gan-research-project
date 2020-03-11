@@ -7,7 +7,7 @@ import torch
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
 from gans.wgan_gp.models import Generator, Critic
@@ -46,6 +46,12 @@ class WGANGP(pl.LightningModule):
         self.fake_images = None
         self.y = None
 
+        self.train_dataset = None
+        self.val_dataset = None
+        self.test_dataset = None
+
+        self.inception_model = None
+
     def forward(self, x, y):
         return self.generator.forward(x, y)
 
@@ -72,7 +78,8 @@ class WGANGP(pl.LightningModule):
         gradients, = torch.autograd.grad(
             outputs=self.critic(interpolates, y),
             inputs=interpolates,
-            grad_outputs=grad_outputs
+            grad_outputs=grad_outputs,
+            create_graph=True
         )
         gradients = gradients.view(gradients.size(0), -1)
         return ((gradients.norm(2, dim=1) - 1) ** 2).mean()
@@ -81,7 +88,7 @@ class WGANGP(pl.LightningModule):
         self.real_images, self.y = batch
 
         if optimizer_idx == 0:  # Train generator
-            noise = torch.randn(self.real_images.shape[0], self.noise_size, 1, 1)
+            noise = torch.randn(self.real_images.size(0), self.noise_size, 1, 1)
             if self.on_gpu:
                 noise = noise.cuda(self.real_images.device.index)
 
@@ -92,7 +99,7 @@ class WGANGP(pl.LightningModule):
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
         if optimizer_idx == 1:  # Train critic
-            noise = torch.randn(self.real_images.shape[0], self.noise_size, 1, 1)
+            noise = torch.randn(self.real_images.size(0), self.noise_size, 1, 1)
             if self.on_gpu:
                 noise = noise.cuda(self.real_images.device.index)
 
@@ -102,6 +109,23 @@ class WGANGP(pl.LightningModule):
             loss = self.critic_loss(self.real_images, self.fake_images, self.y)
             logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
             return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
+
+    def validation_step(self, batch, batch_idx):
+        real_images, y = batch
+
+        # noise = torch.randn(real_images.size(0), self.noise_size, 1, 1)
+        # if self.on_gpu:
+        # noise = noise.cuda(self.real_images.device.index)
+
+        # fake_images = self.generator(noise, y)
+
+        # prediction = self.inception_model(fake_images)
+
+        return OrderedDict({})
+
+    def validation_epoch_end(self, outputs: list):
+        logs = {}
+        return {"log": logs}
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
@@ -148,45 +172,38 @@ class WGANGP(pl.LightningModule):
         ]
 
     def prepare_data(self):
-        # download only
+        # self.inception_model = torchvision.models.inception_v3(pretrained=True, progress=True)
+
+        train_resize = transforms.Resize((self.image_width, self.image_height))
+        test_resize = transforms.Resize(224, 224)
+
+        train_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
+        # prepare images for the usage with torchvision models: https://pytorch.org/docs/stable/torchvision/models.html
+        test_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
+        train_transform = transforms.Compose([train_resize, transforms.ToTensor(), train_normalize])
+        test_transform = transforms.Compose([test_resize, transforms.ToTensor(), test_normalize])
+
         if self.dataset == "mnist":
-            MNIST(os.getcwd() + "/.datasets", train=True, download=True)
+            train_set = MNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
+            test_set = MNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         elif self.dataset == "fashion_mnist":
-            FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True)
+            train_set = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
+            test_set = FashionMNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         elif self.dataset == "cifar10":
-            CIFAR10(os.getcwd() + "/.datasets", train=True, download=True)
+            train_set = CIFAR10(os.getcwd() + "/.datasets", train=True, download=True, transform=transforms)
+            test_set = CIFAR10(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
+
+        self.train_dataset = train_set
+        self.test_dataset, self.val_dataset = random_split(test_set, [len(test_set) - 1000, 1000])
 
     def train_dataloader(self):
-        # no download, just transform
-        if self.image_channels == 1:
-            normalization = transforms.Normalize(mean=[0.5], std=[0.5])
-        elif self.image_channels == 3:
-            normalization = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        return DataLoader(self.train_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
 
-        transform = transforms.Compose([
-            transforms.Resize((self.image_width, self.image_height)),
-            transforms.ToTensor(),
-            # transform the image range from [0, 1] to [-1, 1] to have it in the range of tanh and to perform a more effective back-propagation
-            # https://www.semanticscholar.org/paper/Efficient-BackProp-LeCun-Bottou/b87274e6d9aa4e6ba5148898aa92941617d2b6ed
-            normalization
-        ])
-
-        if self.dataset == "mnist":
-            dataset = MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
-        elif self.dataset == "fashion_mnist":
-            dataset = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
-        elif self.dataset == "cifar10":
-            dataset = CIFAR10(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
-        else:
-            raise NotImplementedError("Custom dataset is not implemented yet")
-
-        return DataLoader(
-            dataset,
-            num_workers=self.dataloader_num_workers,
-            batch_size=self.batch_size
-        )
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
