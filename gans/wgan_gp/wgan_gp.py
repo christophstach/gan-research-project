@@ -90,7 +90,7 @@ class WGANGP(pl.LightningModule):
             self.fake_images = self.generator(noise, self.y)
 
             loss = self.generator_loss(self.fake_images, self.y)
-            logs = {"generator_loss": loss}
+            logs = {"loss": loss, "generator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
         if optimizer_idx == 1:  # Train critic
@@ -102,7 +102,7 @@ class WGANGP(pl.LightningModule):
 
             gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(self.real_images, self.fake_images, self.y)
             loss = self.critic_loss(self.real_images, self.fake_images, self.y)
-            logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
+            logs = {"loss": loss, "critic_loss": loss, "gradient_penalty": gradient_penalty}
             return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     # def validation_step(self, batch, batch_idx):
@@ -209,7 +209,6 @@ class WGANGP(pl.LightningModule):
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         train_group.add_argument("-acb", "--accumulate-grad-batches", type=int, default=1, help="Accumulate gradient batches")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=8, help="Number of workers the dataloader uses")
-
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
