@@ -90,7 +90,7 @@ class WGANGP(pl.LightningModule):
             self.fake_images = self.generator(noise, self.y)
 
             loss = self.generator_loss(self.fake_images, self.y)
-            logs = {"loss": loss, "generator_loss": loss}
+            logs = {"generator_loss": loss}
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
         if optimizer_idx == 1:  # Train critic
@@ -102,7 +102,7 @@ class WGANGP(pl.LightningModule):
 
             gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(self.real_images, self.fake_images, self.y)
             loss = self.critic_loss(self.real_images, self.fake_images, self.y)
-            logs = {"loss": loss, "critic_loss": loss, "gradient_penalty": gradient_penalty}
+            logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
             return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     # def validation_step(self, batch, batch_idx):
