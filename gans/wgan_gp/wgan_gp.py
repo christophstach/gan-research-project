@@ -75,13 +75,7 @@ class WGANGP(pl.LightningModule):
         interpolates = epsilon * real_images + ((1 - epsilon) * fake_images)
 
         # Get gradient w.r.t. interpolates
-        gradients, = torch.autograd.grad(
-            outputs=self.critic(interpolates, y),
-            inputs=interpolates,
-            grad_outputs=grad_outputs,
-            create_graph=True,
-            only_inputs=True
-        )
+        gradients, = torch.autograd.grad(outputs=self.critic(interpolates, y), inputs=interpolates, grad_outputs=grad_outputs, create_graph=True)
         gradients = gradients.view(gradients.size(0), -1)
         return ((gradients.norm(2, dim=1) - 1) ** 2).mean()
 
