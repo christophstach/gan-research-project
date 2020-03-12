@@ -7,6 +7,7 @@ import torch
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
@@ -137,15 +138,16 @@ class WGANGP(pl.LightningModule):
             fake_images = self.generator.forward(noise, y)
             grid = torchvision.utils.make_grid(fake_images, nrow=int(num_images / 2))
 
-            # for tensorboard
-            # self.logger.experiment.add_image("example_images", grid, 0)
-
-            # for comet.ml
-            self.logger.experiment.log_image(
-                grid.detach().cpu().numpy(),
-                name="generated images",
-                image_channels="first"
-            )
+            if isinstance(self.logger, TensorBoardLogger):
+                # for tensorboard
+                self.logger.experiment.add_image("example_images", grid, 0)
+            elif isinstance(self.logger, CometLogger):
+                # for comet.ml
+                self.logger.experiment.log_image(
+                    grid.detach().cpu().numpy(),
+                    name="generated images",
+                    image_channels="first"
+                )
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         optimizer.step()

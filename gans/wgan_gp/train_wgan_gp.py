@@ -2,7 +2,7 @@ import os
 from argparse import ArgumentParser
 
 from pytorch_lightning import Trainer
-from pytorch_lightning.logging import CometLogger
+from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 
 from gans.wgan_gp import WGANGP
 
@@ -21,8 +21,9 @@ def main(hparams):
             experiment_name="Wasserstein GAN+GP (" + hparams.dataset + ")"  # Optional
         )
     elif hparams.logger == "tensorboard":
-        # not implemented yet
-        raise NotImplementedError("Tensorboard logger is not implemented yet")
+        logger = TensorBoardLogger(
+            save_dir=os.getcwd() + "/lightning_logs",
+        )
     else:
         raise ValueError("Must specific a logger")
 
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(add_help=False)
     parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard"], required=True)
     parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist"], required=True)
-    parser.add_argument("--gpus", type=str)
+    parser.add_argument("--gpus", type=int, default=0   )
     parser.add_argument("--nodes", type=int, default=1)
 
     parser = WGANGP.add_model_specific_args(parser)

@@ -26,7 +26,7 @@ class Generator(nn.Module):
             nn.PReLU(self.filters * 2),
             Conv2dPixelShuffle(self.filters * 2, out_channels=self.filters, kernel_size=3, upscale_factor=2),
             nn.PReLU(self.filters),
-            Conv2dPixelShuffle(self.filters, out_channels=self.image_channels, kernel_size=3, upscale_factor=2),
+            Conv2dPixelShuffle(self.filters, out_channels=self.image_channels, kernel_size=5, upscale_factor=2),
             nn.Tanh()
         )
 
