@@ -145,7 +145,7 @@ class WGANGP(pl.LightningModule):
                 # for comet.ml
                 self.logger.experiment.log_image(
                     grid.detach().cpu().numpy(),
-                    name="generated images",
+                    name="generated_images",
                     image_channels="first"
                 )
 
