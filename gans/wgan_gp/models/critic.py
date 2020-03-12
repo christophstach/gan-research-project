@@ -1,5 +1,3 @@
-import math
-
 import torch
 import torch.nn as nn
 
@@ -18,48 +16,16 @@ class Critic(nn.Module):
         self.y_size = self.hparams.y_size
         self.y_embedding_size = self.hparams.y_embedding_size if self.y_size > 0 else 0
 
-        self.main = nn.Sequential(
-            self.first_block(),
-            *[self.middle_block(block_idx) for block_idx in range(self.length)],
-            self.last_block()
-        )
-
         self.y_embedding = nn.Embedding(num_embeddings=self.y_size, embedding_dim=self.image_width * self.image_height)
 
-    def first_block(self):
-        return nn.Sequential(
-            nn.Conv2d(
-                self.image_channels + 1 if self.y_size > 0 else self.image_channels,
-                self.filters,
-                kernel_size=4,
-                stride=2,
-                padding=1
-            ),
-            nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True)
-        )
-
-    def middle_block(self, block_idx):
-        return nn.Sequential(
-            nn.Conv2d(
-                int(self.filters * math.pow(2, block_idx)),
-                int(self.filters * math.pow(2, block_idx + 1)),
-                kernel_size=4,
-                stride=2,
-                padding=1
-            ),
-            nn.LeakyReLU(negative_slope=self.leaky_relu_slope, inplace=True)
-        )
-
-    def last_block(self):
-        return nn.Sequential(
-            nn.Conv2d(
-                int(self.filters * math.pow(2, self.length)),
-                1,
-                kernel_size=4,
-                stride=1,
-                padding=0,
-                bias=False
-            )
+        self.main = nn.Sequential(
+            nn.Conv2d(self.image_channels + 1 if self.y_size > 0 else self.image_channels, self.filters, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
+            nn.PReLU(self.filters),
+            nn.Conv2d(self.filters, self.filters * 2, kernel_size=3, stride=2, padding=1, padding_mode="zero"),
+            nn.PReLU(self.filters * 2),
+            nn.Conv2d(self.filters * 2, self.filters * 4, kernel_size=3, stride=2, padding=1, padding_mode="zero"),
+            nn.PReLU(self.filters * 4),
+            nn.Conv2d(self.filters * 4, 1, kernel_size=4, stride=1, padding=0)
         )
 
     def forward(self, x, y):
