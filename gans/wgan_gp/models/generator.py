@@ -14,7 +14,6 @@ class Generator(nn.Module):
         self.image_width = self.hparams.image_width
         self.image_height = self.hparams.image_height
         self.filters = self.hparams.generator_filters
-        self.length = self.hparams.generator_length
         self.y_size = self.hparams.y_size
         self.y_embedding_size = self.hparams.y_embedding_size if self.y_size > 0 else 0
 

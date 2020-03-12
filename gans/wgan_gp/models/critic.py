@@ -12,7 +12,6 @@ class Critic(nn.Module):
         self.image_height = self.hparams.image_height
         self.leaky_relu_slope = self.hparams.critic_leaky_relu_slope
         self.filters = self.hparams.critic_filters
-        self.length = self.hparams.critic_length
         self.y_size = self.hparams.y_size
         self.y_embedding_size = self.hparams.y_embedding_size if self.y_size > 0 else 0
 
