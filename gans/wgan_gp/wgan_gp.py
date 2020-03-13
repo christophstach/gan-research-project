@@ -88,7 +88,7 @@ class WGANGP(pl.LightningModule):
         self.real_images, self.y = batch
 
         if optimizer_idx == 0:  # Train generator
-            noise = torch.randn(self.real_images.size(0), self.noise_size, 1, 1)
+            noise = torch.randn(self.real_images.size(0), self.noise_size)
             if self.on_gpu:
                 noise = noise.cuda(self.real_images.device.index)
 
@@ -99,7 +99,7 @@ class WGANGP(pl.LightningModule):
             return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
         if optimizer_idx == 1:  # Train critic
-            noise = torch.randn(self.real_images.size(0), self.noise_size, 1, 1)
+            noise = torch.randn(self.real_images.size(0), self.noise_size)
             if self.on_gpu:
                 noise = noise.cuda(self.real_images.device.index)
 
