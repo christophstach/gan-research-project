@@ -55,7 +55,7 @@ class WGANGP(pl.LightningModule):
 
     def on_train_start(self):
         if isinstance(self.logger, CometLogger):
-            self.logger.experiment.set_model_graph(self)
+            self.logger.experiment.set_model_graph(str(self))
 
     def forward(self, x, y):
         return self.generator.forward(x, y)
