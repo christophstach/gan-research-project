@@ -20,9 +20,9 @@ class Critic(nn.Module):
         self.main = nn.Sequential(
             nn.Conv2d(self.image_channels + 1 if self.y_size > 0 else self.image_channels, self.filters, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
             nn.PReLU(self.filters),
-            nn.Conv2d(self.filters, self.filters * 2, kernel_size=3, stride=2, padding=1, padding_mode="zero"),
+            nn.Conv2d(self.filters, self.filters * 2, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
             nn.PReLU(self.filters * 2),
-            nn.Conv2d(self.filters * 2, self.filters * 4, kernel_size=3, stride=2, padding=1, padding_mode="zero"),
+            nn.Conv2d(self.filters * 2, self.filters * 4, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
             nn.PReLU(self.filters * 4),
             nn.Conv2d(self.filters * 4, 1, kernel_size=4, stride=1, padding=0)
         )
