@@ -203,7 +203,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-iw", "--image-width", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-ih", "--image-height", type=int, default=64, help="Generated image shape height")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
-        system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00001, help="Learning rate of both optimizers")
+        system_group.add_argument("-lr", "--learning-rate", type=float, default=0.0001, help="Learning rate of both optimizers")
         train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
         train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
@@ -214,7 +214,7 @@ class WGANGP(pl.LightningModule):
         critic_group = parser.add_argument_group("Critic")
         critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
         critic_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Filters in the critic (are multiplied with different powers of 2)")
-        critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
+        critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=100, help="Gradient penalty term")
 
         generator_group = parser.add_argument_group("Generator")
         generator_group.add_argument("-gf", "--generator-filters", type=int, default=1024, help="Filters in the generator (are multiplied with different powers of 2)")
