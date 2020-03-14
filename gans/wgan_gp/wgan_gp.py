@@ -233,7 +233,7 @@ class WGANGP(pl.LightningModule):
         train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         train_group.add_argument("-acb", "--accumulate-grad-batches", type=int, default=1, help="Accumulate gradient batches")
-        train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=12, help="Number of workers the dataloader uses")
+        train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
