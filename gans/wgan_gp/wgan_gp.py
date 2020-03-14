@@ -43,8 +43,7 @@ class WGANGP(pl.LightningModule):
         self.generator = Generator(self.hparams)
         self.critic = Critic(self.hparams)
 
-        self.real_images = None
-        self.fake_images = None
+        self.noise = None
         self.y = None
 
         self.train_dataset = None
@@ -60,55 +59,96 @@ class WGANGP(pl.LightningModule):
     def forward(self, x, y):
         return self.generator.forward(x, y)
 
-    def generator_loss(self, fake_images, y):
-        return -torch.mean(self.critic(fake_images, y))
+    def generator_loss(self, fake_validity):
+        return -torch.mean(fake_validity)
 
-    def critic_loss(self, real_images, fake_images, y):
-        return -torch.mean(self.critic(real_images, y)) + torch.mean(self.critic(fake_images, y))
+    def critic_loss(self, real_validity, fake_validity):
+        return -torch.mean(real_validity) + torch.mean(fake_validity)
 
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
         epsilon = torch.randn(real_images.size(0), 1, 1, 1, requires_grad=True)
-        grad_outputs = torch.ones(real_images.size(0), 1, requires_grad=True)
+        grad_outputs = torch.ones(real_images.size(0), 1, requires_grad=False)
 
         if self.on_gpu:
-            epsilon = epsilon.cuda(self.real_images.device.index)
-            grad_outputs = grad_outputs.cuda(self.real_images.device.index)
+            epsilon = epsilon.cuda(real_images.device.index)
+            grad_outputs = grad_outputs.cuda(real_images.device.index)
 
         # Get random interpolation between real and fake samples
         interpolates = epsilon * real_images + ((1 - epsilon) * fake_images)
 
         # Get gradient w.r.t. interpolates
-        gradients, = torch.autograd.grad(outputs=self.critic(interpolates, y), inputs=interpolates, grad_outputs=grad_outputs, create_graph=True)
+        interpolate_validity = self.critic(interpolates, y)
+        gradients = torch.autograd.grad(
+            outputs=interpolate_validity, inputs=interpolates, grad_outputs=grad_outputs, create_graph=True
+        )[0]
+
         gradients = gradients.view(gradients.size(0), -1)
-        return ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+
+        return penalty
+
+    def divergence_gradient_penalty(self, real_validity, fake_validity, real_images, fake_images):
+        k = 2
+        p = 6
+
+        # real_validity.requires_grad_(False)
+        # fake_validity.requires_grad_(False)
+        # real_images.requires_grad_(False)
+        # fake_images.requires_grad_(False)
+
+        # real_validity = real_validity.detach()
+        # fake_validity = real_validity.detach()
+        # real_images = real_validity.detach()
+        # fake_images = real_validity.detach()
+
+        # fake_images.requires_grad_(True)
+
+        # Compute W-div gradient penalty
+        real_grad_outputs = torch.ones(real_images.size(0), 1, requires_grad=False)
+        real_gradients = torch.autograd.grad(
+            outputs=real_validity, inputs=real_images, grad_outputs=real_grad_outputs, create_graph=True
+        )[0]
+        real_grad_norm = real_gradients.view(real_gradients.size(0), -1).pow(2).sum(1) ** (p / 2)
+
+        fake_grad_outputs = torch.ones(fake_images.size(0), 1, requires_grad=False)
+        fake_gradients = torch.autograd.grad(
+            outputs=fake_validity, inputs=fake_images, grad_outputs=fake_grad_outputs, create_graph=True, retain_graph=True
+        )[0]
+        fake_grad_norm = fake_gradients.view(fake_gradients.size(0), -1).pow(2).sum(1) ** (p / 2)
+
+        div_gp = torch.mean(real_grad_norm + fake_grad_norm) * k / 2
+
+        return div_gp
 
     def training_step(self, batch, batch_idx, optimizer_idx):
-        self.real_images, self.y = batch
+        if optimizer_idx == 0:  # Train critic
+            real_images, self.y = batch
+            # real_images.requires_grad_(True)
 
-        if optimizer_idx == 0:  # Train generator
-            noise = torch.randn(self.real_images.size(0), self.noise_size)
+            self.noise = torch.randn(real_images.size(0), self.noise_size)
             if self.on_gpu:
-                noise = noise.cuda(self.real_images.device.index)
+                self.noise = self.noise.cuda(real_images.device.index)
 
-            self.fake_images = self.generator(noise, self.y)
+            fake_images = self.generator(self.noise, self.y)
+            real_validity = self.critic(real_images, self.y)
+            fake_validity = self.critic(fake_images, self.y)
 
-            loss = self.generator_loss(self.fake_images, self.y)
-            logs = {"generator_loss": loss}
-            return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
+            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(real_images, fake_images, self.y)
+            # gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, real_images, fake_images)
 
-        if optimizer_idx == 1:  # Train critic
-            noise = torch.randn(self.real_images.size(0), self.noise_size)
-            if self.on_gpu:
-                noise = noise.cuda(self.real_images.device.index)
-
-            self.fake_images = self.generator(noise, self.y).detach()
-
-            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(self.real_images, self.fake_images, self.y)
-            loss = self.critic_loss(self.real_images, self.fake_images, self.y)
+            loss = self.critic_loss(real_validity, fake_validity)
             logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
             return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
+
+        if optimizer_idx == 1:  # Train generator
+            fake_images = self.generator(self.noise, self.y)
+            fake_validity = self.critic(fake_images, self.y)
+
+            loss = self.generator_loss(fake_validity)
+            logs = {"generator_loss": loss}
+            return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
@@ -118,8 +158,8 @@ class WGANGP(pl.LightningModule):
             y = torch.tensor(range(num_images))
 
             if self.on_gpu:
-                noise = noise.cuda(self.real_images.device.index)
-                y = y.cuda(self.real_images.device.index)
+                noise = noise.cuda(self.noise.device.index)
+                y = y.cuda(self.noise.device.index)
 
             fake_images = self.generator.forward(noise, y)
             grid = torchvision.utils.make_grid(fake_images, nrow=int(num_images / 2))
@@ -151,8 +191,8 @@ class WGANGP(pl.LightningModule):
 
     def configure_optimizers(self):
         return [
-            optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
-            optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
+            optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
+            optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
         ]
 
     def prepare_data(self):
@@ -186,9 +226,6 @@ class WGANGP(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
 
-    # def test_dataloader(self):
-    #    return DataLoader(self.test_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
-
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser])
@@ -213,10 +250,10 @@ class WGANGP(pl.LightningModule):
 
         critic_group = parser.add_argument_group("Critic")
         critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
-        critic_group.add_argument("-cf", "--critic-filters", type=int, default=16, help="Filters in the critic (are multiplied with different powers of 2)")
+        critic_group.add_argument("-cf", "--critic-filters", type=int, default=32, help="Filters in the critic (are multiplied with different powers of 2)")
         critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=200, help="Gradient penalty term")
 
         generator_group = parser.add_argument_group("Generator")
-        generator_group.add_argument("-gf", "--generator-filters", type=int, default=256, help="Filters in the generator (are multiplied with different powers of 2)")
+        generator_group.add_argument("-gf", "--generator-filters", type=int, default=512, help="Filters in the generator (are multiplied with different powers of 2)")
 
         return parser
