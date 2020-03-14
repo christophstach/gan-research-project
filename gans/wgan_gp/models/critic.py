@@ -47,6 +47,4 @@ class Critic(nn.Module):
         data = data.view(x.size(0), -1)
         data = self.projection(data)
 
-
-
         return data
