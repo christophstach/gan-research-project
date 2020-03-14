@@ -8,7 +8,6 @@ from gans.wgan_gp import WGANGP
 
 
 def main(hparams):
-    print(hparams)
     model = WGANGP(hparams)
 
     if hparams.logger == "none":
@@ -34,7 +33,7 @@ def main(hparams):
         gpus=hparams.gpus,
         nb_gpu_nodes=hparams.nodes,
         accumulate_grad_batches=hparams.accumulate_grad_batches,
-        progress_bar_refresh_rate=1,
+        progress_bar_refresh_rate=20,
         early_stop_callback=False,
         checkpoint_callback=False,
         logger=logger
