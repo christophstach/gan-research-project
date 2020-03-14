@@ -24,7 +24,14 @@ class Critic(nn.Module):
             nn.PReLU(self.filters * 2),
             nn.Conv2d(self.filters * 2, self.filters * 4, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
             nn.PReLU(self.filters * 4),
-            nn.Conv2d(self.filters * 4, 1, kernel_size=4, stride=1, padding=0)
+            nn.Conv2d(self.filters * 4, self.filters * 8, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
+            nn.PReLU(self.filters * 8),
+            # nn.Conv2d(self.filters * 4, 1, kernel_size=4, stride=1, padding=0)
+        )
+
+        self.projection = nn.Sequential(
+            # nn.Conv2d(self.filters * 8, 1, kernel_size=4, stride=1, padding=0)
+            nn.Linear(self.filters * 8 * (int(self.image_width / 16) * int(self.image_height / 16)), 1)
         )
 
     def forward(self, x, y):
@@ -37,5 +44,9 @@ class Critic(nn.Module):
             data = x
 
         data = self.main(data)
+        data = data.view(x.size(0), -1)
+        data = self.projection(data)
 
-        return data.squeeze()
+
+
+        return data

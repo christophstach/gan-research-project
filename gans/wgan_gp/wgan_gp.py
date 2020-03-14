@@ -70,7 +70,7 @@ class WGANGP(pl.LightningModule):
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
         epsilon = torch.randn(real_images.size(0), 1, 1, 1, requires_grad=True)
-        grad_outputs = torch.ones(real_images.size(0), requires_grad=True)
+        grad_outputs = torch.ones(real_images.size(0), 1, requires_grad=True)
 
         if self.on_gpu:
             epsilon = epsilon.cuda(self.real_images.device.index)
@@ -109,24 +109,6 @@ class WGANGP(pl.LightningModule):
             loss = self.critic_loss(self.real_images, self.fake_images, self.y)
             logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
             return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
-
-    # def validation_step(self, batch, batch_idx):
-
-    # real_images, y = batch
-
-    # noise = torch.randn(real_images.size(0), self.noise_size, 1, 1)
-    # if self.on_gpu:
-    # noise = noise.cuda(self.real_images.device.index)
-
-    # fake_images = self.generator(noise, y)
-
-    # prediction = self.inception_model(fake_images)
-
-    # return OrderedDict({})
-
-    # def validation_epoch_end(self, outputs: list):
-    # logs = {}
-    # return {"log": logs}
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
@@ -218,12 +200,12 @@ class WGANGP(pl.LightningModule):
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
-        system_group.add_argument("-iw", "--image-width", type=int, default=32, help="Generated image shape width")
-        system_group.add_argument("-ih", "--image-height", type=int, default=32, help="Generated image shape height")
-        system_group.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
-        system_group.add_argument("-lr", "--learning-rate", type=float, default=0.0001, help="Learning rate of both optimizers")
+        system_group.add_argument("-iw", "--image-width", type=int, default=64, help="Generated image shape width")
+        system_group.add_argument("-ih", "--image-height", type=int, default=64, help="Generated image shape height")
+        system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
+        system_group.add_argument("-lr", "--learning-rate", type=float, default=0.00001, help="Learning rate of both optimizers")
         train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
-        train_group.add_argument("-b2", "--beta2", type=int, default=0.9, help="Momentum term beta2")
+        train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
@@ -235,6 +217,6 @@ class WGANGP(pl.LightningModule):
         critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
 
         generator_group = parser.add_argument_group("Generator")
-        generator_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Filters in the generator (are multiplied with different powers of 2)")
+        generator_group.add_argument("-gf", "--generator-filters", type=int, default=1024, help="Filters in the generator (are multiplied with different powers of 2)")
 
         return parser

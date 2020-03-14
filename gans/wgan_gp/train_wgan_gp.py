@@ -33,6 +33,7 @@ def main(hparams):
         gpus=hparams.gpus,
         nb_gpu_nodes=hparams.nodes,
         accumulate_grad_batches=hparams.accumulate_grad_batches,
+        progress_bar_refresh_rate=1,
         early_stop_callback=False,
         checkpoint_callback=False,
         logger=logger

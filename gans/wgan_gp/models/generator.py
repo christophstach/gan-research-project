@@ -24,11 +24,13 @@ class Generator(nn.Module):
         )
 
         self.main = nn.Sequential(
-            Conv2dPixelShuffle(self.filters, out_channels=int(self.filters / 2), kernel_size=5, upscale_factor=2),
+            Conv2dPixelShuffle(self.filters, out_channels=int(self.filters / 2), kernel_size=3, upscale_factor=2),
             nn.PReLU(int(self.filters / 2)),
             Conv2dPixelShuffle(int(self.filters / 2), out_channels=int(self.filters / 4), kernel_size=5, upscale_factor=2),
             nn.PReLU(int(self.filters / 4)),
-            Conv2dPixelShuffle(int(self.filters / 4), out_channels=self.image_channels, kernel_size=5, upscale_factor=2),
+            Conv2dPixelShuffle(int(self.filters / 4), out_channels=int(self.filters / 8), kernel_size=5, upscale_factor=2),
+            nn.PReLU(int(self.filters / 8)),
+            Conv2dPixelShuffle(int(self.filters / 8), out_channels=self.image_channels, kernel_size=5, upscale_factor=2),
             nn.Tanh()
         )
 
