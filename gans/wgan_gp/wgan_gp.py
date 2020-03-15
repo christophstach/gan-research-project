@@ -231,7 +231,7 @@ class WGANGP(pl.LightningModule):
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image shape width")
-        system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
+        system_group.add_argument("-bs", "--batch-size", type=int, default=128, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=0.0001, help="Learning rate of both optimizers")
         train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
         train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
