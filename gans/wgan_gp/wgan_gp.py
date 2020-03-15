@@ -71,14 +71,16 @@ class WGANGP(pl.LightningModule):
 
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
-        # Random weight term for interpolation between real and fake samples
-        alpha = torch.randn_like(real_images, device=real_images.device)
-
-        # Get random interpolation between real and fake samples
 
         if self.loss_type == "wgan-gp1":
-            interpolates = alpha * real_images + ((torch.tensor(1.0, device=real_images.device) - alpha) * fake_images)
+            # Random weight term for interpolation between real and fake samples
+            alpha = torch.randn(real_images.size(0), 1, 1, 1, device=real_images.device)
+            # Get random interpolation between real and fake samples
+            interpolates = alpha * real_images + ((1 - alpha) * fake_images)
         elif self.loss_type == "wgan-gp2":
+            # Random weight term for interpolation between real and fake samples
+            alpha = torch.randn_like(real_images, device=real_images.device)
+            # Get random interpolation between real and fake samples
             interpolates = real_images + alpha * (fake_images - real_images)
         else:
             raise NotImplementedError()
