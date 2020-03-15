@@ -34,7 +34,6 @@ class Generator(nn.Module):
         )
 
     def forward(self, x, y):
-        x = x.view(x.size(0), -1, 1, 1)
         x = self.main(x)
 
         return x
