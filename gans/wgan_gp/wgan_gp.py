@@ -27,6 +27,7 @@ class WGANGP(pl.LightningModule):
         elif self.dataset == "cifar10":
             self.hparams.image_channels = 3
 
+        self.loss_type = self.hparams.loss_type
         self.image_channels = self.hparams.image_channels
         self.image_size = self.hparams.image_size
         self.alternation_interval = self.hparams.alternation_interval
@@ -36,6 +37,7 @@ class WGANGP(pl.LightningModule):
         self.learning_rate = self.hparams.learning_rate
         self.gradient_penalty_term = self.hparams.gradient_penalty_term
         self.dataloader_num_workers = self.hparams.dataloader_num_workers
+        self.weight_clipping = self.hparams.weight_clipping
 
         self.beta1 = self.hparams.beta1
         self.beta2 = self.hparams.beta2
@@ -65,7 +67,7 @@ class WGANGP(pl.LightningModule):
 
     def clip_weights(self):
         for weight in self.critic.parameters():
-            weight.data.clamp_(-0.01, 0.01)
+            weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
 
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
@@ -73,7 +75,7 @@ class WGANGP(pl.LightningModule):
         alpha = torch.randn_like(real_images)
         one = torch.tensor(1, dtype=torch.float)
 
-        grad_outputs = torch.ones(real_images.size(0), 1, 1, 1)
+        grad_outputs = torch.ones(real_images.size(0))
 
         if self.on_gpu:
             alpha = alpha.cuda(real_images.device.index)
@@ -99,14 +101,17 @@ class WGANGP(pl.LightningModule):
         k = 2
         p = 6
 
+        real_images.requires_grad_()
+        # fake_images.requires_grad_()
+
         # Compute W-div gradient penalty
-        real_grad_outputs = torch.ones(real_images.size(0), 1, requires_grad=False)
+        real_grad_outputs = torch.ones(real_images.size(0))
         real_gradients = torch.autograd.grad(
             outputs=real_validity, inputs=real_images, grad_outputs=real_grad_outputs, create_graph=True
         )[0]
         real_grad_norm = real_gradients.view(real_gradients.size(0), -1).pow(2).sum(1) ** (p / 2)
 
-        fake_grad_outputs = torch.ones(fake_images.size(0), 1, requires_grad=False)
+        fake_grad_outputs = torch.ones(fake_images.size(0))
         fake_gradients = torch.autograd.grad(
             outputs=fake_validity, inputs=fake_images, grad_outputs=fake_grad_outputs, create_graph=True, retain_graph=True
         )[0]
@@ -119,7 +124,7 @@ class WGANGP(pl.LightningModule):
     def training_step_critic(self, batch):
         real_images, self.y = batch
 
-        self.noise = torch.randn(real_images.size(0), self.noise_size, 1, 1)
+        self.noise = torch.randn(real_images.size(0), self.noise_size)
         if self.on_gpu:
             self.noise = self.noise.cuda(real_images.device.index)
 
@@ -127,12 +132,16 @@ class WGANGP(pl.LightningModule):
         real_validity = self.critic(real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
-        gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(real_images.data, fake_images.data, self.y)
-        # gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, real_images, fake_images)
+        if self.loss_type == "wgan-gp":
+            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(real_images.data, fake_images.data, self.y)
+        elif self.loss_type == "wgan-gp-div":
+            gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, real_images, fake_images)
+        else:
+            gradient_penalty = 0
 
         loss = self.critic_loss(real_validity, fake_validity)
         logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
-        return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
+        return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
         fake_images = self.forward(self.noise, self.y)
@@ -153,7 +162,7 @@ class WGANGP(pl.LightningModule):
     def on_epoch_end(self):
         if self.logger:
             num_images = 16
-            noise = torch.randn(num_images, self.noise_size, 1, 1)
+            noise = torch.randn(num_images, self.noise_size)
             y = torch.tensor(range(num_images))
 
             if self.on_gpu:
@@ -181,7 +190,10 @@ class WGANGP(pl.LightningModule):
         # update critic opt every step
         if optimizer_idx == 0:
             optimizer.step()
-            self.clip_weights()
+
+            if self.loss_type == "wgan-gc":
+                self.clip_weights()
+
             optimizer.zero_grad()
 
         # update generator opt every {self.alternation_interval} steps
@@ -190,10 +202,16 @@ class WGANGP(pl.LightningModule):
             optimizer.zero_grad()
 
     def configure_optimizers(self):
-        return [
-            optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
-            optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
-        ]
+        if self.loss_type == "wgan-gp" or self.loss_type == "wgan-gp-div":
+            return [
+                optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
+                optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
+            ]
+        elif self.loss_type == "wgan-gc":
+            return [
+                optim.RMSprop(self.critic.parameters(), lr=self.learning_rate),
+                optim.RMSprop(self.generator.parameters(), lr=self.learning_rate)
+            ]
 
     def prepare_data(self):
         train_resize = transforms.Resize((self.image_size, self.image_size))
@@ -235,14 +253,16 @@ class WGANGP(pl.LightningModule):
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         train_group.add_argument("-acb", "--accumulate-grad-batches", type=int, default=1, help="Accumulate gradient batches")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
+        train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
+        train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
-        train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
-        train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
+        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp", "wgan-gc", "wgan-gp-div"], default="wgan-gp")
+
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
@@ -251,6 +271,7 @@ class WGANGP(pl.LightningModule):
         critic_group = parser.add_argument_group("Critic")
         critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
         critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=100, help="Gradient penalty term")
+        critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         generator_group = parser.add_argument_group("Generator")
 
