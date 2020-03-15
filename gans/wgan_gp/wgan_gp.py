@@ -72,24 +72,18 @@ class WGANGP(pl.LightningModule):
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
-        alpha = torch.randn_like(real_images)
-        one = torch.tensor(1, dtype=torch.float)
-
-        grad_outputs = torch.ones(real_images.size(0))
-
-        if self.on_gpu:
-            alpha = alpha.cuda(real_images.device.index)
-            grad_outputs = grad_outputs.cuda(real_images.device.index)
-            one = one.cuda(real_images.device.index)
+        alpha = torch.randn_like(real_images, device=real_images.device)
 
         # Get random interpolation between real and fake samples
-        interpolates = alpha * real_images + ((one - alpha) * fake_images)
+
+        # interpolates = alpha * real_images + ((1 - alpha) * fake_images)
+        interpolates = real_images + alpha * (fake_images - real_images)
         interpolates.requires_grad_()
 
         # Get gradient w.r.t. interpolates
         interpolate_validity = self.critic(interpolates, y)
         gradients = torch.autograd.grad(
-            outputs=interpolate_validity, inputs=interpolates, grad_outputs=grad_outputs, create_graph=True
+            outputs=interpolate_validity, inputs=interpolates, grad_outputs=torch.ones_like(interpolate_validity), create_graph=True
         )[0]
 
         gradients = gradients.view(gradients.size(0), -1)
@@ -194,7 +188,7 @@ class WGANGP(pl.LightningModule):
         if optimizer_idx == 0:
             optimizer.step()
 
-            if self.loss_type == "wgan-gc":
+            if self.loss_type == "wgan-wc":
                 self.clip_weights()
 
             optimizer.zero_grad()
@@ -210,7 +204,7 @@ class WGANGP(pl.LightningModule):
                 optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
                 optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
             ]
-        elif self.loss_type == "wgan-gc":
+        elif self.loss_type == "wgan-wc":
             return [
                 optim.RMSprop(self.critic.parameters(), lr=self.learning_rate),
                 optim.RMSprop(self.generator.parameters(), lr=self.learning_rate)
@@ -264,7 +258,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
-        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp", "wgan-gc", "wgan-gp-div"], default="wgan-gp")
+        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp", "wgan-wc", "wgan-gp-div"], default="wgan-gp")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
