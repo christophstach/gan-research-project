@@ -76,8 +76,13 @@ class WGANGP(pl.LightningModule):
 
         # Get random interpolation between real and fake samples
 
-        # interpolates = alpha * real_images + ((1 - alpha) * fake_images)
-        interpolates = real_images + alpha * (fake_images - real_images)
+        if self.loss_type == "wgan-gp1":
+            interpolates = alpha * real_images + ((torch.tensor(1.0, device=real_images.device) - alpha) * fake_images)
+        elif self.loss_type == "wgan-gp2":
+            interpolates = real_images + alpha * (fake_images - real_images)
+        else:
+            raise NotImplementedError()
+
         interpolates.requires_grad_()
 
         # Get gradient w.r.t. interpolates
@@ -118,15 +123,13 @@ class WGANGP(pl.LightningModule):
     def training_step_critic(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.real_images.size(0), self.noise_size)
-        if self.on_gpu:
-            noise = noise.cuda(self.real_images.device.index)
+        noise = torch.randn(self.real_images.size(0), self.noise_size, device=self.real_images.device)
 
         fake_images = self.forward(noise, self.y).detach()
         real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
-        if self.loss_type == "wgan-gp":
+        if self.loss_type == "wgan-gp1" or self.loss_type == "wgan-gp2":
             gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
         elif self.loss_type == "wgan-gp-div":
             gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, self.real_images, fake_images)
@@ -140,9 +143,7 @@ class WGANGP(pl.LightningModule):
     def training_step_generator(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.real_images.size(0), self.noise_size)
-        if self.on_gpu:
-            noise = noise.cuda(self.real_images.device.index)
+        noise = torch.randn(self.real_images.size(0), self.noise_size, device=self.real_images.device)
 
         fake_images = self.forward(noise, self.y)
         fake_validity = self.critic(fake_images, self.y)
@@ -162,12 +163,8 @@ class WGANGP(pl.LightningModule):
     def on_epoch_end(self):
         if self.logger:
             num_images = 16
-            noise = torch.randn(num_images, self.noise_size)
-            y = torch.tensor(range(num_images))
-
-            if self.on_gpu:
-                noise = noise.cuda(self.real_images.device.index)
-                y = y.cuda(self.real_images.device.index)
+            noise = torch.randn(num_images, self.noise_size, device=self.real_images.device)
+            y = torch.tensor(range(num_images), device=self.real_images.device)
 
             fake_images = self.forward(noise, y)
             grid = torchvision.utils.make_grid(fake_images, nrow=int(math.sqrt(num_images)))
@@ -199,7 +196,7 @@ class WGANGP(pl.LightningModule):
             optimizer.zero_grad()
 
     def configure_optimizers(self):
-        if self.loss_type == "wgan-gp" or self.loss_type == "wgan-gp-div":
+        if self.loss_type == "wgan-gp1" or self.loss_type == "wgan-gp2" or self.loss_type == "wgan-gp-div":
             return [
                 optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
                 optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
@@ -258,7 +255,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
-        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp", "wgan-wc", "wgan-gp-div"], default="wgan-gp")
+        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "wgan-gp-div"], default="wgan-gp1")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
