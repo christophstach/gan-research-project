@@ -186,9 +186,6 @@ class WGANGP(pl.LightningModule):
                 )
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
-        optimizer.step()
-        optimizer.zero_grad()
-
         # update critic opt every step
         if optimizer_idx == 0:
             optimizer.step()
