@@ -33,4 +33,4 @@ class Critic(nn.Module):
     def forward(self, x, y):
         x = self.main(x)
 
-        return x
+        return x.squeeze()

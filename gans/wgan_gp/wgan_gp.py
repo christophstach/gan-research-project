@@ -69,7 +69,7 @@ class WGANGP(pl.LightningModule):
         alpha = torch.randn_like(real_images)
         one = torch.tensor(1, dtype=torch.float)
 
-        grad_outputs = torch.ones(real_images.size(0), 1, 1, 1)
+        grad_outputs = torch.ones(real_images.size(0))
 
         if self.on_gpu:
             alpha = alpha.cuda(real_images.device.index)
@@ -119,7 +119,7 @@ class WGANGP(pl.LightningModule):
         if optimizer_idx == 0:  # Train critic
             real_images, self.y = batch
 
-            self.noise = torch.randn(real_images.size(0), self.noise_size, 1, 1)
+            self.noise = torch.randn(real_images.size(0), self.noise_size)
             if self.on_gpu:
                 self.noise = self.noise.cuda(real_images.device.index)
 
@@ -146,7 +146,7 @@ class WGANGP(pl.LightningModule):
     def on_epoch_end(self):
         if self.logger:
             num_images = 16
-            noise = torch.randn(num_images, self.noise_size, 1, 1)
+            noise = torch.randn(num_images, self.noise_size)
             y = torch.tensor(range(num_images))
 
             if self.on_gpu:
