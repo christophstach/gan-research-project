@@ -128,12 +128,12 @@ class WGANGP(pl.LightningModule):
         if self.on_gpu:
             self.noise = self.noise.cuda(real_images.device.index)
 
-        fake_images = self.forward(self.noise, self.y)
+        fake_images = self.forward(self.noise, self.y).detach()
         real_validity = self.critic(real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
         if self.loss_type == "wgan-gp":
-            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(real_images.data, fake_images.data, self.y)
+            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(real_images, fake_images, self.y)
         elif self.loss_type == "wgan-gp-div":
             gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, real_images, fake_images)
         else:
