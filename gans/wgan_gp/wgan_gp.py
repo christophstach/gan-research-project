@@ -153,7 +153,7 @@ class WGANGP(pl.LightningModule):
     def on_epoch_end(self):
         if self.logger:
             num_images = 16
-            noise = torch.randn(num_images, self.noise_size)
+            noise = torch.randn(num_images, self.noise_size, 1, 1)
             y = torch.tensor(range(num_images))
 
             if self.on_gpu:
