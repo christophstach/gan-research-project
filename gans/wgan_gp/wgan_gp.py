@@ -144,6 +144,8 @@ class WGANGP(pl.LightningModule):
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
+        real_images, self.y = batch
+
         fake_images = self.forward(self.noise, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
