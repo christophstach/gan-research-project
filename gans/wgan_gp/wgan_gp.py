@@ -123,7 +123,7 @@ class WGANGP(pl.LightningModule):
         if self.on_gpu:
             self.noise = self.noise.cuda(real_images.device.index)
 
-        fake_images = self.forward(self.noise, self.y).detach()
+        fake_images = self.forward(self.noise, self.y)
         real_validity = self.critic(real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
