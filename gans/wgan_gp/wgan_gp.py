@@ -113,9 +113,6 @@ class WGANGP(pl.LightningModule):
         return div_gp
 
     def training_step(self, batch, batch_idx, optimizer_idx):
-        self.critic.train(optimizer_idx == 0)
-        self.generator.train(optimizer_idx == 1)
-
         if optimizer_idx == 0:  # Train critic
             real_images, self.y = batch
 
