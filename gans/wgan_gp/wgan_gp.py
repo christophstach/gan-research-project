@@ -1,3 +1,4 @@
+import math
 import os
 from argparse import ArgumentParser
 from collections import OrderedDict
@@ -27,8 +28,7 @@ class WGANGP(pl.LightningModule):
             self.hparams.image_channels = 3
 
         self.image_channels = self.hparams.image_channels
-        self.image_width = self.hparams.image_width
-        self.image_height = self.hparams.image_height
+        self.image_size = self.hparams.image_size
         self.alternation_interval = self.hparams.alternation_interval
         self.batch_size = self.hparams.batch_size
         self.noise_size = self.hparams.noise_size
@@ -50,8 +50,6 @@ class WGANGP(pl.LightningModule):
         self.val_dataset = None
         self.test_dataset = None
 
-        self.inception_model = None
-
     def on_train_start(self):
         if isinstance(self.logger, CometLogger):
             self.logger.experiment.set_model_graph(str(self))
@@ -68,15 +66,19 @@ class WGANGP(pl.LightningModule):
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
-        epsilon = torch.randn(real_images.size(0), 1, 1, 1, requires_grad=True)
-        grad_outputs = torch.ones(real_images.size(0), 1, requires_grad=False)
+        alpha = torch.randn_like(real_images)
+        one = torch.tensor(1, dtype=torch.float)
+
+        grad_outputs = torch.ones(real_images.size(0), 1, 1, 1)
 
         if self.on_gpu:
-            epsilon = epsilon.cuda(real_images.device.index)
+            alpha = alpha.cuda(real_images.device.index)
             grad_outputs = grad_outputs.cuda(real_images.device.index)
+            one = one.cuda(real_images.device.index)
 
         # Get random interpolation between real and fake samples
-        interpolates = epsilon * real_images + ((1 - epsilon) * fake_images)
+        interpolates = alpha * real_images + ((one - alpha) * fake_images)
+        interpolates.requires_grad_()
 
         # Get gradient w.r.t. interpolates
         interpolate_validity = self.critic(interpolates, y)
@@ -92,18 +94,6 @@ class WGANGP(pl.LightningModule):
     def divergence_gradient_penalty(self, real_validity, fake_validity, real_images, fake_images):
         k = 2
         p = 6
-
-        # real_validity.requires_grad_(False)
-        # fake_validity.requires_grad_(False)
-        # real_images.requires_grad_(False)
-        # fake_images.requires_grad_(False)
-
-        # real_validity = real_validity.detach()
-        # fake_validity = real_validity.detach()
-        # real_images = real_validity.detach()
-        # fake_images = real_validity.detach()
-
-        # fake_images.requires_grad_(True)
 
         # Compute W-div gradient penalty
         real_grad_outputs = torch.ones(real_images.size(0), 1, requires_grad=False)
@@ -123,11 +113,13 @@ class WGANGP(pl.LightningModule):
         return div_gp
 
     def training_step(self, batch, batch_idx, optimizer_idx):
+        self.critic.train(optimizer_idx == 0)
+        self.generator.train(optimizer_idx == 1)
+
         if optimizer_idx == 0:  # Train critic
             real_images, self.y = batch
-            # real_images.requires_grad_(True)
 
-            self.noise = torch.randn(real_images.size(0), self.noise_size)
+            self.noise = torch.randn(real_images.size(0), self.noise_size, 1, 1)
             if self.on_gpu:
                 self.noise = self.noise.cuda(real_images.device.index)
 
@@ -153,7 +145,7 @@ class WGANGP(pl.LightningModule):
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
-            num_images = self.y_size if self.y_size > 0 else 6
+            num_images = 16
             noise = torch.randn(num_images, self.noise_size)
             y = torch.tensor(range(num_images))
 
@@ -162,7 +154,7 @@ class WGANGP(pl.LightningModule):
                 y = y.cuda(self.noise.device.index)
 
             fake_images = self.generator.forward(noise, y)
-            grid = torchvision.utils.make_grid(fake_images, nrow=int(num_images / 2))
+            grid = torchvision.utils.make_grid(fake_images, nrow=int(math.sqrt(num_images)))
 
             if isinstance(self.logger, TensorBoardLogger):
                 # for tensorboard
@@ -196,12 +188,13 @@ class WGANGP(pl.LightningModule):
         ]
 
     def prepare_data(self):
-        # self.inception_model = torchvision.models.inception_v3(pretrained=True, progress=True)
-
-        train_resize = transforms.Resize((self.image_width, self.image_height))
+        train_resize = transforms.Resize((self.image_size, self.image_size))
         test_resize = transforms.Resize(224, 224)
 
-        train_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
+        if self.image_channels == 3:
+            train_normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        else:
+            train_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
         # prepare images for the usage with torchvision models: https://pytorch.org/docs/stable/torchvision/models.html
         test_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
@@ -237,8 +230,7 @@ class WGANGP(pl.LightningModule):
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
-        system_group.add_argument("-iw", "--image-width", type=int, default=64, help="Generated image shape width")
-        system_group.add_argument("-ih", "--image-height", type=int, default=64, help="Generated image shape height")
+        system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=0.0001, help="Learning rate of both optimizers")
         train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
@@ -250,10 +242,8 @@ class WGANGP(pl.LightningModule):
 
         critic_group = parser.add_argument_group("Critic")
         critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
-        critic_group.add_argument("-cf", "--critic-filters", type=int, default=32, help="Filters in the critic (are multiplied with different powers of 2)")
-        critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=200, help="Gradient penalty term")
+        critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=100, help="Gradient penalty term")
 
         generator_group = parser.add_argument_group("Generator")
-        generator_group.add_argument("-gf", "--generator-filters", type=int, default=512, help="Filters in the generator (are multiplied with different powers of 2)")
 
         return parser

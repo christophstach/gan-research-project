@@ -1,7 +1,4 @@
-import torch
 import torch.nn as nn
-
-from ...building_blocks import Conv2dPixelShuffle
 
 
 class Generator(nn.Module):
@@ -11,45 +8,32 @@ class Generator(nn.Module):
         self.hparams = hparams
         self.noise_size = self.hparams.noise_size
         self.image_channels = self.hparams.image_channels
-        self.image_width = self.hparams.image_width
-        self.image_height = self.hparams.image_height
-        self.filters = self.hparams.generator_filters
-        self.y_size = self.hparams.y_size
-        self.y_embedding_size = self.hparams.y_embedding_size if self.y_size > 0 else 0
-
-        self.y_embedding = nn.Embedding(num_embeddings=self.y_size, embedding_dim=self.y_embedding_size)
-        self.projection = nn.Sequential(
-            nn.Linear(self.noise_size + self.y_embedding_size, self.filters * 16),
-            nn.PReLU(self.filters * 16),
-        )
+        self.image_size = self.hparams.image_size
 
         self.main = nn.Sequential(
-            Conv2dPixelShuffle(self.filters, out_channels=int(self.filters / 2), kernel_size=3, upscale_factor=2),
-            nn.BatchNorm2d(int(self.filters / 2)),
-            nn.PReLU(int(self.filters / 2)),
-            Conv2dPixelShuffle(int(self.filters / 2), out_channels=int(self.filters / 4), kernel_size=5, upscale_factor=2),
-            nn.BatchNorm2d(int(self.filters / 4)),
-            nn.PReLU(int(self.filters / 4)),
-            Conv2dPixelShuffle(int(self.filters / 4), out_channels=int(self.filters / 8), kernel_size=5, upscale_factor=2),
-            nn.BatchNorm2d(int(self.filters / 8)),
-            nn.PReLU(int(self.filters / 8)),
-            Conv2dPixelShuffle(int(self.filters / 8), out_channels=self.image_channels, kernel_size=5, upscale_factor=2),
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d(self.noise_size, self.image_size * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(self.image_size * 8),
+            nn.ReLU(True),
+            # state size. (self.image_size*8) x 4 x 4
+            nn.ConvTranspose2d(self.image_size * 8, self.image_size * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.image_size * 4),
+            nn.ReLU(True),
+            # state size. (self.image_size*4) x 8 x 8
+            nn.ConvTranspose2d(self.image_size * 4, self.image_size * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.image_size * 2),
+            nn.ReLU(True),
+            # state size. (self.image_size*2) x 16 x 16
+            nn.ConvTranspose2d(self.image_size * 2, self.image_size, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.image_size),
+            nn.ReLU(True),
+            # state size. (self.image_size) x 32 x 32
+            nn.ConvTranspose2d(self.image_size, self.image_channels, 4, 2, 1, bias=False),
             nn.Tanh()
+            # state size. (nc) x 64 x 64
         )
 
     def forward(self, x, y):
-        # For Conditional GAN add additional data to the original input data
+        x = self.main(x)
 
-        if self.y_size > 0:
-            y = self.y_embedding(y)
-            # reshape embedding  so it can be added on top of the noise vector
-            y = y.view(x.size(0), -1)
-            data = torch.cat((x, y), dim=1)
-        else:
-            data = x
-
-        data = self.projection(data)
-        data = data.view(data.size(0), -1, 4, 4)
-        data = self.main(data)
-
-        return data
+        return x

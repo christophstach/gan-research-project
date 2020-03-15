@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 
@@ -8,45 +7,30 @@ class Critic(nn.Module):
 
         self.hparams = hparams
         self.image_channels = self.hparams.image_channels
-        self.image_width = self.hparams.image_width
-        self.image_height = self.hparams.image_height
+        self.image_size = self.hparams.image_size
         self.leaky_relu_slope = self.hparams.critic_leaky_relu_slope
-        self.filters = self.hparams.critic_filters
-        self.y_size = self.hparams.y_size
-        self.y_embedding_size = self.hparams.y_embedding_size if self.y_size > 0 else 0
-
-        self.y_embedding = nn.Embedding(num_embeddings=self.y_size, embedding_dim=self.image_width * self.image_height)
 
         self.main = nn.Sequential(
-            nn.Conv2d(self.image_channels + 1 if self.y_size > 0 else self.image_channels, self.filters, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
-            nn.PReLU(self.filters),
-            nn.Conv2d(self.filters, self.filters * 2, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
-            nn.BatchNorm2d(self.filters * 2),
-            nn.PReLU(self.filters * 2),
-            nn.Conv2d(self.filters * 2, self.filters * 4, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
-            nn.BatchNorm2d(self.filters * 4),
-            nn.PReLU(self.filters * 4),
-            nn.Conv2d(self.filters * 4, self.filters * 8, kernel_size=5, stride=2, padding=2, padding_mode="zero"),
-            nn.BatchNorm2d(self.filters * 8),
-            nn.PReLU(self.filters * 8)
-        )
-
-        self.projection = nn.Sequential(
-            # nn.Conv2d(self.filters * 8, 1, kernel_size=4, stride=1, padding=0)
-            nn.Linear(self.filters * 8 * (int(self.image_width / 16) * int(self.image_height / 16)), 1)
+            # input is (nc) x 64 x 64
+            nn.Conv2d(self.image_channels, self.image_size, 4, 2, 1, bias=False),
+            nn.LeakyReLU(self.leaky_relu_slope, inplace=True),
+            # state size. (self.image_size) x 32 x 32
+            nn.Conv2d(self.image_size, self.image_size * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.image_size * 2),
+            nn.LeakyReLU(self.leaky_relu_slope, inplace=True),
+            # state size. (self.image_size*2) x 16 x 16
+            nn.Conv2d(self.image_size * 2, self.image_size * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.image_size * 4),
+            nn.LeakyReLU(self.leaky_relu_slope, inplace=True),
+            # state size. (self.image_size*4) x 8 x 8
+            nn.Conv2d(self.image_size * 4, self.image_size * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.image_size * 8),
+            nn.LeakyReLU(self.leaky_relu_slope, inplace=True),
+            # state size. (self.image_size*8) x 4 x 4
+            nn.Conv2d(self.image_size * 8, 1, 4, 1, 0, bias=False),
         )
 
     def forward(self, x, y):
-        if self.y_size > 0:
-            y = self.y_embedding(y)
-            # reshape embedding  so it can be used as a image layer and fed into the classifier
-            y = y.view(x.size(0), -1, x.size(2), x.size(3))
-            data = torch.cat((x, y), dim=1)
-        else:
-            data = x
+        x = self.main(x)
 
-        data = self.main(data)
-        data = data.view(x.size(0), -1)
-        data = self.projection(data)
-
-        return data
+        return x
