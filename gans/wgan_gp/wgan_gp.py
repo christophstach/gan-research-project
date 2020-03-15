@@ -45,7 +45,7 @@ class WGANGP(pl.LightningModule):
         self.generator = Generator(self.hparams)
         self.critic = Critic(self.hparams)
 
-        self.noise = None
+        self.real_images = None
         self.y = None
 
         self.train_dataset = None
@@ -122,20 +122,20 @@ class WGANGP(pl.LightningModule):
         return div_gp
 
     def training_step_critic(self, batch):
-        real_images, self.y = batch
+        self.real_images, self.y = batch
 
-        self.noise = torch.randn(real_images.size(0), self.noise_size)
+        noise = torch.randn(self.real_images.size(0), self.noise_size)
         if self.on_gpu:
-            self.noise = self.noise.cuda(real_images.device.index)
+            noise = noise.cuda(self.real_images.device.index)
 
-        fake_images = self.forward(self.noise, self.y).detach()
-        real_validity = self.critic(real_images, self.y)
+        fake_images = self.forward(noise, self.y).detach()
+        real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
         if self.loss_type == "wgan-gp":
-            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(real_images, fake_images, self.y)
+            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
         elif self.loss_type == "wgan-gp-div":
-            gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, real_images, fake_images)
+            gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, self.real_images, fake_images)
         else:
             gradient_penalty = 0
 
@@ -144,9 +144,13 @@ class WGANGP(pl.LightningModule):
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
-        real_images, self.y = batch
+        self.real_images, self.y = batch
 
-        fake_images = self.forward(self.noise, self.y)
+        noise = torch.randn(self.real_images.size(0), self.noise_size)
+        if self.on_gpu:
+            noise = noise.cuda(self.real_images.device.index)
+
+        fake_images = self.forward(noise, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
         loss = self.generator_loss(fake_validity)
@@ -168,8 +172,8 @@ class WGANGP(pl.LightningModule):
             y = torch.tensor(range(num_images))
 
             if self.on_gpu:
-                noise = noise.cuda(self.noise.device.index)
-                y = y.cuda(self.noise.device.index)
+                noise = noise.cuda(self.real_images.device.index)
+                y = y.cuda(self.real_images.device.index)
 
             fake_images = self.forward(noise, y)
             grid = torchvision.utils.make_grid(fake_images, nrow=int(math.sqrt(num_images)))
