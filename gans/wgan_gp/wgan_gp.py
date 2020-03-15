@@ -58,10 +58,14 @@ class WGANGP(pl.LightningModule):
         return self.generator(x, y)
 
     def generator_loss(self, fake_validity):
-        return -torch.mean(fake_validity)
+        return -fake_validity.mean()
 
     def critic_loss(self, real_validity, fake_validity):
-        return torch.mean(fake_validity) - torch.mean(real_validity)
+        return fake_validity.mean() - real_validity.mean()
+
+    def clip_weights(self):
+        for weight in self.critic.parameters():
+            weight.data.clamp_(-0.01, 0.01)
 
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
@@ -83,7 +87,7 @@ class WGANGP(pl.LightningModule):
         # Get gradient w.r.t. interpolates
         interpolate_validity = self.critic(interpolates, y)
         gradients = torch.autograd.grad(
-            outputs=interpolate_validity, inputs=interpolates, grad_outputs=grad_outputs, create_graph=True, retain_graph=True
+            outputs=interpolate_validity, inputs=interpolates, grad_outputs=grad_outputs, create_graph=True
         )[0]
 
         gradients = gradients.view(gradients.size(0), -1)
@@ -119,7 +123,7 @@ class WGANGP(pl.LightningModule):
         if self.on_gpu:
             self.noise = self.noise.cuda(real_images.device.index)
 
-        fake_images = self.forward(self.noise, self.y)
+        fake_images = self.forward(self.noise, self.y).detach()
         real_validity = self.critic(real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
@@ -128,7 +132,7 @@ class WGANGP(pl.LightningModule):
 
         loss = self.critic_loss(real_validity, fake_validity)
         logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
-        return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
+        return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
         fake_images = self.forward(self.noise, self.y)
@@ -174,13 +178,14 @@ class WGANGP(pl.LightningModule):
         optimizer.step()
         optimizer.zero_grad()
 
-        # update generator opt every {self.alternation_interval} steps
-        if optimizer_idx == 0 and batch_idx % self.alternation_interval == 0:
+        # update critic opt every step
+        if optimizer_idx == 0:
             optimizer.step()
+            self.clip_weights()
             optimizer.zero_grad()
 
-        # update critic opt every step
-        if optimizer_idx == 1:
+        # update generator opt every {self.alternation_interval} steps
+        if optimizer_idx == 1 and batch_idx % self.alternation_interval == 0:
             optimizer.step()
             optimizer.zero_grad()
 
