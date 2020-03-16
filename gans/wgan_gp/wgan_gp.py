@@ -50,7 +50,7 @@ class WGANGP(pl.LightningModule):
             logger=False
         )
 
-
+        critic_trainer.fit(self.critic, self.train_dataloader())
 
     def forward(self, x, y):
         return self.generator(x, y)
@@ -259,7 +259,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
-        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="lsgan")
+        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="wgan-gp1")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
@@ -268,12 +268,12 @@ class WGANGP(pl.LightningModule):
 
         critic_group = parser.add_argument_group("Critic")
         critic_group.add_argument("-lrs", "--leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
-        critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=100, help="Gradient penalty term")
+        critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
         critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         pretrain_group = parser.add_argument_group("Pretrain")
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=float, default=1, help="")
-        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=20, help="")
+        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=10, help="")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate_grad_batches", type=float, default=1, help="")
 
         generator_group = parser.add_argument_group("Generator")
