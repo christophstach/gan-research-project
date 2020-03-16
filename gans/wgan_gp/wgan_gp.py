@@ -84,7 +84,7 @@ class WGANGP(pl.LightningModule):
 
         if self.hparams.loss_type == "wgan-gp1":
             # Random weight term for interpolation between real and fake samples
-            alpha = torch.randn(real_images.size(0), 1, 1, 1, device=real_images.device)
+            alpha = torch.randn(self.hparams.batch_size, 1, 1, 1, device=real_images.device)
             # Get random interpolation between real and fake samples
             interpolates = alpha * real_images + ((1 - alpha) * fake_images)
         elif self.hparams.loss_type == "wgan-gp2":
