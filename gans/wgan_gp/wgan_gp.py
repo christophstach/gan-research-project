@@ -196,7 +196,7 @@ class WGANGP(pl.LightningModule):
         # update critic opt every step
         if optimizer_idx == 0:
             for i in range(self.hparams.warmup_layers):
-                for param in self.critic.main[i]:
+                for param in self.critic.main[i].parameters():
                     param.requires_grad = self.trainer.global_step > self.hparams.warmup_iterations
 
             optimizer.step()
