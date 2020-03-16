@@ -58,19 +58,26 @@ class Critic(pl.LightningModule):
 
     """Below methods are just used for pretraining the critic"""
 
-    def on_train_start(self):
-        self.pretrain = True
-
-    def on_train_end(self):
-        self.pretrain = False
-
     def training_step(self, batch, batch_idx):
         x, y = batch
         prediction = self.forward(x, y)
+
         loss = F.cross_entropy(prediction, y)
-        # find better solution
-        logs = {"accuracy": accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1))}
-        return OrderedDict({"loss": loss, "progress_bar": logs})
+        return OrderedDict({"loss": loss})
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        prediction = self.forward(x, y)
+
+        loss = F.cross_entropy(prediction, y)
+        return OrderedDict({"val_loss": loss, "val_acc": accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1))})
+
+    def validation_epoch_end(self, outputs):
+        val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
+        val_acc_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
+
+        logs = {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean}
+        return {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean, "logs": logs}
 
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),

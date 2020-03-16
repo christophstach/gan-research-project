@@ -38,19 +38,27 @@ class WGANGP(pl.LightningModule):
             self.logger.experiment.set_model_graph(str(self))
 
     def on_train_start(self):
-        critic_trainer = Trainer(
-            min_epochs=self.hparams.pretrain_min_epochs,
-            max_epochs=self.hparams.pretrain_max_epochs,
-            gpus=self.hparams.gpus,
-            nb_gpu_nodes=self.hparams.nodes,
-            accumulate_grad_batches=self.hparams.pretrain_accumulate_grad_batches,
-            progress_bar_refresh_rate=20,
-            early_stop_callback=False,
-            checkpoint_callback=False,
-            logger=False
-        )
+        if self.hparams.pretrain_enabled:
+            train_set, val_set = random_split(self.train_dataset, [int(len(self.train_dataset) * 0.8), int(len(self.train_dataset) * 0.2)])
 
-        critic_trainer.fit(self.critic, self.train_dataloader())
+            train_loader = DataLoader(train_set, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
+            val_loader = DataLoader(val_set, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
+
+            critic_trainer = Trainer(
+                min_epochs=self.hparams.pretrain_min_epochs,
+                max_epochs=self.hparams.pretrain_max_epochs,
+                gpus=self.hparams.gpus,
+                nb_gpu_nodes=self.hparams.nodes,
+                accumulate_grad_batches=self.hparams.pretrain_accumulate_grad_batches,
+                progress_bar_refresh_rate=20,
+                early_stop_callback=False,
+                checkpoint_callback=False,
+                logger=False
+            )
+
+            self.critic.pretrain = True
+            critic_trainer.fit(self.critic, train_loader, val_loader)
+            self.critic.pretrain = False
 
     def forward(self, x, y):
         return self.generator(x, y)
