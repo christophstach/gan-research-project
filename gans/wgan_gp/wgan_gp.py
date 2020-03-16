@@ -12,20 +12,13 @@ from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
-from gans.wgan_gp.models import Generator, Critic
-
 
 class WGANGP(pl.LightningModule):
-    def __init__(self, hparams):
+    def __init__(self, hparams, generator, critic):
         super().__init__()
 
         self.hparams = hparams
         self.dataset = self.hparams.dataset
-
-        if self.dataset == "mnist" or self.dataset == "fashion_mnist":
-            self.hparams.image_channels = 1
-        elif self.dataset == "cifar10":
-            self.hparams.image_channels = 3
 
         self.loss_type = self.hparams.loss_type
         self.image_channels = self.hparams.image_channels
@@ -42,8 +35,8 @@ class WGANGP(pl.LightningModule):
         self.beta1 = self.hparams.beta1
         self.beta2 = self.hparams.beta2
 
-        self.generator = Generator(self.hparams)
-        self.critic = Critic(self.hparams)
+        self.generator = generator
+        self.critic = critic
 
         self.real_images = None
         self.y = None
@@ -52,6 +45,12 @@ class WGANGP(pl.LightningModule):
         self.val_dataset = None
         self.test_dataset = None
 
+    def on_init_start(self, trainer):
+        pass
+
+    def on_init_end(self, trainer):
+        pass
+
     def on_train_start(self):
         if isinstance(self.logger, CometLogger):
             self.logger.experiment.set_model_graph(str(self))
@@ -59,11 +58,17 @@ class WGANGP(pl.LightningModule):
     def forward(self, x, y):
         return self.generator(x, y)
 
-    def generator_loss(self, fake_validity):
-        return -fake_validity.mean()
-
     def critic_loss(self, real_validity, fake_validity):
-        return fake_validity.mean() - real_validity.mean()
+        if self.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
+            return fake_validity.mean() - real_validity.mean()
+        elif self.loss_type == "lsgan":
+            return 0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()
+
+    def generator_loss(self, fake_validity):
+        if self.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
+            return -fake_validity.mean()
+        elif self.loss_type == "lsgan":
+            return 0.5 * ((fake_validity - 1) ** 2).mean()
 
     def clip_weights(self):
         for weight in self.critic.parameters():
@@ -131,7 +136,7 @@ class WGANGP(pl.LightningModule):
         real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
-        if self.loss_type == "wgan-gp1" or self.loss_type == "wgan-gp2":
+        if self.loss_type in ["wgan-gp1", "wgan-gp2"]:
             gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
         elif self.loss_type == "wgan-gp-div":
             gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, self.real_images, fake_images)
@@ -198,7 +203,7 @@ class WGANGP(pl.LightningModule):
             optimizer.zero_grad()
 
     def configure_optimizers(self):
-        if self.loss_type == "wgan-gp1" or self.loss_type == "wgan-gp2" or self.loss_type == "wgan-gp-div":
+        if self.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div", "lsgan"]:
             return [
                 optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
                 optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
@@ -257,7 +262,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image shape width")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
-        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "wgan-gp-div"], default="wgan-gp1")
+        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="lsgan")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")

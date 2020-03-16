@@ -5,10 +5,14 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 
 from gans.wgan_gp import WGANGP
+from gans.wgan_gp.models import Generator, Critic
+
 
 
 def main(hparams):
-    model = WGANGP(hparams)
+    generator = Generator(hparams)
+    critic = Critic(hparams)
+    model = WGANGP(hparams, generator, critic)
 
     if hparams.logger == "none":
         logger = False
@@ -19,6 +23,7 @@ def main(hparams):
             project_name="research-project-gan",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
             experiment_name="Wasserstein GAN+GP (" + hparams.dataset + ")"  # Optional
+
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
@@ -51,4 +56,11 @@ if __name__ == "__main__":
 
     parser = WGANGP.add_model_specific_args(parser)
 
-    main(parser.parse_args())
+    hparams = parser.parse_args()
+
+    if hparams.dataset == "mnist" or hparams.dataset == "fashion_mnist":
+        hparams.image_channels = 1
+    elif hparams.dataset == "cifar10":
+        hparams.image_channels = 3
+
+    main(hparams)
