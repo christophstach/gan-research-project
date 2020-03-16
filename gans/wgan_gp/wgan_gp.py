@@ -195,6 +195,10 @@ class WGANGP(pl.LightningModule):
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
         if optimizer_idx == 0:
+            for i in range(self.hparams.warmup_layers):
+                for param in self.critic.main[i]:
+                    param.requires_grad = self.trainer.global_step > self.hparams.warmup_iterations
+
             optimizer.step()
 
             if self.hparams.loss_type == "wgan-wc":
@@ -268,6 +272,9 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
         system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="wgan-gp1")
+
+        system_group.add_argument("-wi", "--warmup-iterations", type=int, default=2000, help="")
+        system_group.add_argument("-wl", "--warmup-layers", type=int, default=1, help="")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
