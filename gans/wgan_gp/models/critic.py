@@ -79,8 +79,8 @@ class Critic(pl.LightningModule):
         val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
         val_acc_mean = torch.stack([x["val_acc"] for x in outputs]).mean()
 
-        logs = {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean}
-        return {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean, "progress_bar": logs}
+        logs = {"val_loss_mean": val_loss_mean, "val_acc_mean": val_acc_mean}
+        return OrderedDict({"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean, "progress_bar": logs})
 
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),
