@@ -84,7 +84,7 @@ class WGANGP(pl.LightningModule):
 
         if self.hparams.loss_type == "wgan-gp1":
             # Random weight term for interpolation between real and fake samples
-            alpha = torch.randn(self.hparams.batch_size, 1, 1, 1, device=real_images.device)
+            alpha = torch.randn(real_images.size(0), 1, 1, 1, device=real_images.device)
             # Get random interpolation between real and fake samples
             interpolates = alpha * real_images + ((1 - alpha) * fake_images)
         elif self.hparams.loss_type == "wgan-gp2":
@@ -135,7 +135,7 @@ class WGANGP(pl.LightningModule):
     def training_step_critic(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
+        noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
         fake_images = self.forward(noise, self.y).detach()
         real_validity = self.critic(self.real_images, self.y)
@@ -155,7 +155,7 @@ class WGANGP(pl.LightningModule):
     def training_step_generator(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
+        noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
         fake_images = self.forward(noise, self.y)
         fake_validity = self.critic(fake_images, self.y)
