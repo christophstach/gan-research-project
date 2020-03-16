@@ -70,7 +70,7 @@ class Critic(pl.LightningModule):
         prediction = self.forward(x, y)
 
         loss = F.cross_entropy(prediction, y)
-        acc = accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1))
+        acc = torch.tensor(accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1)), device=loss.device)
 
         logs = {"val_acc": acc}
         return OrderedDict({"val_loss": loss, "val_acc": acc, "progress_bar": logs})
