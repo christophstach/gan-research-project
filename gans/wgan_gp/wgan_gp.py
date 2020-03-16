@@ -175,7 +175,7 @@ class WGANGP(pl.LightningModule):
     def on_epoch_end(self):
         if self.logger:
             num_images = 16
-            noise = torch.randn(num_images, self.noise_size, device=self.real_images.device)
+            noise = torch.randn(num_images, self.hparams.noise_size, device=self.real_images.device)
             y = torch.tensor(range(num_images), device=self.real_images.device)
 
             fake_images = self.forward(noise, y)
