@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from sklearn.metrics import accuracy_score
 
 
 class Critic(pl.LightningModule):
@@ -67,7 +68,8 @@ class Critic(pl.LightningModule):
         x, y = batch
         prediction = self.forward(x, y)
         loss = F.cross_entropy(prediction, y)
-        return OrderedDict({"loss": loss})
+        logs = {"accuracy": accuracy_score(y, prediction.argmax(dim=1))}
+        return OrderedDict({"loss": loss, "progress_bar": logs})
 
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),
