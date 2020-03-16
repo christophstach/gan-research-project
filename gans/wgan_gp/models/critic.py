@@ -73,11 +73,11 @@ class Critic(pl.LightningModule):
         acc = accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1))
 
         logs = {"val_acc": acc}
-        return OrderedDict({"val_loss": loss, "val_acc": acc, "logs": logs})
+        return OrderedDict({"val_loss": loss, "val_acc": acc, "progress_bar": logs})
 
     def validation_epoch_end(self, outputs):
         val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
-        val_acc_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
+        val_acc_mean = torch.stack([x["val_acc"] for x in outputs]).mean()
 
         logs = {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean}
         return {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean, "progress_bar": logs}
