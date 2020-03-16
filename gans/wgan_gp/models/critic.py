@@ -70,14 +70,17 @@ class Critic(pl.LightningModule):
         prediction = self.forward(x, y)
 
         loss = F.cross_entropy(prediction, y)
-        return OrderedDict({"val_loss": loss, "val_acc": accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1))})
+        acc = accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1))
+
+        logs = {"val_acc": acc}
+        return OrderedDict({"val_loss": loss, "val_acc": acc, "logs": logs})
 
     def validation_epoch_end(self, outputs):
         val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
         val_acc_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
 
         logs = {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean}
-        return {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean, "logs": logs}
+        return {"val_loss": val_loss_mean, "val_acc_mean": val_acc_mean, "progress_bar": logs}
 
     def configure_optimizers(self):
         return optim.Adam(self.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),
