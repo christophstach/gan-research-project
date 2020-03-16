@@ -69,7 +69,7 @@ class Critic(pl.LightningModule):
         prediction = self.forward(x, y)
         loss = F.cross_entropy(prediction, y)
         # find better solution
-        logs = {"accuracy": accuracy_score(y, prediction.cpu().argmax(dim=1))}
+        logs = {"accuracy": accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1))}
         return OrderedDict({"loss": loss, "progress_bar": logs})
 
     def configure_optimizers(self):
