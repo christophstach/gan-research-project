@@ -8,6 +8,7 @@ import torch
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
@@ -18,22 +19,6 @@ class WGANGP(pl.LightningModule):
         super().__init__()
 
         self.hparams = hparams
-        self.dataset = self.hparams.dataset
-
-        self.loss_type = self.hparams.loss_type
-        self.image_channels = self.hparams.image_channels
-        self.image_size = self.hparams.image_size
-        self.alternation_interval = self.hparams.alternation_interval
-        self.batch_size = self.hparams.batch_size
-        self.noise_size = self.hparams.noise_size
-        self.y_size = self.hparams.y_size
-        self.learning_rate = self.hparams.learning_rate
-        self.gradient_penalty_term = self.hparams.gradient_penalty_term
-        self.dataloader_num_workers = self.hparams.dataloader_num_workers
-        self.weight_clipping = self.hparams.weight_clipping
-
-        self.beta1 = self.hparams.beta1
-        self.beta2 = self.hparams.beta2
 
         self.generator = generator
         self.critic = critic
@@ -49,30 +34,42 @@ class WGANGP(pl.LightningModule):
         pass
 
     def on_init_end(self, trainer):
-        pass
-
-    def on_train_start(self):
         if isinstance(self.logger, CometLogger):
             self.logger.experiment.set_model_graph(str(self))
+
+    def on_train_start(self):
+        critic_trainer = Trainer(
+            min_epochs=self.hparams.pretrain_min_epochs,
+            max_epochs=self.hparams.pretrain_max_epochs,
+            gpus=self.hparams.gpus,
+            nb_gpu_nodes=self.hparams.nodes,
+            accumulate_grad_batches=self.hparams.pretrain_accumulate_grad_batches,
+            progress_bar_refresh_rate=20,
+            early_stop_callback=False,
+            checkpoint_callback=False,
+            logger=False
+        )
+
+
 
     def forward(self, x, y):
         return self.generator(x, y)
 
     def critic_loss(self, real_validity, fake_validity):
-        if self.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
+        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
             return fake_validity.mean() - real_validity.mean()
-        elif self.loss_type == "lsgan":
+        elif self.hparams.loss_type == "lsgan":
             return 0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()
 
     def generator_loss(self, fake_validity):
-        if self.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
+        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
             return -fake_validity.mean()
-        elif self.loss_type == "lsgan":
+        elif self.hparams.loss_type == "lsgan":
             return 0.5 * ((fake_validity - 1) ** 2).mean()
 
     def clip_weights(self):
         for weight in self.critic.parameters():
-            weight.data.clamp_(-self.weight_clipping, self.weight_clipping)
+            weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
@@ -130,15 +127,15 @@ class WGANGP(pl.LightningModule):
     def training_step_critic(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.real_images.size(0), self.noise_size, device=self.real_images.device)
+        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
 
         fake_images = self.forward(noise, self.y).detach()
         real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
-        if self.loss_type in ["wgan-gp1", "wgan-gp2"]:
-            gradient_penalty = self.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
-        elif self.loss_type == "wgan-gp-div":
+        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2"]:
+            gradient_penalty = self.hparams.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
+        elif self.hparams.loss_type == "wgan-gp-div":
             gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, self.real_images, fake_images)
         else:
             gradient_penalty = 0
@@ -150,7 +147,7 @@ class WGANGP(pl.LightningModule):
     def training_step_generator(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.real_images.size(0), self.noise_size, device=self.real_images.device)
+        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
 
         fake_images = self.forward(noise, self.y)
         fake_validity = self.critic(fake_images, self.y)
@@ -192,33 +189,33 @@ class WGANGP(pl.LightningModule):
         if optimizer_idx == 0:
             optimizer.step()
 
-            if self.loss_type == "wgan-wc":
+            if self.hparams.loss_type == "wgan-wc":
                 self.clip_weights()
 
             optimizer.zero_grad()
 
         # update generator opt every {self.alternation_interval} steps
-        if optimizer_idx == 1 and batch_idx % self.alternation_interval == 0:
+        if optimizer_idx == 1 and batch_idx % self.hparams.alternation_interval == 0:
             optimizer.step()
             optimizer.zero_grad()
 
     def configure_optimizers(self):
-        if self.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div", "lsgan"]:
+        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div", "lsgan"]:
             return [
-                optim.Adam(self.critic.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2)),
-                optim.Adam(self.generator.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
+                optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),
+                optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
             ]
-        elif self.loss_type == "wgan-wc":
+        elif self.hparams.loss_type == "wgan-wc":
             return [
                 optim.RMSprop(self.critic.parameters(), lr=self.learning_rate),
                 optim.RMSprop(self.generator.parameters(), lr=self.learning_rate)
             ]
 
     def prepare_data(self):
-        train_resize = transforms.Resize((self.image_size, self.image_size))
+        train_resize = transforms.Resize((self.hparams.image_size, self.hparams.image_size))
         test_resize = transforms.Resize(224, 224)
 
-        if self.image_channels == 3:
+        if self.hparams.image_channels == 3:
             train_normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         else:
             train_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
@@ -228,13 +225,13 @@ class WGANGP(pl.LightningModule):
         train_transform = transforms.Compose([train_resize, transforms.ToTensor(), train_normalize])
         test_transform = transforms.Compose([test_resize, transforms.ToTensor(), test_normalize])
 
-        if self.dataset == "mnist":
+        if self.hparams.dataset == "mnist":
             train_set = MNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
             test_set = MNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
-        elif self.dataset == "fashion_mnist":
+        elif self.hparams.dataset == "fashion_mnist":
             train_set = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
             test_set = FashionMNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
-        elif self.dataset == "cifar10":
+        elif self.hparams.dataset == "cifar10":
             train_set = CIFAR10(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
             test_set = CIFAR10(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         else:
@@ -244,7 +241,7 @@ class WGANGP(pl.LightningModule):
         self.test_dataset, self.val_dataset = random_split(test_set, [len(test_set) - 1000, 1000])
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, num_workers=self.dataloader_num_workers, batch_size=self.batch_size)
+        return DataLoader(self.train_dataset, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -252,7 +249,7 @@ class WGANGP(pl.LightningModule):
         train_group = parser.add_argument_group("Training")
         train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
-        train_group.add_argument("-acb", "--accumulate-grad-batches", type=int, default=1, help="Accumulate gradient batches")
+        train_group.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Accumulate gradient batches")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
         train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
         train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
@@ -270,9 +267,14 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
 
         critic_group = parser.add_argument_group("Critic")
-        critic_group.add_argument("-clrs", "--critic-leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
+        critic_group.add_argument("-lrs", "--leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
         critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=100, help="Gradient penalty term")
         critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
+
+        pretrain_group = parser.add_argument_group("Pretrain")
+        pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=float, default=1, help="")
+        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=20, help="")
+        pretrain_group.add_argument("-pagb", "--pretrain-accumulate_grad_batches", type=float, default=1, help="")
 
         generator_group = parser.add_argument_group("Generator")
 

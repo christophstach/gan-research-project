@@ -8,7 +8,6 @@ from gans.wgan_gp import WGANGP
 from gans.wgan_gp.models import Generator, Critic
 
 
-
 def main(hparams):
     generator = Generator(hparams)
     critic = Critic(hparams)
