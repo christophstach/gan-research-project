@@ -270,14 +270,14 @@ class WGANGP(pl.LightningModule):
         test_transform = transforms.Compose([test_resize, transforms.ToTensor(), test_normalize])
 
         if self.hparams.dataset == "mnist":
-            train_set = MNIST(os.getcwd() + "/.ds", train=True, download=True, transform=train_transform)
-            test_set = MNIST(os.getcwd() + "/.ds", train=False, download=True, transform=test_transform)
+            train_set = MNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
+            test_set = MNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         elif self.hparams.dataset == "fashion_mnist":
-            train_set = FashionMNIST(os.getcwd() + "/.ds", train=True, download=True, transform=train_transform)
-            test_set = FashionMNIST(os.getcwd() + "/.ds", train=False, download=True, transform=test_transform)
+            train_set = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
+            test_set = FashionMNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         elif self.hparams.dataset == "cifar10":
-            train_set = CIFAR10(os.getcwd() + "/.ds", train=True, download=True, transform=train_transform)
-            test_set = CIFAR10(os.getcwd() + "/.ds", train=False, download=True, transform=test_transform)
+            train_set = CIFAR10(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
+            test_set = CIFAR10(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
 
