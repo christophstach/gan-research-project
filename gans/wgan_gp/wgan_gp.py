@@ -279,9 +279,9 @@ class WGANGP(pl.LightningModule):
         critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         pretrain_group = parser.add_argument_group("Pretrain")
-        pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
+        pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=True, help="Enables pretraining of the critic with an classification layer on the real data")
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=float, default=1, help="Minimum pretrain epochs")
-        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=5, help="Maximum pretrain epochs")
+        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=10, help="Maximum pretrain epochs")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
 
         generator_group = parser.add_argument_group("Generator")

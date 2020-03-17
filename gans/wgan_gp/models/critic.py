@@ -37,11 +37,28 @@ class Critic(pl.LightningModule):
         )
 
         self.validator = nn.Sequential(
-            nn.Conv2d(self.hparams.image_size * 4 + self.hparams.y_embedding_size, 1, 4, 1, 0, bias=False)
+            nn.Conv2d(self.hparams.image_size * 4, 1024, 4, 1, 0, bias=False),
+
+            nn.Conv2d(1024, 512, 1, 1, 0, bias=False),
+            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+
+            nn.Conv2d(512, 256, 1, 1, 0, bias=False),
+            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+
+            nn.Conv2d(256, 1, 1, 1, 0, bias=False),
         )
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(self.hparams.image_size * 4, self.hparams.y_size, 4, 1, 0, bias=False)
+            nn.Conv2d(self.hparams.image_size * 4, 1024, 4, 1, 0, bias=False),
+            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+
+            nn.Conv2d(1024, 512, 1, 1, 0, bias=False),
+            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+
+            nn.Conv2d(512, 256, 1, 1, 0, bias=False),
+            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+
+            nn.Conv2d(256, self.hparams.y_size, 1, 1, 0, bias=False),
         )
 
     def forward(self, x, y):
