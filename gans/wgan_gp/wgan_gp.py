@@ -192,9 +192,9 @@ class WGANGP(pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
         ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
-        logs = {"ic_score_mean": ic_score_mean}
 
-        return OrderedDict({"ic_score_mean": ic_score_mean, "progress_bar": logs, "logs": logs})
+        logs = {"ic_score_mean": ic_score_mean}
+        return OrderedDict({"ic_score_mean": ic_score_mean, "progress_bar": logs, "log": logs})
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
