@@ -188,8 +188,7 @@ class WGANGP(pl.LightningModule):
         logits = F.softmax(self.scorer(fake_images), dim=1)
         ic_score = inception_score(logits)
 
-        logs = {"ic_score": ic_score}
-        return OrderedDict({"ic_score": ic_score, "logs": logs})
+        return OrderedDict({"ic_score": ic_score,})
 
     def validation_epoch_end(self, outputs):
         ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
