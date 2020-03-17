@@ -189,13 +189,13 @@ class WGANGP(pl.LightningModule):
         ic_score = inception_score(logits)
 
         logs = {"ic_score": ic_score}
-        return OrderedDict({"ic_score": ic_score, "progress_bar": logs})
+        return OrderedDict({"ic_score": ic_score, "logs": logs})
 
     def validation_epoch_end(self, outputs):
         ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
         logs = {"ic_score_mean": ic_score_mean}
 
-        return OrderedDict({"ic_score_mean": ic_score_mean, "progress_bar": logs})
+        return OrderedDict({"ic_score_mean": ic_score_mean, "progress_bar": logs, "logs": logs})
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):

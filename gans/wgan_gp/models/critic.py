@@ -99,8 +99,7 @@ class Critic(pl.LightningModule):
         loss = F.cross_entropy(prediction, y)
         acc = torch.tensor(accuracy_score(y.cpu(), prediction.cpu().argmax(dim=1)), device=loss.device)
 
-        logs = {"val_acc": acc}
-        return OrderedDict({"val_loss": loss, "val_acc": acc, "progress_bar": logs})
+        return OrderedDict({"val_loss": loss, "val_acc": acc})
 
     def validation_epoch_end(self, outputs):
         val_loss_mean = torch.stack([x["val_loss"] for x in outputs]).mean()
