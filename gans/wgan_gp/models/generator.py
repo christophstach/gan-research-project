@@ -19,7 +19,7 @@ class Generator(pl.LightningModule):
             nn.BatchNorm2d(self.hparams.image_size * 2),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(self.hparams.image_size * 2, self.hparams.image_size * 2, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(self.hparams.image_size * 2, self.hparams.image_size, 4, 2, 1, bias=False),
             nn.BatchNorm2d(self.hparams.image_size),
             nn.ReLU(True),
 
