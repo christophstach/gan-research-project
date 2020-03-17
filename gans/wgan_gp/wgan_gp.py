@@ -169,7 +169,7 @@ class WGANGP(pl.LightningModule):
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
-            noise = torch.randn(self.hparams.y_size ** 10, self.hparams.noise_size, device=self.real_images.device)
+            noise = torch.randn(self.hparams.y_size ** 2, self.hparams.noise_size, device=self.real_images.device)
             y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device).repeat(self.hparams.y_size)
 
             fake_images = self.forward(noise, y)
@@ -189,9 +189,8 @@ class WGANGP(pl.LightningModule):
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
         if optimizer_idx == 0:
-            for layer in self.hparams.warmup_layers:
-                for param in self.critic.main[layer].parameters():
-                    param.requires_grad = self.trainer.global_step > self.hparams.warmup_iterations
+            for param in self.critic.features.parameters():
+                param.requires_grad = self.trainer.global_step > self.hparams.warmup_iterations
 
             optimizer.step()
 
@@ -268,7 +267,6 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="wgan-gp1")
 
         system_group.add_argument("-wi", "--warmup-iterations", type=int, default=10000, help="")
-        system_group.add_argument("-wl", "--warmup-layers", type=int, nargs="+", default=[1, 3, 5, 7], help="")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
@@ -283,7 +281,7 @@ class WGANGP(pl.LightningModule):
         pretrain_group = parser.add_argument_group("Pretrain")
         pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=True, help="")
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=float, default=1, help="")
-        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=10, help="")
+        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=5, help="")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate_grad_batches", type=float, default=1, help="")
 
         generator_group = parser.add_argument_group("Generator")

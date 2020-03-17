@@ -15,7 +15,7 @@ class Critic(pl.LightningModule):
         self.hparams = hparams
         self.pretrain = False
 
-        self.main = nn.Sequential(
+        self.features = nn.Sequential(
             # input is (self.hparams.image_channels) x 64 x 64
             nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, 4, 2, 1, bias=False),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
@@ -48,7 +48,7 @@ class Critic(pl.LightningModule):
         )
 
     def forward(self, x, y):
-        x = self.main(x)
+        x = self.features(x)
 
         if self.pretrain:
             x = self.classifier(x)
