@@ -176,7 +176,7 @@ class WGANGP(pl.LightningModule):
         y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
 
         fake_images = self.forward(noise, y).detach()
-        fake_images = F.interpolate(fake_images, (224, 224))
+        fake_images = F.interpolate(fake_images, (299, 299))
 
         if fake_images.size(1) == 1:
             fake_images = torch.stack([
