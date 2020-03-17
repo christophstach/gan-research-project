@@ -254,7 +254,7 @@ class WGANGP(pl.LightningModule):
         train_group = parser.add_argument_group("Training")
         train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
-        train_group.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Accumulate gradient batches")
+        train_group.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
         train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
         train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
@@ -266,7 +266,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
         system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="wgan-gp1")
 
-        system_group.add_argument("-wi", "--warmup-iterations", type=int, default=10000, help="")
+        system_group.add_argument("-wi", "--warmup-iterations", type=int, default=0, help="Number of iterations to freeze the critics feature parameters")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
@@ -279,10 +279,10 @@ class WGANGP(pl.LightningModule):
         critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         pretrain_group = parser.add_argument_group("Pretrain")
-        pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=True, help="")
-        pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=float, default=1, help="")
-        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=5, help="")
-        pretrain_group.add_argument("-pagb", "--pretrain-accumulate_grad_batches", type=float, default=1, help="")
+        pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
+        pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=float, default=1, help="Minimum pretrain epochs")
+        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=5, help="Maximum pretrain epochs")
+        pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
 
         generator_group = parser.add_argument_group("Generator")
 
