@@ -169,11 +169,11 @@ class WGANGP(pl.LightningModule):
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
-            noise = torch.randn(self.y_size ** 10, self.hparams.noise_size, device=self.real_images.device)
-            y = torch.tensor(range(self.y_size), device=self.real_images.device).repeat(self.y_size)
+            noise = torch.randn(self.hparams.y_size ** 10, self.hparams.noise_size, device=self.real_images.device)
+            y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device).repeat(self.hparams.y_size)
 
             fake_images = self.forward(noise, y)
-            grid = torchvision.utils.make_grid(fake_images, nrow=self.y_size, padding=0)
+            grid = torchvision.utils.make_grid(fake_images, nrow=self.hparams.y_size, padding=0)
 
             if isinstance(self.logger, TensorBoardLogger):
                 # for tensorboard
