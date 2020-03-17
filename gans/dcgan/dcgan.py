@@ -123,7 +123,7 @@ class DCGAN(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(
             MNIST(
-                os.getcwd() + "/.datasets",
+                os.getcwd() + "/.ds",
                 train=True,
                 download=True,
                 transform=transforms.Compose([

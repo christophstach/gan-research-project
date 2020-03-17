@@ -129,11 +129,11 @@ class WGAN(pl.LightningModule):
     def prepare_data(self):
         # download only
         if self.dataset == "mnist":
-            MNIST(os.getcwd() + "/.datasets", train=True, download=True)
+            MNIST(os.getcwd() + "/.ds", train=True, download=True)
         elif self.dataset == "fashion_mnist":
-            FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True)
+            FashionMNIST(os.getcwd() + "/.ds", train=True, download=True)
         elif self.dataset == "cifar10":
-            CIFAR10(os.getcwd() + "/.datasets", train=True, download=True)
+            CIFAR10(os.getcwd() + "/.ds", train=True, download=True)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
 
@@ -153,11 +153,11 @@ class WGAN(pl.LightningModule):
         ])
 
         if self.dataset == "mnist":
-            dataset = MNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
+            dataset = MNIST(os.getcwd() + "/.ds", train=True, download=False, transform=transform)
         elif self.dataset == "fashion_mnist":
-            dataset = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
+            dataset = FashionMNIST(os.getcwd() + "/.ds", train=True, download=False, transform=transform)
         elif self.dataset == "cifar10":
-            dataset = CIFAR10(os.getcwd() + "/.datasets", train=True, download=False, transform=transform)
+            dataset = CIFAR10(os.getcwd() + "/.ds", train=True, download=False, transform=transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
 
