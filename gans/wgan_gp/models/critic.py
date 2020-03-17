@@ -16,21 +16,18 @@ class Critic(pl.LightningModule):
         self.pretrain = False
 
         self.features = nn.Sequential(
-            # input is (self.hparams.image_channels) x 64 x 64
+
             nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, 4, 2, 1, bias=False),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
-            # state size. (self.hparams.image_size) x 32 x 32
+
             nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(self.hparams.image_size * 2),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
-            # state size. (self.hparams.image_size*2) x 16 x 16
+
             nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(self.hparams.image_size * 4),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
-            # state size. (self.hparams.image_size*4) x 8 x 8
-            nn.Conv2d(self.hparams.image_size * 4, self.hparams.image_size * 8, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(self.hparams.image_size * 8),
-            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+
+            # nn.Conv2d(self.hparams.image_size * 4, self.hparams.image_size * 8, 4, 2, 1, bias=False),
+            # nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
             # state size. (self.hparams.image_size*8) x 4 x 4
 
         )
@@ -40,11 +37,11 @@ class Critic(pl.LightningModule):
         )
 
         self.validator = nn.Sequential(
-            nn.Conv2d(self.hparams.image_size * 8 + self.hparams.y_embedding_size, 1, 4, 1, 0, bias=False)
+            nn.Conv2d(self.hparams.image_size * 4 + self.hparams.y_embedding_size, 1, 4, 1, 0, bias=False)
         )
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(self.hparams.image_size * 8, self.hparams.y_size, 4, 1, 0, bias=False)
+            nn.Conv2d(self.hparams.image_size * 4, self.hparams.y_size, 4, 1, 0, bias=False)
         )
 
     def forward(self, x, y):
