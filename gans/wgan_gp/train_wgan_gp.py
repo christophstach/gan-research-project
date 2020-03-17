@@ -1,6 +1,7 @@
 import os
 from argparse import ArgumentParser
 
+import torchvision.models as models
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 
@@ -11,7 +12,8 @@ from gans.wgan_gp.models import Generator, Critic
 def main(hparams):
     generator = Generator(hparams)
     critic = Critic(hparams)
-    model = WGANGP(hparams, generator, critic)
+    scorer = models.inception_v3(pretrained=True)
+    model = WGANGP(hparams, generator, critic, scorer)
 
     if hparams.logger == "none":
         logger = False

@@ -7,7 +7,6 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
-import torchvision.models as models
 import torchvision.transforms as transforms
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger
@@ -19,13 +18,14 @@ from gans.helpers.metrics import inception_score
 
 
 class WGANGP(pl.LightningModule):
-    def __init__(self, hparams, generator, critic):
+    def __init__(self, hparams, generator, critic, scorer):
         super().__init__()
 
         self.hparams = hparams
 
         self.generator = generator
         self.critic = critic
+        self.scorer = scorer
 
         self.real_images = None
         self.y = None
@@ -34,11 +34,7 @@ class WGANGP(pl.LightningModule):
         self.val_dataset = None
         self.test_dataset = None
 
-        self.score_model = None
-
     def on_train_start(self):
-        self.score_model = models.inception_v3(pretrained=True)
-
         if isinstance(self.logger, CometLogger):
             self.logger.experiment.set_model_graph(str(self))
 
@@ -193,7 +189,7 @@ class WGANGP(pl.LightningModule):
                 fake_images
             ], dim=1).squeeze()
 
-        logits = F.softmax(self.score_model(fake_images), dim=1)
+        logits = F.softmax(self.scorer(fake_images), dim=1)
         ic_score = inception_score(logits)
 
         logs = {"ic_score": ic_score}
@@ -325,7 +321,7 @@ class WGANGP(pl.LightningModule):
         pretrain_group = parser.add_argument_group("Pretrain")
         pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=True, help="Enables pretraining of the critic with an classification layer on the real data")
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
-        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=25, help="Maximum pretrain epochs")
+        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=1, help="Maximum pretrain epochs")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
 
         generator_group = parser.add_argument_group("Generator")
