@@ -37,7 +37,7 @@ class Critic(pl.LightningModule):
         )
 
         self.validator = nn.Sequential(
-            nn.Conv2d(self.hparams.image_size * 4, 1024, 4, 1, 0, bias=False),
+            nn.Conv2d(self.hparams.y_embedding_size + self.hparams.image_size * 4, 1024, 4, 1, 0, bias=False),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(1024, 512, 1, 1, 0, bias=False),
@@ -50,7 +50,7 @@ class Critic(pl.LightningModule):
         )
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(self.hparams.y_embedding_size + self.hparams.image_size * 4, 1024, 4, 1, 0, bias=False),
+            nn.Conv2d(self.hparams.image_size * 4, 1024, 4, 1, 0, bias=False),
             nn.BatchNorm2d(1024),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
