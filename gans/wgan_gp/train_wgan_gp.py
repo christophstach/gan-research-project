@@ -39,7 +39,9 @@ def main(hparams):
         progress_bar_refresh_rate=20,
         early_stop_callback=False,
         checkpoint_callback=False,
-        logger=logger
+        logger=logger,
+        fast_dev_run=False,
+        num_sanity_val_steps=0
     )
 
     trainer.fit(model)

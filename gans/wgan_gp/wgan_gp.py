@@ -4,13 +4,18 @@ from collections import OrderedDict
 
 import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
+import torchvision.models as models
 import torchvision.transforms as transforms
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
+
+from ..datasets import RangeDataset
+from ..helpers.metrics import inception_score
 
 
 class WGANGP(pl.LightningModule):
@@ -29,7 +34,11 @@ class WGANGP(pl.LightningModule):
         self.val_dataset = None
         self.test_dataset = None
 
+        self.score_model = None
+
     def on_train_start(self):
+        self.score_model = models.inception_v3(pretrained=True)
+
         if isinstance(self.logger, CometLogger):
             self.logger.experiment.set_model_graph(str(self))
 
@@ -166,6 +175,36 @@ class WGANGP(pl.LightningModule):
         if optimizer_idx == 1:  # Train generator
             return self.training_step_generator(batch)
 
+    def validation_step(self, batch, batch_idx):
+        resize = transforms.Resize(224, 224)
+        to_image = transforms.ToPILImage()
+        to_tensor = transforms.ToTensor()
+
+        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size)
+        y = torch.randint(0, 9, (self.hparams.batch_size,))
+
+        fake_images = self.forward(noise, y).detach()
+        fake_images = F.interpolate(fake_images, (224, 224))
+
+        if fake_images.size(1) == 1:
+            fake_images = torch.stack([
+                fake_images,
+                fake_images,
+                fake_images
+            ], dim=1).squeeze()
+
+        logits = F.softmax(self.score_model(fake_images), dim=1)
+        ic_score = inception_score(logits)
+
+        logs = {"ic_score": ic_score}
+        return OrderedDict({"ic_score": ic_score, "progress_bar": logs})
+
+    def validation_epoch_end(self, outputs):
+        ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
+        logs = {"ic_score_mean": ic_score_mean}
+
+        return OrderedDict({"ic_score_mean": ic_score_mean, "progress_bar": logs})
+
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
@@ -243,10 +282,14 @@ class WGANGP(pl.LightningModule):
             raise NotImplementedError("Custom dataset is not implemented yet")
 
         self.train_dataset = train_set
-        self.test_dataset, self.val_dataset = random_split(test_set, [len(test_set) - 1000, 1000])
+        self.val_dataset = RangeDataset(0, self.hparams.validations)
+        # self.test_dataset, self.val_dataset = random_split(test_set, [len(test_set) - 1000, 1000])
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
+
+    def val_dataloader(self):
+        return DataLoader(self.val_dataset, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -256,8 +299,9 @@ class WGANGP(pl.LightningModule):
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         train_group.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
-        train_group.add_argument("-b1", "--beta1", type=int, default=0.5, help="Momentum term beta1")
-        train_group.add_argument("-b2", "--beta2", type=int, default=0.999, help="Momentum term beta2")
+        train_group.add_argument("-b1", "--beta1", type=float, default=0.5, help="Momentum term beta1")
+        train_group.add_argument("-b2", "--beta2", type=float, default=0.999, help="Momentum term beta2")
+        train_group.add_argument("-v", "--validations", type=int, default=1000, help="Number of validations each epoch")
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
@@ -280,8 +324,8 @@ class WGANGP(pl.LightningModule):
 
         pretrain_group = parser.add_argument_group("Pretrain")
         pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=True, help="Enables pretraining of the critic with an classification layer on the real data")
-        pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=float, default=1, help="Minimum pretrain epochs")
-        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=float, default=25, help="Maximum pretrain epochs")
+        pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
+        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=25, help="Maximum pretrain epochs")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
 
         generator_group = parser.add_argument_group("Generator")
