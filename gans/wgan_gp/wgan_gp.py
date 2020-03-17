@@ -172,12 +172,8 @@ class WGANGP(pl.LightningModule):
             return self.training_step_generator(batch)
 
     def validation_step(self, batch, batch_idx):
-        resize = transforms.Resize(224, 224)
-        to_image = transforms.ToPILImage()
-        to_tensor = transforms.ToTensor()
-
-        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size)
-        y = torch.randint(0, 9, (self.hparams.batch_size,))
+        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
+        y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
 
         fake_images = self.forward(noise, y).detach()
         fake_images = F.interpolate(fake_images, (224, 224))
