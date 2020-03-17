@@ -14,8 +14,8 @@ from pytorch_lightning.logging import CometLogger, TensorBoardLogger
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
-from ..datasets import RangeDataset
-from ..helpers.metrics import inception_score
+from gans.datasets import RangeDataset
+from gans.helpers.metrics import inception_score
 
 
 class WGANGP(pl.LightningModule):
