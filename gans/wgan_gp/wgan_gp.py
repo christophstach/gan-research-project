@@ -1,4 +1,3 @@
-import math
 import os
 from argparse import ArgumentParser
 from collections import OrderedDict
@@ -170,12 +169,11 @@ class WGANGP(pl.LightningModule):
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
-            num_images = 16
-            noise = torch.randn(num_images, self.hparams.noise_size, device=self.real_images.device)
-            y = torch.tensor(range(num_images), device=self.real_images.device)
+            noise = torch.randn(self.y_size ** 10, self.hparams.noise_size, device=self.real_images.device)
+            y = torch.tensor(range(self.y_size), device=self.real_images.device).repeat(self.y_size)
 
             fake_images = self.forward(noise, y)
-            grid = torchvision.utils.make_grid(fake_images, nrow=int(math.sqrt(num_images)))
+            grid = torchvision.utils.make_grid(fake_images, nrow=self.y_size, padding=0)
 
             if isinstance(self.logger, TensorBoardLogger):
                 # for tensorboard

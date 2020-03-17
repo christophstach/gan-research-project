@@ -22,11 +22,10 @@ def main(hparams):
             project_name="research-project-gan",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
             experiment_name="Wasserstein GAN+GP (" + hparams.dataset + ")"  # Optional
-
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
-            save_dir=os.getcwd() + "/lightning_logs",
+            save_dir=os.getcwd() + "/lightning_logs"
         )
     else:
         raise ValueError("Must specific a logger")

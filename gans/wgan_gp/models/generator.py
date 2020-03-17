@@ -1,4 +1,5 @@
 import pytorch_lightning as pl
+import torch
 import torch.nn as nn
 
 
@@ -10,7 +11,7 @@ class Generator(pl.LightningModule):
 
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(self.hparams.noise_size, self.hparams.image_size * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(self.hparams.noise_size + self.hparams.y_embedding_size, self.hparams.image_size * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(self.hparams.image_size * 8),
             nn.ReLU(True),
             # state size. (self.image_size*8) x 4 x 4
@@ -31,7 +32,15 @@ class Generator(pl.LightningModule):
             # state size. (nc) x 64 x 64
         )
 
+        self.y_embedding = nn.Sequential(
+            nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.y_embedding_size)
+        )
+
     def forward(self, x, y):
+        y = self.y_embedding(y)
+        x = torch.cat([x, y], dim=1)
+        # Comment lines above to disable conditional gan
+
         x = x.view(x.size(0), -1, 1, 1)
         x = self.main(x)
 

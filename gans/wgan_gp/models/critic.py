@@ -35,8 +35,12 @@ class Critic(pl.LightningModule):
 
         )
 
+        self.y_embedding = nn.Sequential(
+            nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.y_embedding_size * 16)
+        )
+
         self.validator = nn.Sequential(
-            nn.Conv2d(self.hparams.image_size * 8, 1, 4, 1, 0, bias=False)
+            nn.Conv2d(self.hparams.image_size * 8 + self.hparams.y_embedding_size, 1, 4, 1, 0, bias=False)
         )
 
         self.classifier = nn.Sequential(
@@ -51,6 +55,11 @@ class Critic(pl.LightningModule):
             x = x.squeeze()
             x = torch.sigmoid(x)
         else:
+            y = self.y_embedding(y)
+            y = y.view(y.size(0), -1, 4, 4)
+            x = torch.cat([x, y], dim=1)
+            # Comment lines above to disable conditional gan
+
             x = self.validator(x)
             x = x.squeeze()
 
