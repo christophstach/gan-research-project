@@ -11,23 +11,23 @@ class Generator(pl.LightningModule):
 
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(self.hparams.noise_size + self.hparams.y_embedding_size, self.hparams.image_size * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(self.hparams.image_size * 8),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(self.hparams.image_size * 8, self.hparams.image_size * 4, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(self.hparams.noise_size + self.hparams.y_embedding_size, self.hparams.image_size * 4, 4, 1, 0, bias=False),
             nn.BatchNorm2d(self.hparams.image_size * 4),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d(self.hparams.image_size * 4, self.hparams.image_size * 2, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(self.hparams.image_size * 4, self.hparams.image_size * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(self.hparams.image_size * 2),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(self.hparams.image_size * 2, self.hparams.image_size * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.hparams.image_size),
             nn.ReLU(True),
 
             #            nn.ConvTranspose2d(self.hparams.image_size * 2, self.hparams.image_size, 4, 2, 1, bias=False),
             #            nn.BatchNorm2d(self.hparams.image_size),
             #            nn.ReLU(True),
 
-            nn.ConvTranspose2d(self.hparams.image_size * 2, self.hparams.image_channels, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(self.hparams.image_size, self.hparams.image_channels, 4, 2, 1, bias=False),
             nn.Tanh()
         )
 
