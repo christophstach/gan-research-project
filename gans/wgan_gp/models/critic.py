@@ -19,20 +19,19 @@ class Critic(pl.LightningModule):
 
             nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, 4, 2, 1),
             nn.LayerNorm([self.hparams.image_size, int(self.hparams.image_size / 2), int(self.hparams.image_size / 2)]),
-            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+            nn.PReLU(self.hparams.image_size),
 
             nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, 4, 2, 1),
             nn.LayerNorm([self.hparams.image_size * 2, int(self.hparams.image_size / 4), int(self.hparams.image_size / 4)]),
-            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+            nn.PReLU(self.hparams.image_size * 2),
 
             nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, 4, 2, 1),
             nn.LayerNorm([self.hparams.image_size * 4, int(self.hparams.image_size / 8), int(self.hparams.image_size / 8)]),
-            nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
+            nn.PReLU(self.hparams.image_size * 4),
 
             # nn.Conv2d(self.hparams.image_size * 4, self.hparams.image_size * 8, 4, 2, 1),
             # nn.LayerNorm([self.hparams.image_size * 8, int(self.hparams.image_size / 16), int(self.hparams.image_size / 16)]),
-            # nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
-            # state size. (self.hparams.image_size*8) x 4 x 4
+            # nn.PReLU(self.hparams.image_size * 8),
 
         )
 

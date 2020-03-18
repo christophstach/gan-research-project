@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class UpsampleConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, upscale_factor=2, padding_mode="zero"):
+    def __init__(self, in_channels, out_channels, kernel_size=3, upscale_factor=2, padding_mode="zeros"):
         super().__init__()
 
         self.main = nn.Sequential(
@@ -27,7 +27,7 @@ class UpsampleConv2d(nn.Module):
 
 
 class Conv2dPixelShuffle(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, upscale_factor=2, padding_mode="zero"):
+    def __init__(self, in_channels, out_channels, kernel_size=3, upscale_factor=2, padding_mode="zeros"):
         super().__init__()
 
         self.main = nn.Sequential(
