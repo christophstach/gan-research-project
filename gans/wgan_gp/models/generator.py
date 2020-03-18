@@ -41,7 +41,4 @@ class Generator(pl.LightningModule):
         x = x.view(x.size(0), -1, 1, 1)
         x = self.main(x)
 
-        print(x.size())
-        exit(0)
-
         return x
