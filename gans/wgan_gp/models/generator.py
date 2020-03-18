@@ -13,15 +13,15 @@ class Generator(pl.LightningModule):
             # input is Z, going into a convolution
             nn.ConvTranspose2d(self.hparams.noise_size + self.hparams.y_embedding_size, self.hparams.image_size * 4, 4, 1, 0),
             nn.InstanceNorm2d(self.hparams.image_size * 4),
-            nn.PReLU(self.hparams.image_size * 4),
+            nn.PReLU(),
 
             nn.ConvTranspose2d(self.hparams.image_size * 4, self.hparams.image_size * 2, 4, 2, 1),
             nn.InstanceNorm2d(self.hparams.image_size * 2),
-            nn.PReLU(self.hparams.image_size * 2),
+            nn.PReLU(),
 
             nn.ConvTranspose2d(self.hparams.image_size * 2, self.hparams.image_size, 4, 2, 1),
             nn.InstanceNorm2d(self.hparams.image_size),
-            nn.PReLU(self.hparams.image_size),
+            nn.PReLU(),
 
             #            nn.ConvTranspose2d(self.hparams.image_size * 2, self.hparams.image_size, 4, 2, 1),
             #            nn.InstanceNorm2d(self.hparams.image_size),
