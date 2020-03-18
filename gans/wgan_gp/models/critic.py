@@ -18,15 +18,19 @@ class Critic(pl.LightningModule):
         self.features = nn.Sequential(
 
             nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, 4, 2, 1),
+            nn.LayerNorm([self.hparams.image_size, int(self.hparams.image_size / 2), int(self.hparams.image_size / 2)]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, 4, 2, 1),
+            nn.LayerNorm([self.hparams.image_size * 2, int(self.hparams.image_size / 4), int(self.hparams.image_size / 4)]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, 4, 2, 1),
+            nn.LayerNorm([self.hparams.image_size * 4, int(self.hparams.image_size / 8), int(self.hparams.image_size / 8)]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             # nn.Conv2d(self.hparams.image_size * 4, self.hparams.image_size * 8, 4, 2, 1),
+            # nn.LayerNorm([self.hparams.image_size * 8, int(self.hparams.image_size / 16), int(self.hparams.image_size / 16)]),
             # nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
             # state size. (self.hparams.image_size*8) x 4 x 4
 
@@ -38,12 +42,15 @@ class Critic(pl.LightningModule):
 
         self.validator = nn.Sequential(
             nn.Conv2d(self.hparams.y_embedding_size + self.hparams.image_size * 4, 1024, 4, 1, 0),
+            nn.LayerNorm([1024, 1, 1]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(1024, 512, 1, 1, 0),
+            nn.LayerNorm([512, 1, 1]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(512, 256, 1, 1, 0),
+            nn.LayerNorm([256, 1, 1]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(256, 1, 1, 1, 0),
@@ -51,15 +58,15 @@ class Critic(pl.LightningModule):
 
         self.classifier = nn.Sequential(
             nn.Conv2d(self.hparams.image_size * 4, 1024, 4, 1, 0),
-            nn.BatchNorm2d(1024),
+            nn.LayerNorm([1024, 1, 1]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(1024, 512, 1, 1, 0),
-            nn.BatchNorm2d(512),
+            nn.LayerNorm([512, 1, 1]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(512, 256, 1, 1, 0),
-            nn.BatchNorm2d(256),
+            nn.LayerNorm([256, 1, 1]),
             nn.LeakyReLU(self.hparams.leaky_relu_slope, inplace=True),
 
             nn.Conv2d(256, self.hparams.y_size, 1, 1, 0),
