@@ -220,7 +220,7 @@ class WGANGP(pl.LightningModule):
         # update critic opt every step
         if optimizer_idx == 0:
             for param in self.critic.features.parameters():
-                param.requires_grad = self.trainer.global_step > self.hparams.warmup_iterations
+                param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
 
             optimizer.step()
 
@@ -301,7 +301,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
         system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="wgan-gp1")
 
-        system_group.add_argument("-wi", "--warmup-iterations", type=int, default=20000, help="Number of iterations to freeze the critics feature parameters")
+        system_group.add_argument("-wi", "--warmup-epochs", type=int, default=5, help="Number of epochs to freeze the critics feature parameters")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
