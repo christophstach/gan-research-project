@@ -16,15 +16,15 @@ class Critic(pl.LightningModule):
         self.pretrain = False
 
         self.features = nn.Sequential(
-            nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, 4, 2, 1),
+            nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, kernel_size=4, stride=2, padding=1),
             nn.LayerNorm([self.hparams.image_size, int(self.hparams.image_size / 2), int(self.hparams.image_size / 2)]),
             nn.PReLU(),
 
-            nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, 4, 2, 1),
+            nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, kernel_size=4, stride=2, padding=1),
             nn.LayerNorm([self.hparams.image_size * 2, int(self.hparams.image_size / 4), int(self.hparams.image_size / 4)]),
             nn.PReLU(),
 
-            nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, 4, 2, 1),
+            nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, kernel_size=4, stride=2, padding=1),
             nn.LayerNorm([self.hparams.image_size * 4, int(self.hparams.image_size / 8), int(self.hparams.image_size / 8)]),
             nn.PReLU()
         )
