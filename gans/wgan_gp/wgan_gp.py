@@ -9,7 +9,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from pytorch_lightning import Trainer
-from pytorch_lightning.logging import CometLogger, TensorBoardLogger
+from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
@@ -35,7 +35,7 @@ class WGANGP(pl.LightningModule):
         self.test_dataset = None
 
     def on_train_start(self):
-        if isinstance(self.logger, CometLogger):
+        if isinstance(self.logger, CometLogger) or isinstance(self.logger, WandbLogger):
             self.logger.experiment.set_model_graph(str(self))
 
         if self.hparams.pretrain_enabled:
@@ -208,8 +208,8 @@ class WGANGP(pl.LightningModule):
             if isinstance(self.logger, TensorBoardLogger):
                 # for tensorboard
                 self.logger.experiment.add_image("example_images", grid, 0)
-            elif isinstance(self.logger, CometLogger):
-                # for comet.ml
+            elif isinstance(self.logger, CometLogger) or isinstance(self.logger, WandbLogger):
+                # for comet.ml and wandb
                 self.logger.experiment.log_image(
                     grid.detach().cpu().numpy(),
                     name="generated_images",

@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 
 import torchvision.models as models
 from pytorch_lightning import Trainer
-from pytorch_lightning.logging import CometLogger, TensorBoardLogger
+from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 
 from gans.wgan_gp import WGANGP
 from gans.wgan_gp.models import Generator, Critic
@@ -24,6 +24,11 @@ def main(hparams):
             project_name="research-project-gan",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
             experiment_name="Wasserstein GAN+GP (" + hparams.dataset + ")"  # Optional
+        )
+    elif hparams.logger == "wandb":
+        logger = WandbLogger(
+            project="research-project-gan",
+            name="Wasserstein GAN+GP (" + hparams.dataset + ")"
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
@@ -52,7 +57,7 @@ def main(hparams):
 if __name__ == "__main__":
     parser = ArgumentParser(add_help=False)
     parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard"], required=True)
-    parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist"], required=True)
+    parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "wandb"], required=True)
     parser.add_argument("--gpus", type=int, nargs="+", default=0)
     parser.add_argument("--nodes", type=int, default=1)
 
