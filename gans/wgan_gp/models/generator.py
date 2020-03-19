@@ -16,7 +16,7 @@ class Generator(pl.LightningModule):
             # nn.InstanceNorm2d(self.hparams.image_size * 4),
             nn.BatchNorm2d(self.hparams.image_size * 4),
             # nn.PReLU(),
-            nn.PReLU,
+            nn.PReLU(),
 
             # Conv2dPixelShuffle(self.hparams.image_size * 4, self.hparams.image_size * 2, kernel_size=3, upscale_factor=2),
             nn.ConvTranspose2d(self.hparams.image_size * 4, self.hparams.image_size * 2, kernel_size=4, stride=2, padding=1),
