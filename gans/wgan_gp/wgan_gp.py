@@ -188,7 +188,7 @@ class WGANGP(pl.LightningModule):
         logits = F.softmax(self.scorer(fake_images), dim=1)
         ic_score = inception_score(logits)
 
-        return OrderedDict({"ic_score": ic_score,})
+        return OrderedDict({"ic_score": ic_score})
 
     def validation_epoch_end(self, outputs):
         ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
@@ -309,7 +309,6 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
 
         critic_group = parser.add_argument_group("Critic")
-        critic_group.add_argument("-lrs", "--leaky-relu-slope", type=float, default=0.2, help="Slope of the leakyReLU activation function in the critic")
         critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
         critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
