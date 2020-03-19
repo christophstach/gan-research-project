@@ -17,7 +17,7 @@ class Critic(pl.LightningModule):
 
         self.features = nn.Sequential(
             nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm([self.hparams.image_size, int(self.hparams.image_size / 2), int(self.hparams.image_size / 2)]),
+            # nn.LayerNorm([self.hparams.image_size, int(self.hparams.image_size / 2), int(self.hparams.image_size / 2)]),
             # nn.PReLU(),
             nn.LeakyReLU(0.2, inplace=True),
 
