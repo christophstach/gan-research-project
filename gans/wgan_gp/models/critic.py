@@ -101,8 +101,8 @@ class Critic(pl.LightningModule):
             # Comment lines above to disable conditional gan
 
             x = self.validator(x)
-            x = x.squeeze()
-
+            x = x.view(x.size(0), -1)
+            
         return x
 
     """Below methods are just used for pretraining the critic"""
