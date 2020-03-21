@@ -53,7 +53,8 @@ class WGANGP(pl.LightningModule):
                 progress_bar_refresh_rate=20,
                 early_stop_callback=False,
                 checkpoint_callback=False,
-                logger=False
+                logger=False,
+                distributed_backend="dp"
             )
 
             self.critic.pretrain = True
