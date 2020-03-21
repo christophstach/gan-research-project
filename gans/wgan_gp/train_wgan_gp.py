@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 import torchvision.models as models
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 from gans.wgan_gp import WGANGP
 from gans.wgan_gp.models import Generator, Critic
@@ -45,7 +46,13 @@ def main(hparams):
         accumulate_grad_batches=hparams.accumulate_grad_batches,
         progress_bar_refresh_rate=20,
         early_stop_callback=False,
-        checkpoint_callback=False,
+        checkpoint_callback=ModelCheckpoint(
+            filepath=os.getcwd()+ "/checkpoints/{epoch}-{negative_critic_loss:.2f}",
+            monitor="negative_critic_loss",
+            mode="min",
+            save_top_k=10,
+            period=1
+        ),
         logger=logger,
         fast_dev_run=False,
         num_sanity_val_steps=0

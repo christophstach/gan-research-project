@@ -149,7 +149,7 @@ class WGANGP(pl.LightningModule):
             gradient_penalty = 0
 
         loss = self.critic_loss(real_validity, fake_validity)
-        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty}
+        logs = {"critic_loss": loss, "negative_critic_loss": -loss, "gradient_penalty": gradient_penalty}
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
@@ -219,8 +219,9 @@ class WGANGP(pl.LightningModule):
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
         if optimizer_idx == 0:
-            for param in self.critic.features.parameters():
-                param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
+            if self.hparams.warmup_enabled:
+                for param in self.critic.features.parameters():
+                    param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
 
             optimizer.step()
 
@@ -301,6 +302,7 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
         system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="wgan-gp1")
 
+        system_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
         system_group.add_argument("-wi", "--warmup-epochs", type=int, default=5, help="Number of epochs to freeze the critics feature parameters")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
@@ -313,7 +315,7 @@ class WGANGP(pl.LightningModule):
         critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         pretrain_group = parser.add_argument_group("Pretrain")
-        pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=True, help="Enables pretraining of the critic with an classification layer on the real data")
+        pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
         pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=50, help="Maximum pretrain epochs")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
