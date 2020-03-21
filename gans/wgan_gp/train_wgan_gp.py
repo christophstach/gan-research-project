@@ -13,7 +13,7 @@ from gans.wgan_gp.models import Generator, Critic
 def main(hparams):
     generator = Generator(hparams)
     critic = Critic(hparams)
-    scorer = models.vgg13_bn(pretrained=True)
+    scorer = models.inception_v3(pretrained=True)
     model = WGANGP(hparams, generator, critic, scorer)
 
     if hparams.logger == "none":
