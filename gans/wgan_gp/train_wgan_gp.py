@@ -55,7 +55,8 @@ def main(hparams):
         ),
         logger=logger,
         fast_dev_run=False,
-        num_sanity_val_steps=0
+        num_sanity_val_steps=0,
+        distributed_backend="dp"
     )
 
     trainer.fit(model)

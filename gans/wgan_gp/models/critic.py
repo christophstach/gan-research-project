@@ -102,7 +102,7 @@ class Critic(pl.LightningModule):
 
             x = self.validator(x)
             x = x.view(x.size(0), -1)
-            
+
         return x
 
     """Below methods are just used for pretraining the critic"""
