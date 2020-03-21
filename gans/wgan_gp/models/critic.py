@@ -7,6 +7,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
+import math
+
 
 class Critic(pl.LightningModule):
     def __init__(self, hparams):
@@ -73,6 +75,17 @@ class Critic(pl.LightningModule):
 
             nn.Conv2d(128, self.hparams.y_size, kernel_size=1, stride=1),
         )
+
+    def init_weights(self, m):
+        if isinstance(m, nn.Conv2d):
+            # Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification
+            # https://arxiv.org/abs/1502.01852
+
+            torch.nn.init.kaiming_uniform_(m.weight, a=0.2, nonlinearity="leaky_relu")
+            if m.bias is not None:
+                fan_in, _ = torch.nn.init._calculate_fan_in_and_fan_out(m.weight)
+                bound = 1 / math.sqrt(fan_in)
+                torch.nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x, y):
         x = self.features(x)
