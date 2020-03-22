@@ -219,7 +219,7 @@ class WGANGP(pl.LightningModule):
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
                 self.logger.experiment.log({
                     "generated_images": [
-                        wandb.Image(grid.detach().cpu().numpy(), caption="image_grid")
+                        wandb.Image(grid.detach(), caption="image_grid")
                     ]
                 })
             elif isinstance(self.logger, CometLogger):
