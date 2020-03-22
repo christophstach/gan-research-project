@@ -299,7 +299,7 @@ class WGANGP(pl.LightningModule):
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
         train_group.add_argument("-b1", "--beta1", type=float, default=0.5, help="Momentum term beta1")
         train_group.add_argument("-b2", "--beta2", type=float, default=0.999, help="Momentum term beta2")
-        train_group.add_argument("-v", "--validations", type=int, default=1000, help="Number of validations each epoch")
+        train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
