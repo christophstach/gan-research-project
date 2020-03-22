@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
 from gans.helpers.metrics import inception_score
-
+import wandb
 
 class WGANGP(pl.LightningModule):
     def __init__(self, hparams, generator, critic, scorer):
@@ -217,6 +217,11 @@ class WGANGP(pl.LightningModule):
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
             elif isinstance(self.logger, WandbLogger):
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
+                self.logger.experiment.log({
+                    "generated_images": [
+                        wandb.Image(grid.detach().cpu().numpy(), caption="image_grid")
+                    ]
+                })
             elif isinstance(self.logger, CometLogger):
                 # for comet.ml and wandb
                 self.logger.experiment.log_image(
