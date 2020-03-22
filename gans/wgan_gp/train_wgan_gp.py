@@ -13,7 +13,7 @@ from gans.wgan_gp.models import Generator, Critic
 def main(hparams):
     generator = Generator(hparams)
     critic = Critic(hparams)
-    scorer = models.inception_v3(pretrained=True)
+    scorer = models.mobilenet_v2(pretrained=True)
     model = WGANGP(hparams, generator, critic, scorer)
 
     if hparams.logger == "none":
@@ -47,7 +47,7 @@ def main(hparams):
         progress_bar_refresh_rate=20,
         early_stop_callback=False,
         checkpoint_callback=ModelCheckpoint(
-            filepath=os.getcwd()+ "/checkpoints/{epoch}-{negative_critic_loss:.2f}",
+            filepath=os.getcwd()+ "/checkpoints/{epoch}-{negative_critic_loss:.5f}",
             monitor="negative_critic_loss",
             mode="min",
             save_top_k=10,

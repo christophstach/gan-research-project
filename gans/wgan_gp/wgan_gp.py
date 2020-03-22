@@ -13,7 +13,6 @@ from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogge
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
-from gans.ds import RangeDataset
 from gans.helpers.metrics import inception_score
 
 
@@ -35,8 +34,10 @@ class WGANGP(pl.LightningModule):
         self.test_dataset = None
 
     def on_train_start(self):
-        if isinstance(self.logger, CometLogger) or isinstance(self.logger, WandbLogger):
+        if isinstance(self.logger, CometLogger):
             self.logger.experiment.set_model_graph(str(self))
+        elif isinstance(self.logger, WandbLogger):
+            pass
 
         if self.hparams.pretrain_enabled:
             train_set, val_set = random_split(self.train_dataset, [int(len(self.train_dataset) * 0.8), int(len(self.train_dataset) * 0.2)])
@@ -85,7 +86,7 @@ class WGANGP(pl.LightningModule):
 
         if self.hparams.loss_type == "wgan-gp1":
             # Random weight term for interpolation between real and fake samples
-            alpha = torch.randn(real_images.size(0), 1, 1, 1, device=real_images.device)
+            alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
             # Get random interpolation between real and fake samples
             interpolates = alpha * real_images + ((1 - alpha) * fake_images)
         elif self.hparams.loss_type == "wgan-gp2":
@@ -172,25 +173,6 @@ class WGANGP(pl.LightningModule):
         if optimizer_idx == 1:  # Train generator
             return self.training_step_generator(batch)
 
-    def validation_step(self, batch, batch_idx):
-        noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
-        y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
-
-        fake_images = self.forward(noise, y).detach()
-        fake_images = F.interpolate(fake_images, (299, 299))
-
-        if fake_images.size(1) == 1:
-            fake_images = torch.stack([
-                fake_images,
-                fake_images,
-                fake_images
-            ], dim=1).squeeze()
-
-        logits = F.softmax(self.scorer(fake_images), dim=1)
-        ic_score = inception_score(logits)
-
-        return OrderedDict({"ic_score": ic_score})
-
     def validation_epoch_end(self, outputs):
         ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
 
@@ -206,16 +188,43 @@ class WGANGP(pl.LightningModule):
             fake_images = self.forward(noise, y)
             grid = torchvision.utils.make_grid(fake_images, nrow=self.hparams.y_size, padding=0)
 
+            if self.hparams.validations > 0:
+                outputs = []
+                for _ in range(self.hparams.validations):
+                    noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
+                    y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
+
+                    fake_images = self.forward(noise, y).detach()
+                    fake_images = F.interpolate(fake_images, (299, 299))
+
+                    if fake_images.size(1) == 1:
+                        fake_images = torch.stack([
+                            fake_images,
+                            fake_images,
+                            fake_images
+                        ], dim=1).squeeze()
+
+                    logits = F.softmax(self.scorer(fake_images), dim=1)
+                    ic_score = inception_score(logits)
+                    outputs.append({"ic_score": ic_score})
+                ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
+            else:
+                ic_score_mean = torch.tensor(0)
+
             if isinstance(self.logger, TensorBoardLogger):
                 # for tensorboard
                 self.logger.experiment.add_image("example_images", grid, 0)
-            elif isinstance(self.logger, CometLogger) or isinstance(self.logger, WandbLogger):
+                self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
+            elif isinstance(self.logger, WandbLogger):
+                self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
+            elif isinstance(self.logger, CometLogger):
                 # for comet.ml and wandb
                 self.logger.experiment.log_image(
                     grid.detach().cpu().numpy(),
                     name="generated_images",
                     image_channels="first"
                 )
+                self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
@@ -275,14 +284,10 @@ class WGANGP(pl.LightningModule):
             raise NotImplementedError("Custom dataset is not implemented yet")
 
         self.train_dataset = train_set
-        self.val_dataset = RangeDataset(0, self.hparams.validations)
         # self.test_dataset, self.val_dataset = random_split(test_set, [len(test_set) - 1000, 1000])
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
-
-    def val_dataloader(self):
-        return DataLoader(self.val_dataset, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
 
     @staticmethod
     def add_model_specific_args(parent_parser):

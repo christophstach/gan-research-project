@@ -18,19 +18,15 @@ class Critic(pl.LightningModule):
         self.pretrain = False
 
         self.features = nn.Sequential(
-            nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, kernel_size=4, stride=2, padding=1, bias=False),
-            # nn.LayerNorm([self.hparams.image_size, int(self.hparams.image_size / 2), int(self.hparams.image_size / 2)]),
-            # nn.PReLU(),
+            nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, kernel_size=4, stride=2, padding=1, bias=False),
-            # nn.LayerNorm([self.hparams.image_size * 2, int(self.hparams.image_size / 4), int(self.hparams.image_size / 4)]),
-            # nn.PReLU(),
+            nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm([self.hparams.image_size * 2, int(self.hparams.image_size / 4), int(self.hparams.image_size / 4)]),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, kernel_size=4, stride=2, padding=1, bias=False),
-            # nn.LayerNorm([self.hparams.image_size * 4, int(self.hparams.image_size / 8), int(self.hparams.image_size / 8)]),
-            # nn.PReLU()
+            nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm([self.hparams.image_size * 4, int(self.hparams.image_size / 8), int(self.hparams.image_size / 8)]),
             nn.LeakyReLU(0.2, inplace=True)
         )
 
@@ -40,18 +36,15 @@ class Critic(pl.LightningModule):
 
         self.validator = nn.Sequential(
             nn.Conv2d(self.hparams.y_embedding_size + self.hparams.image_size * 4, 512, kernel_size=4, stride=1),
-            # nn.LayerNorm([512, 1, 1]),
-            # nn.PReLU(512),
+            nn.LayerNorm([512, 1, 1]),
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(512, 256, kernel_size=1, stride=1),
-            # nn.LayerNorm([256, 1, 1]),
-            # nn.PReLU(256),
+            nn.LayerNorm([256, 1, 1]),
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(256, 128, kernel_size=1, stride=1),
-            # nn.LayerNorm([129, 1, 1]),
-            # nn.PReLU(128),
+            nn.LayerNorm([129, 1, 1]),
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(128, 1, kernel_size=1, stride=1),
@@ -59,18 +52,15 @@ class Critic(pl.LightningModule):
 
         self.classifier = nn.Sequential(
             nn.Conv2d(self.hparams.image_size * 4, 512, kernel_size=4, stride=1),
-            # nn.LayerNorm([512, 1, 1]),
-            # nn.PReLU(512),
+            nn.LayerNorm([512, 1, 1]),
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(512, 256, kernel_size=1, stride=1),
-            # nn.LayerNorm([256, 1, 1]),
-            # nn.PReLU(256),
+            nn.LayerNorm([256, 1, 1]),
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(256, 128, kernel_size=1, stride=1),
-            # nn.LayerNorm([128, 1, 1]),
-            # nn.PReLU(128),
+            nn.LayerNorm([128, 1, 1]),
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(128, self.hparams.y_size, kernel_size=1, stride=1),
