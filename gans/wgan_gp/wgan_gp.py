@@ -247,15 +247,18 @@ class WGANGP(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div", "lsgan"]:
-            return [
-                optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),
-                optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
-            ]
+            critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),
+            generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
         elif self.hparams.loss_type == "wgan-wc":
-            return [
-                optim.RMSprop(self.critic.parameters(), lr=self.learning_rate),
-                optim.RMSprop(self.generator.parameters(), lr=self.learning_rate)
-            ]
+            critic_optimizer = optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
+            generator_optimizer = optim.RMSprop(self.generator.parameters(), lr=self.learning_rate)
+        else:
+            raise NotImplementedError()
+
+        critic_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
+        generator_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
+
+        return [critic_optimizer, generator_optimizer], [critic_lr_scheduler, generator_lr_scheduler]
 
     def prepare_data(self):
         train_resize = transforms.Resize((self.hparams.image_size, self.hparams.image_size))
