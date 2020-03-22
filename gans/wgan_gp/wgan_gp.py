@@ -151,7 +151,7 @@ class WGANGP(pl.LightningModule):
             gradient_penalty = 0
 
         loss = self.critic_loss(real_validity, fake_validity)
-        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": self.trainer.lr_schedulers[0]["scheduler"].get_lr()}
+        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": self.trainer.lr_schedulers[0]["scheduler"].get_last_lr()[0]}
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
@@ -163,7 +163,7 @@ class WGANGP(pl.LightningModule):
         fake_validity = self.critic(fake_images, self.y)
         loss = self.generator_loss(fake_validity)
 
-        logs = {"generator_loss": loss, "generator_lr": self.trainer.lr_schedulers[1]["scheduler"].get_lr()}
+        logs = {"generator_loss": loss, "generator_lr": self.trainer.lr_schedulers[1]["scheduler"].get_last_lr()[0]}
         return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
     def training_step(self, batch, batch_idx, optimizer_idx):
