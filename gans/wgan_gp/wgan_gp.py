@@ -247,7 +247,7 @@ class WGANGP(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div", "lsgan"]:
-            critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2)),
+            critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
             generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
         elif self.hparams.loss_type == "wgan-wc":
             critic_optimizer = optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
