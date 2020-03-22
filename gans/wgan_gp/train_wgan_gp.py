@@ -29,7 +29,7 @@ def main(hparams):
     elif hparams.logger == "wandb":
         logger = WandbLogger(
             project="research-project-gan",
-            name="Wasserstein GAN+GP (" + hparams.dataset + ")"
+            name="WGAN (" + hparams.dataset + ", " + hparams.loss_type + ")"
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(

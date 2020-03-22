@@ -223,7 +223,7 @@ class WGANGP(pl.LightningModule):
 
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
                 self.logger.experiment.log({
-                    "generated_images": wandb.Image(fake_image.detach(), caption=str(idx)) for idx, fake_image in enumerate(fake_images)
+                    "generated_images": [wandb.Image(fake_image, caption=str(idx)) for idx, fake_image in enumerate(fake_images)]
                 })
             elif isinstance(self.logger, CometLogger):
                 noise = torch.randn(self.hparams.y_size ** 2, self.hparams.noise_size, device=self.real_images.device)
