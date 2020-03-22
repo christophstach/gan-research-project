@@ -8,13 +8,14 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import wandb
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
 from gans.helpers.metrics import inception_score
-import wandb
+
 
 class WGANGP(pl.LightningModule):
     def __init__(self, hparams, generator, critic, scorer):
@@ -182,12 +183,6 @@ class WGANGP(pl.LightningModule):
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
-            noise = torch.randn(self.hparams.y_size ** 2, self.hparams.noise_size, device=self.real_images.device)
-            y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device).repeat(self.hparams.y_size)
-
-            fake_images = self.forward(noise, y)
-            grid = torchvision.utils.make_grid(fake_images, nrow=self.hparams.y_size, padding=0)
-
             if self.hparams.validations > 0:
                 outputs = []
                 for _ in range(self.hparams.validations):
@@ -212,18 +207,31 @@ class WGANGP(pl.LightningModule):
                 ic_score_mean = torch.tensor(0, device=self.real_images.device)
 
             if isinstance(self.logger, TensorBoardLogger):
-                # for tensorboard
+                noise = torch.randn(self.hparams.y_size ** 2, self.hparams.noise_size, device=self.real_images.device)
+                y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device).repeat(self.hparams.y_size)
+
+                fake_images = self.forward(noise, y)
+                grid = torchvision.utils.make_grid(fake_images, nrow=self.hparams.y_size, padding=0)
+
                 self.logger.experiment.add_image("example_images", grid, 0)
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
             elif isinstance(self.logger, WandbLogger):
+                noise = torch.randn(self.hparams.y_size, self.hparams.noise_size, device=self.real_images.device)
+                y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device)
+
+                fake_images = self.forward(noise, y)
+
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
                 self.logger.experiment.log({
-                    "generated_images": [
-                        wandb.Image(grid.detach(), caption="image_grid")
-                    ]
+                    "generated_images": wandb.Image(fake_image.detach(), caption=str(idx)) for idx, fake_image in enumerate(fake_images)
                 })
             elif isinstance(self.logger, CometLogger):
-                # for comet.ml and wandb
+                noise = torch.randn(self.hparams.y_size ** 2, self.hparams.noise_size, device=self.real_images.device)
+                y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device).repeat(self.hparams.y_size)
+
+                fake_images = self.forward(noise, y)
+                grid = torchvision.utils.make_grid(fake_images, nrow=self.hparams.y_size, padding=0)
+
                 self.logger.experiment.log_image(
                     grid.detach().cpu().numpy(),
                     name="generated_images",

@@ -24,7 +24,7 @@ def main(hparams):
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
             project_name="research-project-gan",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-            experiment_name="Wasserstein GAN+GP (" + hparams.dataset + ")"  # Optional
+            experiment_name="WGAN (" + hparams.dataset + ", " + hparams.loss_type + ")"  # Optional
         )
     elif hparams.logger == "wandb":
         logger = WandbLogger(
