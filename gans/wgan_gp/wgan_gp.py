@@ -209,7 +209,7 @@ class WGANGP(pl.LightningModule):
                     outputs.append({"ic_score": ic_score})
                 ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
             else:
-                ic_score_mean = torch.tensor(0)
+                ic_score_mean = torch.tensor(0, device=self.real_images.device)
 
             if isinstance(self.logger, TensorBoardLogger):
                 # for tensorboard
