@@ -48,8 +48,8 @@ def main(hparams):
         early_stop_callback=False,
         checkpoint_callback=ModelCheckpoint(
             filepath=os.getcwd()+ "/checkpoints/{epoch}-{negative_critic_loss:.5f}",
-            monitor="negative_critic_loss",
-            mode="min",
+            monitor="critic_loss",
+            mode="max",
             save_top_k=10,
             period=1
         ),
@@ -64,7 +64,7 @@ def main(hparams):
 
 if __name__ == "__main__":
     parser = ArgumentParser(add_help=False)
-    parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard"], required=True)
+    parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard", "wandb"], required=True)
     parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "wandb"], required=True)
     parser.add_argument("--gpus", type=int, nargs="+", default=0)
     parser.add_argument("--nodes", type=int, default=1)

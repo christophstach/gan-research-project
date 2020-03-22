@@ -129,3 +129,4 @@ lightning_logs
 
 
 notebooks/patrick
+wandb/*

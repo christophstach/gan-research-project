@@ -67,15 +67,15 @@ class WGANGP(pl.LightningModule):
 
     def critic_loss(self, real_validity, fake_validity):
         if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
-            return fake_validity.mean() - real_validity.mean()
+            return (fake_validity.mean() - real_validity.mean()).unsqueeze(0)
         elif self.hparams.loss_type == "lsgan":
-            return 0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()
+            return (0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()).unsqueeze(0)
 
     def generator_loss(self, fake_validity):
         if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
-            return -fake_validity.mean()
+            return (-fake_validity.mean()).unsqueeze(0)
         elif self.hparams.loss_type == "lsgan":
-            return 0.5 * ((fake_validity - 1) ** 2).mean()
+            return (0.5 * ((fake_validity - 1) ** 2).mean()).unsqueeze(0)
 
     def clip_weights(self):
         for weight in self.critic.parameters():
@@ -106,7 +106,7 @@ class WGANGP(pl.LightningModule):
         )[0]
 
         gradients = gradients.view(gradients.size(0), -1)
-        penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        penalty = (((gradients.norm(2, dim=1) - 1) ** 2).mean()).unsqueeze(0)
 
         return penalty
 
@@ -151,7 +151,7 @@ class WGANGP(pl.LightningModule):
             gradient_penalty = 0
 
         loss = self.critic_loss(real_validity, fake_validity)
-        logs = {"critic_loss": loss, "negative_critic_loss": -loss, "gradient_penalty": gradient_penalty}
+        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": self.trainer.lr_schedulers[0]["scheduler"].get_lr()}
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
@@ -161,9 +161,9 @@ class WGANGP(pl.LightningModule):
 
         fake_images = self.forward(noise, self.y)
         fake_validity = self.critic(fake_images, self.y)
-
         loss = self.generator_loss(fake_validity)
-        logs = {"generator_loss": loss}
+
+        logs = {"generator_loss": loss, "generator_lr": self.trainer.lr_schedulers[1]["scheduler"].get_lr()}
         return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
     def training_step(self, batch, batch_idx, optimizer_idx):
