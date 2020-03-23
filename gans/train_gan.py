@@ -22,13 +22,13 @@ def main(hparams):
         logger = CometLogger(
             api_key=os.environ["COMET_KEY"],
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
-            project_name="gans-research-project",  # Optional
+            project_name="gan-research-project",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
             experiment_name=hparams.strategy + " (" + hparams.dataset + ")"  # Optional
         )
     elif hparams.logger == "wandb":
         logger = WandbLogger(
-            project="gans-research-project",
+            project="gan-research-project",
             name=hparams.strategy + " (" + hparams.dataset + ")"  # Optional
         )
     elif hparams.logger == "tensorboard":
