@@ -5,7 +5,7 @@ import torch.nn as nn
 
 
 class DownsampleStridedConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, kernel_size=4, negative_slope=0.2):
         super().__init__()
 
         self.negative_slope = negative_slope

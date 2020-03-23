@@ -43,25 +43,40 @@ class UpsampleFractionalConv2d(nn.Module):
 
 
 class UpsampleInterpolateConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, upscale_factor=2, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, kernel_size=5, upscale_factor=2, negative_slope=0.2, activation=True):
         super().__init__()
 
         self.negative_slope = negative_slope
 
-        self.main = nn.Sequential(
-            nn.Upsample(
-                scale_factor=upscale_factor,
-                mode="nearest"
-            ),
-            nn.ReflectionPad2d(kernel_size // 2),
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=1
-            ),
-            nn.LeakyReLU(self.negative_slope, inplace=True)
-        )
+        if activation:
+            self.main = nn.Sequential(
+                nn.Upsample(
+                    scale_factor=upscale_factor,
+                    mode="nearest"
+                ),
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=1
+                ),
+                nn.LeakyReLU(self.negative_slope, inplace=True)
+            )
+        else:
+            self.main = nn.Sequential(
+                nn.Upsample(
+                    scale_factor=upscale_factor,
+                    mode="nearest"
+                ),
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=1
+                )
+            )
 
         self.apply(self.init_weights)
 
@@ -83,7 +98,7 @@ class UpsampleInterpolateConv2d(nn.Module):
 
 
 class UpsampleConv2dPixelShuffle(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, upscale_factor=2, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, kernel_size=4, upscale_factor=2, negative_slope=0.2):
         super().__init__()
 
         self.negative_slope = negative_slope

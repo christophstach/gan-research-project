@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
-from ..building_blocks import DownsampleMaxPoolConv2d, DownsampleStridedConv2d
+from ..building_blocks import DownsampleStridedConv2d
 
 
 class Critic(pl.LightningModule):
