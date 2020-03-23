@@ -47,7 +47,7 @@ def main(hparams):
         progress_bar_refresh_rate=20,
         early_stop_callback=False,
         checkpoint_callback=ModelCheckpoint(
-            filepath=os.getcwd()+ "/checkpoints/{epoch}-{negative_critic_loss:.5f}",
+            filepath=os.getcwd()+ "/checkpoints/{epoch}-" + hparams.strategy + "-{negative_critic_loss:.5f}",
             monitor="critic_loss",
             mode="max",
             save_top_k=10,
