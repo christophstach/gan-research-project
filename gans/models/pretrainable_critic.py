@@ -1,3 +1,4 @@
+import math
 from collections import OrderedDict
 
 import pytorch_lightning as pl
@@ -7,10 +8,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
-import math
 
-
-class Critic(pl.LightningModule):
+class PretrainableCritic(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
 
@@ -18,15 +17,13 @@ class Critic(pl.LightningModule):
         self.pretrain = False
 
         self.features = nn.Sequential(
-            nn.Conv2d(self.hparams.image_channels, self.hparams.image_size, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(self.hparams.image_channels, self.hparams.critic_filters, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(self.hparams.image_size, self.hparams.image_size * 2, kernel_size=4, stride=2, padding=1),
-            # nn.LayerNorm([self.hparams.image_size * 2, int(self.hparams.image_size / 4), int(self.hparams.image_size / 4)]),
+            nn.Conv2d(self.hparams.image_size, self.hparams.critic_filters * 2, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(self.hparams.image_size * 2, self.hparams.image_size * 4, kernel_size=4, stride=2, padding=1),
-            # nn.LayerNorm([self.hparams.image_size * 4, int(self.hparams.image_size / 8), int(self.hparams.image_size / 8)]),
+            nn.Conv2d(self.hparams.image_size * 2, self.hparams.critic_filters * 4, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True)
         )
 
@@ -48,22 +45,6 @@ class Critic(pl.LightningModule):
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(128, 1, kernel_size=1, stride=1),
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Conv2d(self.hparams.image_size * 4, 512, kernel_size=4, stride=1),
-            # nn.LayerNorm([512, 1, 1]),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(512, 256, kernel_size=1, stride=1),
-            # nn.LayerNorm([256, 1, 1]),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(256, 128, kernel_size=1, stride=1),
-            # nn.LayerNorm([128, 1, 1]),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(128, self.hparams.y_size, kernel_size=1, stride=1),
         )
 
     def init_weights(self, m):
@@ -88,7 +69,7 @@ class Critic(pl.LightningModule):
             y = self.y_embedding(y)
             y = y.view(y.size(0), -1, 4, 4)
             x = torch.cat([x, y], dim=1)
-            # Comment lines above to disable conditional gan
+            # Comment lines above to disable conditional gans
 
             x = self.validator(x)
             x = x.view(x.size(0), -1)

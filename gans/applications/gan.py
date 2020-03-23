@@ -14,10 +14,10 @@ from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogge
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
 
-from gans.helpers.metrics import inception_score
+from ..helpers import inception_score
 
 
-class WGANGP(pl.LightningModule):
+class GAN(pl.LightningModule):
     def __init__(self, hparams, generator, critic, scorer):
         super().__init__()
 
@@ -67,13 +67,13 @@ class WGANGP(pl.LightningModule):
         return self.generator(x, y)
 
     def critic_loss(self, real_validity, fake_validity):
-        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp", "wgan-div"]:
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div"]:
             return (fake_validity.mean() - real_validity.mean()).unsqueeze(0)
         elif self.hparams.strategy == "lsgan":
             return (0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()).unsqueeze(0)
 
     def generator_loss(self, fake_validity):
-        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp", "wgan-div"]:
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div"]:
             return (-fake_validity.mean()).unsqueeze(0)
         elif self.hparams.strategy == "lsgan":
             return (0.5 * ((fake_validity - 1) ** 2).mean()).unsqueeze(0)
@@ -100,9 +100,9 @@ class WGANGP(pl.LightningModule):
 
         gradients = gradients.view(gradients.size(0), -1)
 
-        if self.hparams.strategy == "wgan-gp-0":
+        if self.hparams.strategy == "wgan-0-gp":
             penalties = gradients.norm(2, dim=1).pow(2)
-        elif self.hparams.strategy == "wgan-gp-1":
+        elif self.hparams.strategy == "wgan-1-gp":
             penalties = (gradients.norm(2, dim=1) - 1).pow(2)
         elif self.hparams.strategy == "wgan-lp":
             penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(2, dim=1) - 1).pow(2)
@@ -110,29 +110,6 @@ class WGANGP(pl.LightningModule):
             raise ValueError()
 
         return penalties.mean().unsqueeze(0)
-
-    def divergence_gradient_penalty(self, real_validity, fake_validity, real_images, fake_images):
-        k = 2
-        p = 6
-
-        # real_images.requires_grad_()
-        # fake_images.requires_grad_()
-
-        # Compute W-div gradient penalty
-
-        real_gradients = torch.autograd.grad(
-            outputs=real_validity, inputs=real_images, grad_outputs=torch.ones_like(real_validity, device=real_images.device), create_graph=True
-        )[0]
-        real_grad_norm = real_gradients.view(real_gradients.size(0), -1).pow(2).sum(1) ** (p / 2)
-
-        fake_gradients = torch.autograd.grad(
-            outputs=fake_validity, inputs=fake_images, grad_outputs=torch.ones_like(fake_validity, device=real_images.device), create_graph=True
-        )[0]
-        fake_grad_norm = fake_gradients.view(fake_gradients.size(0), -1).pow(2).sum(1) ** (p / 2)
-
-        div_gp = torch.mean(real_grad_norm + fake_grad_norm) * k / 2
-
-        return div_gp
 
     def training_step_critic(self, batch):
         self.real_images, self.y = batch
@@ -143,7 +120,7 @@ class WGANGP(pl.LightningModule):
         real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
-        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp"]:
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp"]:
             gradient_penalty = self.hparams.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
         elif self.hparams.strategy == "wgan-div":
             gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, self.real_images, fake_images)
@@ -269,7 +246,7 @@ class WGANGP(pl.LightningModule):
             optimizer.zero_grad()
 
     def configure_optimizers(self):
-        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp", "wgan-div", "lsgan"]:
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div", "lsgan"]:
             critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
             generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
         elif self.hparams.strategy == "wgan-wc":
@@ -337,11 +314,10 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-lt", "--strategy", type=str, choices=[
             "lsgan",
             "wgan-wc",
-            "wgan-gp-1",  # Original WGAN-GP
-            "wgan-gp-0",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
+            "wgan-1-gp",  # Original WGAN-GP
+            "wgan-0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
             "wgan-lp",  # On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
-            "wgan-div"
-        ], default="wgan-div")
+        ], default="wgan-0-gp")
 
         system_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
         system_group.add_argument("-wi", "--warmup-epochs", type=int, default=5, help="Number of epochs to freeze the critics feature parameters")
@@ -349,16 +325,19 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
-        system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
+        system_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
+        system_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
+        system_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-        critic_group = parser.add_argument_group("Critic")
-        critic_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
-        critic_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
+        system_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Number of filters in the generator")
+        system_group.add_argument("-cf", "--critic-filters", type=int, default=8, help="Number of filters in the critic")
 
         pretrain_group = parser.add_argument_group("Pretrain")
         pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
         pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=50, help="Maximum pretrain epochs")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
+
+
 
         return parser

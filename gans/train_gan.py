@@ -3,18 +3,18 @@ from argparse import ArgumentParser
 
 import torchvision.models as models
 from pytorch_lightning import Trainer
-from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 
-from gans.wgan_gp import WGANGP
-from gans.wgan_gp.models import Generator, Critic
+from gans.applications import GAN
+from gans.models import Generator, Critic
 
 
 def main(hparams):
     generator = Generator(hparams)
     critic = Critic(hparams)
     scorer = models.mobilenet_v2(pretrained=True)
-    model = WGANGP(hparams, generator, critic, scorer)
+    model = GAN(hparams, generator, critic, scorer)
 
     if hparams.logger == "none":
         logger = False
@@ -22,14 +22,14 @@ def main(hparams):
         logger = CometLogger(
             api_key=os.environ["COMET_KEY"],
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
-            project_name="gan-research-project",  # Optional
+            project_name="gans-research-project",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-            experiment_name="WGAN (" + hparams.dataset + ", " + hparams.strategy + ")"  # Optional
+            experiment_name=hparams.strategy + " (" + hparams.dataset + ")"  # Optional
         )
     elif hparams.logger == "wandb":
         logger = WandbLogger(
-            project="gan-research-project",
-            name="WGAN (" + hparams.dataset + ", " + hparams.strategy + ")"
+            project="gans-research-project",
+            name=hparams.strategy + " (" + hparams.dataset + ")"  # Optional
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
@@ -47,7 +47,7 @@ def main(hparams):
         progress_bar_refresh_rate=20,
         early_stop_callback=False,
         checkpoint_callback=ModelCheckpoint(
-            filepath=os.getcwd()+ "/checkpoints/{epoch}-" + hparams.strategy + "-{negative_critic_loss:.5f}",
+            filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.strategy + "-{negative_critic_loss:.5f}",
             monitor="critic_loss",
             mode="max",
             save_top_k=10,
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", type=int, nargs="+", default=0)
     parser.add_argument("--nodes", type=int, default=1)
 
-    parser = WGANGP.add_model_specific_args(parser)
+    parser = GAN.add_model_specific_args(parser)
 
     hparams = parser.parse_args()
 

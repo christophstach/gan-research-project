@@ -1,4 +1,1 @@
-from .metrics import kl_divergence
-from .to_one_hot import to_one_hot
-
-
+from .metrics import kl_divergence, js_divergence, inception_score
