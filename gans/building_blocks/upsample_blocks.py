@@ -5,7 +5,7 @@ import torch.nn as nn
 
 
 class UpsampleFractionalConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=4, stride=1, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, kernel_size=5, stride=1, negative_slope=0.2):
 
         super().__init__()
 
@@ -98,22 +98,34 @@ class UpsampleInterpolateConv2d(nn.Module):
 
 
 class UpsampleConv2dPixelShuffle(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=4, upscale_factor=2, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, kernel_size=5, upscale_factor=2, negative_slope=0.2, activation=True):
         super().__init__()
 
         self.negative_slope = negative_slope
 
-        self.main = nn.Sequential(
-            nn.ReflectionPad2d(kernel_size // 2),
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels * 2 ** upscale_factor,
-                kernel_size=kernel_size,
-                stride=1
-            ),
-            nn.LeakyReLU(self.negative_slope, inplace=True),
-            nn.PixelShuffle(upscale_factor)
-        )
+        if activation:
+            self.main = nn.Sequential(
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels * 2 ** upscale_factor,
+                    kernel_size=kernel_size,
+                    stride=1
+                ),
+                nn.PixelShuffle(upscale_factor),
+                nn.LeakyReLU(self.negative_slope, inplace=True)
+            )
+        else:
+            self.main = nn.Sequential(
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels * 2 ** upscale_factor,
+                    kernel_size=kernel_size,
+                    stride=1
+                ),
+                nn.PixelShuffle(upscale_factor)
+            )
 
         self.apply(self.init_weights)
 

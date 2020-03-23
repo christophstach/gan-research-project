@@ -25,7 +25,7 @@ class Critic(pl.LightningModule):
 
         self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.image_size ** 2)
         self.validator = nn.Sequential(
-            DownsampleStridedConv2d(self.hparams.critic_filters * 4, 1)
+            DownsampleStridedConv2d(self.hparams.critic_filters * 4, 1, activation=False)
         )
 
     def init_weights(self, m):

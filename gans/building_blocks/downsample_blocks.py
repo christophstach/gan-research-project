@@ -5,21 +5,32 @@ import torch.nn as nn
 
 
 class DownsampleStridedConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=4, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, kernel_size=4, negative_slope=0.2, activation=True):
         super().__init__()
 
         self.negative_slope = negative_slope
 
-        self.main = nn.Sequential(
-            nn.ReflectionPad2d(kernel_size // 2),
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=2
-            ),
-            nn.LeakyReLU(self.negative_slope, inplace=True)
-        )
+        if activation:
+            self.main = nn.Sequential(
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=2
+                ),
+                nn.LeakyReLU(self.negative_slope, inplace=True)
+            )
+        else:
+            self.main = nn.Sequential(
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=2
+                )
+            )
 
         self.apply(self.init_weights)
 
@@ -41,22 +52,34 @@ class DownsampleStridedConv2d(nn.Module):
 
 
 class DownsampleMaxPoolConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, negative_slope=0.2):
+    def __init__(self, in_channels, out_channels, kernel_size=3, negative_slope=0.2, activation=True):
         super().__init__()
 
         self.negative_slope = negative_slope
 
-        self.main = nn.Sequential(
-            nn.MaxPool2d(2),
-            nn.ReflectionPad2d(kernel_size // 2),
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=1
-            ),
-            nn.LeakyReLU(self.negative_slope, inplace=True)
-        )
+        if activation:
+            self.main = nn.Sequential(
+                nn.MaxPool2d(2),
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=1
+                ),
+                nn.LeakyReLU(self.negative_slope, inplace=True)
+            )
+        else:
+            self.main = nn.Sequential(
+                nn.MaxPool2d(2),
+                nn.ReflectionPad2d(kernel_size // 2),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=1
+                )
+            )
 
         self.apply(self.init_weights)
 
