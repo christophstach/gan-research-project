@@ -330,14 +330,12 @@ class GAN(pl.LightningModule):
         system_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         system_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Number of filters in the generator")
-        system_group.add_argument("-cf", "--critic-filters", type=int, default=8, help="Number of filters in the critic")
+        system_group.add_argument("-cf", "--critic-filters", type=int, default=32, help="Number of filters in the critic")
 
         pretrain_group = parser.add_argument_group("Pretrain")
         pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
         pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=50, help="Maximum pretrain epochs")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
-
-
 
         return parser
