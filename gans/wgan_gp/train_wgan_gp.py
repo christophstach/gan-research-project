@@ -22,14 +22,14 @@ def main(hparams):
         logger = CometLogger(
             api_key=os.environ["COMET_KEY"],
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
-            project_name="research-project-gan",  # Optional
+            project_name="gan-research-project",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-            experiment_name="WGAN (" + hparams.dataset + ", " + hparams.loss_type + ")"  # Optional
+            experiment_name="WGAN (" + hparams.dataset + ", " + hparams.strategy + ")"  # Optional
         )
     elif hparams.logger == "wandb":
         logger = WandbLogger(
-            project="research-project-gan",
-            name="WGAN (" + hparams.dataset + ", " + hparams.loss_type + ")"
+            project="gan-research-project",
+            name="WGAN (" + hparams.dataset + ", " + hparams.strategy + ")"
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(

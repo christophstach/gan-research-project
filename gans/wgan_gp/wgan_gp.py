@@ -67,15 +67,15 @@ class WGANGP(pl.LightningModule):
         return self.generator(x, y)
 
     def critic_loss(self, real_validity, fake_validity):
-        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
+        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp", "wgan-div"]:
             return (fake_validity.mean() - real_validity.mean()).unsqueeze(0)
-        elif self.hparams.loss_type == "lsgan":
+        elif self.hparams.strategy == "lsgan":
             return (0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()).unsqueeze(0)
 
     def generator_loss(self, fake_validity):
-        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div"]:
+        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp", "wgan-div"]:
             return (-fake_validity.mean()).unsqueeze(0)
-        elif self.hparams.loss_type == "lsgan":
+        elif self.hparams.strategy == "lsgan":
             return (0.5 * ((fake_validity - 1) ** 2).mean()).unsqueeze(0)
 
     def clip_weights(self):
@@ -85,49 +85,48 @@ class WGANGP(pl.LightningModule):
     def gradient_penalty(self, real_images, fake_images, y):
         """Calculates the gradient penalty loss for WGAN GP"""
 
-        if self.hparams.loss_type == "wgan-gp1":
-            # Random weight term for interpolation between real and fake samples
-            alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
-            # Get random interpolation between real and fake samples
-            interpolates = alpha * real_images + ((1 - alpha) * fake_images)
-        elif self.hparams.loss_type == "wgan-gp2":
-            # Random weight term for interpolation between real and fake samples
-            alpha = torch.randn_like(real_images, device=real_images.device)
-            # Get random interpolation between real and fake samples
-            interpolates = real_images + alpha * (fake_images - real_images)
-        else:
-            raise NotImplementedError()
+        # Random weight term for interpolation between real and fake samples
+        alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
+        # Get random interpolation between real and fake samples
+        interpolates = alpha * real_images + ((torch.tensor(1.0, device=real_images.device) - alpha) * fake_images)
 
         interpolates.requires_grad_()
 
         # Get gradient w.r.t. interpolates
         interpolate_validity = self.critic(interpolates, y)
         gradients = torch.autograd.grad(
-            outputs=interpolate_validity, inputs=interpolates, grad_outputs=torch.ones_like(interpolate_validity), create_graph=True
+            outputs=interpolate_validity, inputs=interpolates, grad_outputs=torch.ones_like(interpolate_validity, device=real_images.device), create_graph=True
         )[0]
 
         gradients = gradients.view(gradients.size(0), -1)
-        penalty = (((gradients.norm(2, dim=1) - 1) ** 2).mean()).unsqueeze(0)
 
-        return penalty
+        if self.hparams.strategy == "wgan-gp-0":
+            penalties = gradients.norm(2, dim=1).pow(2)
+        elif self.hparams.strategy == "wgan-gp-1":
+            penalties = (gradients.norm(2, dim=1) - 1).pow(2)
+        elif self.hparams.strategy == "wgan-lp":
+            penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(2, dim=1) - 1).pow(2)
+        else:
+            raise ValueError()
+
+        return penalties.mean().unsqueeze(0)
 
     def divergence_gradient_penalty(self, real_validity, fake_validity, real_images, fake_images):
         k = 2
         p = 6
 
-        real_images.requires_grad_()
+        # real_images.requires_grad_()
         # fake_images.requires_grad_()
 
         # Compute W-div gradient penalty
-        real_grad_outputs = torch.ones(real_images.size(0))
+
         real_gradients = torch.autograd.grad(
-            outputs=real_validity, inputs=real_images, grad_outputs=real_grad_outputs, create_graph=True
+            outputs=real_validity, inputs=real_images, grad_outputs=torch.ones_like(real_validity, device=real_images.device), create_graph=True
         )[0]
         real_grad_norm = real_gradients.view(real_gradients.size(0), -1).pow(2).sum(1) ** (p / 2)
 
-        fake_grad_outputs = torch.ones(fake_images.size(0))
         fake_gradients = torch.autograd.grad(
-            outputs=fake_validity, inputs=fake_images, grad_outputs=fake_grad_outputs, create_graph=True, retain_graph=True
+            outputs=fake_validity, inputs=fake_images, grad_outputs=torch.ones_like(fake_validity, device=real_images.device), create_graph=True
         )[0]
         fake_grad_norm = fake_gradients.view(fake_gradients.size(0), -1).pow(2).sum(1) ** (p / 2)
 
@@ -144,15 +143,21 @@ class WGANGP(pl.LightningModule):
         real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
-        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2"]:
+        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp"]:
             gradient_penalty = self.hparams.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
-        elif self.hparams.loss_type == "wgan-gp-div":
+        elif self.hparams.strategy == "wgan-div":
             gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, self.real_images, fake_images)
         else:
             gradient_penalty = 0
 
         loss = self.critic_loss(real_validity, fake_validity)
-        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": self.trainer.lr_schedulers[0]["scheduler"].get_last_lr()[0]}
+
+        if len(self.trainer.lr_schedulers) >= 1:
+            lr = self.trainer.lr_schedulers[0]["scheduler"].get_lr()[0]
+        else:
+            lr = self.hparams.learning_rate
+
+        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": lr}
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
@@ -164,7 +169,12 @@ class WGANGP(pl.LightningModule):
         fake_validity = self.critic(fake_images, self.y)
         loss = self.generator_loss(fake_validity)
 
-        logs = {"generator_loss": loss, "generator_lr": self.trainer.lr_schedulers[1]["scheduler"].get_last_lr()[0]}
+        if len(self.trainer.lr_schedulers) >= 2:
+            lr = self.trainer.lr_schedulers[1]["scheduler"].get_lr()[0]
+        else:
+            lr = self.hparams.learning_rate
+
+        logs = {"generator_loss": loss, "generator_lr": lr}
         return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
     def training_step(self, batch, batch_idx, optimizer_idx):
@@ -248,7 +258,7 @@ class WGANGP(pl.LightningModule):
 
             optimizer.step()
 
-            if self.hparams.loss_type == "wgan-wc":
+            if self.hparams.strategy == "wgan-wc":
                 self.clip_weights()
 
             optimizer.zero_grad()
@@ -259,19 +269,21 @@ class WGANGP(pl.LightningModule):
             optimizer.zero_grad()
 
     def configure_optimizers(self):
-        if self.hparams.loss_type in ["wgan-gp1", "wgan-gp2", "wgan-gp-div", "lsgan"]:
+        if self.hparams.strategy in ["wgan-gp-0", "wgan-gp-1", "wgan-lp", "wgan-div", "lsgan"]:
             critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
             generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
-        elif self.hparams.loss_type == "wgan-wc":
+        elif self.hparams.strategy == "wgan-wc":
             critic_optimizer = optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
             generator_optimizer = optim.RMSprop(self.generator.parameters(), lr=self.learning_rate)
         else:
             raise NotImplementedError()
 
-        critic_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
-        generator_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
+        # critic_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
+        # generator_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
 
-        return [critic_optimizer, generator_optimizer], [critic_lr_scheduler, generator_lr_scheduler]
+        # , [critic_lr_scheduler, generator_lr_scheduler]
+
+        return [critic_optimizer, generator_optimizer]
 
     def prepare_data(self):
         train_resize = transforms.Resize((self.hparams.image_size, self.hparams.image_size))
@@ -322,7 +334,14 @@ class WGANGP(pl.LightningModule):
         system_group.add_argument("-iw", "--image-size", type=int, default=32, help="Generated image size")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
-        system_group.add_argument("-lt", "--loss-type", type=str, choices=["wgan-gp1", "wgan-gp2", "wgan-wc", "lsgan", "wgan-gp-div"], default="wgan-gp1")
+        system_group.add_argument("-lt", "--strategy", type=str, choices=[
+            "lsgan",
+            "wgan-wc",
+            "wgan-gp-1",  # Original WGAN-GP
+            "wgan-gp-0",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
+            "wgan-lp",  # On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
+            "wgan-div"
+        ], default="wgan-div")
 
         system_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
         system_group.add_argument("-wi", "--warmup-epochs", type=int, default=5, help="Number of epochs to freeze the critics feature parameters")
@@ -341,7 +360,5 @@ class WGANGP(pl.LightningModule):
         pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
         pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=50, help="Maximum pretrain epochs")
         pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
-
-        generator_group = parser.add_argument_group("Generator")
 
         return parser
