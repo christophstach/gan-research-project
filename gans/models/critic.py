@@ -19,8 +19,7 @@ class Critic(pl.LightningModule):
 
         self.features = nn.Sequential(
             DownsampleStridedConv2d(self.hparams.image_channels + 1, self.hparams.critic_filters),
-            DownsampleStridedConv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2),
-
+            DownsampleStridedConv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2)
         )
 
         self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.image_size ** 2)
