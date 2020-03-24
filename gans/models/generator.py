@@ -13,9 +13,15 @@ class Generator(pl.LightningModule):
 
         self.hparams = hparams
 
-        self.main = nn.Sequential(
+        self.projection = nn.Sequential(
             # input is Z, going into a convolution
-            UpsampleFractionalConv2d(self.hparams.noise_size + self.hparams.y_embedding_size, self.hparams.generator_filters * 4, kernel_size=4, stride=1),
+            nn.Linear(
+                self.hparams.noise_size + self.hparams.y_embedding_size,
+                self.hparams.generator_filters * 4 * 4 ** 2
+            )
+        )
+
+        self.main = nn.Sequential(
             UpsampleFractionalConv2d(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2),
             UpsampleFractionalConv2d(self.hparams.generator_filters * 2, self.hparams.generator_filters)
         )
@@ -41,12 +47,11 @@ class Generator(pl.LightningModule):
 
     def forward(self, x, y):
         y = self.y_embedding(y)
-        x = torch.cat([x, y], dim=1)
 
-        # Comment lines above to disable conditional gans
+        data = torch.cat([x, y], dim=1)
+        data = self.projection(data)
+        data = data.view(data.size(0), -1, 4, 4)
+        data = self.main(data)
+        data = self.out(data)
 
-        x = x.view(x.size(0), -1, 1, 1)
-        x = self.main(x)
-        x = self.out(x)
-
-        return x
+        return data

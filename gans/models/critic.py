@@ -20,12 +20,12 @@ class Critic(pl.LightningModule):
         self.features = nn.Sequential(
             DownsampleStridedConv2d(self.hparams.image_channels + 1, self.hparams.critic_filters),
             DownsampleStridedConv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2),
-            DownsampleStridedConv2d(self.hparams.critic_filters * 2, self.hparams.critic_filters * 4)
+
         )
 
         self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.image_size ** 2)
         self.validator = nn.Sequential(
-            DownsampleStridedConv2d(self.hparams.critic_filters * 4, 1, activation=False)
+            DownsampleStridedConv2d(self.hparams.critic_filters * 2, 1, activation=False)
         )
 
     def init_weights(self, m):
@@ -48,6 +48,7 @@ class Critic(pl.LightningModule):
 
         validity = self.validator(data)
         validity = validity.view(validity.size(0), -1)
+        validity = validity.mean(1, keepdim=True)
 
         return validity
 
