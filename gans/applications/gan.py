@@ -344,8 +344,8 @@ class GAN(pl.LightningModule):
         system_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
         system_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-        system_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Number of filters in the generator")
-        system_group.add_argument("-cf", "--critic-filters", type=int, default=32, help="Number of filters in the critic")
+        system_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
+        system_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
         system_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=True, help="Find paper for this")
 
         pretrain_group = parser.add_argument_group("Pretrain")
