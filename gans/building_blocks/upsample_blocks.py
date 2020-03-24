@@ -31,8 +31,7 @@ class UpsampleFractionalConv2d(nn.Module):
                     kernel_size=kernel_size,
                     stride=stride,
                     padding=stride - 1
-                ),
-                nn.BatchNorm2d(out_channels)
+                )
             )
 
         self.apply(self.init_weights)
