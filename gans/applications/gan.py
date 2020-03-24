@@ -1,4 +1,5 @@
 import os
+import random
 from argparse import ArgumentParser
 from collections import OrderedDict
 
@@ -29,6 +30,7 @@ class GAN(pl.LightningModule):
 
         self.real_images = None
         self.y = None
+        self.experience = None
 
         self.train_dataset = None
         self.val_dataset = None
@@ -116,7 +118,12 @@ class GAN(pl.LightningModule):
 
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
-        fake_images = self.forward(noise, self.y).detach()
+        if self.experience is not None and self.experience.size(0) == self.real_images.size(0):
+            fake_images = self.experience.detach()
+            self.experience = None
+        else:
+            fake_images = self.forward(noise, self.y).detach()
+
         real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
@@ -143,6 +150,14 @@ class GAN(pl.LightningModule):
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
         fake_images = self.forward(noise, self.y)
+        rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
+
+        if self.hparams.enable_experience_replay:
+            if self.experience is None:
+                self.experience = rand_image
+            else:
+                self.experience = torch.cat([self.experience, rand_image], dim=0)
+
         fake_validity = self.critic(fake_images, self.y)
         loss = self.generator_loss(fake_validity)
 
@@ -331,6 +346,7 @@ class GAN(pl.LightningModule):
 
         system_group.add_argument("-gf", "--generator-filters", type=int, default=32, help="Number of filters in the generator")
         system_group.add_argument("-cf", "--critic-filters", type=int, default=32, help="Number of filters in the critic")
+        system_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=True, help="Find paper for this")
 
         pretrain_group = parser.add_argument_group("Pretrain")
         pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")

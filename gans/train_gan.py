@@ -38,6 +38,17 @@ def main(hparams):
     else:
         raise ValueError("Must specific a logger")
 
+    if hparams.save_checkpoints:
+        checkpoint_callback = ModelCheckpoint(
+            filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.strategy + "-{negative_critic_loss:.5f}",
+            monitor="critic_loss",
+            mode="max",
+            save_top_k=10,
+            period=1
+        )
+    else:
+        checkpoint_callback = False
+
     trainer = Trainer(
         min_epochs=hparams.min_epochs,
         max_epochs=hparams.max_epochs,
@@ -46,13 +57,7 @@ def main(hparams):
         accumulate_grad_batches=hparams.accumulate_grad_batches,
         progress_bar_refresh_rate=20,
         early_stop_callback=False,
-        checkpoint_callback=ModelCheckpoint(
-            filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.strategy + "-{negative_critic_loss:.5f}",
-            monitor="critic_loss",
-            mode="max",
-            save_top_k=10,
-            period=1
-        ),
+        checkpoint_callback=checkpoint_callback,
         logger=logger,
         fast_dev_run=False,
         num_sanity_val_steps=0,
@@ -68,6 +73,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "wandb"], required=True)
     parser.add_argument("--gpus", type=int, nargs="+", default=0)
     parser.add_argument("--nodes", type=int, default=1)
+    parser.add_argument("--save-checkpoints", type=bool, default=False)
 
     parser = GAN.add_model_specific_args(parser)
 

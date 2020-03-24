@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 
-from ..building_blocks import UpsampleFractionalConv2d, UpsampleConv2dPixelShuffle
+from ..building_blocks import UpsampleFractionalConv2d
 
 
 class Generator(pl.LightningModule):
@@ -15,14 +15,14 @@ class Generator(pl.LightningModule):
 
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            UpsampleFractionalConv2d(self.hparams.noise_size + self.hparams.y_embedding_size, self.hparams.image_size * 4, kernel_size=4, stride=1),
-            UpsampleConv2dPixelShuffle(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2),
-            UpsampleConv2dPixelShuffle(self.hparams.generator_filters * 2, self.hparams.generator_filters)
+            UpsampleFractionalConv2d(self.hparams.noise_size + self.hparams.y_embedding_size, self.hparams.generator_filters * 4, kernel_size=4, stride=1),
+            UpsampleFractionalConv2d(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2),
+            UpsampleFractionalConv2d(self.hparams.generator_filters * 2, self.hparams.generator_filters)
         )
 
         self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.y_embedding_size)
         self.out = nn.Sequential(
-            UpsampleConv2dPixelShuffle(self.hparams.generator_filters, self.hparams.image_channels, activation=False),
+            UpsampleFractionalConv2d(self.hparams.generator_filters, self.hparams.image_channels, activation=False),
             nn.Tanh()
         )
 
