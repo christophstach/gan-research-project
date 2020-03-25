@@ -54,6 +54,7 @@ class Generator(pl.LightningModule):
         else:
             data = x
 
+        print(data.size())
         data = self.projection(data)
         data = data.view(data.size(0), -1, 4, 4)
         data = self.main(data)
