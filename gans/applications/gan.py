@@ -209,17 +209,21 @@ class GAN(pl.LightningModule):
                 ic_score_mean = torch.tensor(0, device=self.real_images.device)
 
             if isinstance(self.logger, TensorBoardLogger):
-                noise = torch.randn(self.hparams.y_size ** 2, self.hparams.noise_size, device=self.real_images.device)
-                y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device).repeat(self.hparams.y_size)
+                grid_size = self.hparams.y_size if self.y_size > 1 else 5
+
+                noise = torch.randn(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
+                y = torch.tensor(range(grid_size), device=self.real_images.device).repeat(grid_size)
 
                 fake_images = self.forward(noise, y)
-                grid = torchvision.utils.make_grid(fake_images, nrow=self.hparams.y_size, padding=0)
+                grid = torchvision.utils.make_grid(fake_images, nrow=grid_size, padding=0)
 
                 self.logger.experiment.add_image("example_images", grid, 0)
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
             elif isinstance(self.logger, WandbLogger):
-                noise = torch.randn(self.hparams.y_size, self.hparams.noise_size, device=self.real_images.device)
-                y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device)
+                grid_size = self.hparams.y_size if self.y_size > 1 else 1
+
+                noise = torch.randn(grid_size, self.hparams.noise_size, device=self.real_images.device)
+                y = torch.tensor(range(grid_size), device=self.real_images.device)
 
                 fake_images = self.forward(noise, y)
 
@@ -228,11 +232,13 @@ class GAN(pl.LightningModule):
                     "generated_images": [wandb.Image(fake_image, caption=str(idx)) for idx, fake_image in enumerate(fake_images)]
                 })
             elif isinstance(self.logger, CometLogger):
-                noise = torch.randn(self.hparams.y_size ** 2, self.hparams.noise_size, device=self.real_images.device)
-                y = torch.tensor(range(self.hparams.y_size), device=self.real_images.device).repeat(self.hparams.y_size)
+                grid_size = self.hparams.y_size if self.y_size > 1 else 5
+
+                noise = torch.randn(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
+                y = torch.tensor(range(grid_size), device=self.real_images.device).repeat(grid_size)
 
                 fake_images = self.forward(noise, y)
-                grid = torchvision.utils.make_grid(fake_images, nrow=self.hparams.y_size, padding=0)
+                grid = torchvision.utils.make_grid(fake_images, nrow=grid_size, padding=0)
 
                 self.logger.experiment.log_image(
                     grid.detach().cpu().numpy(),
