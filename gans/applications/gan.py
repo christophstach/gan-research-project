@@ -176,6 +176,27 @@ class GAN(pl.LightningModule):
         if optimizer_idx == 1:  # Train generator
             return self.training_step_generator(batch)
 
+    def backward(self, trainer, loss, optimizer, optimizer_idx):
+        if optimizer_idx == 0:
+            self.critic.train()
+            self.generator.eval()
+
+            for p in self.critic.parameters(): p.requires_grad = True
+            for p in self.generator.parameters(): p.requires_grad = False
+
+            if self.hparams.warmup_enabled:
+                for param in self.critic.features.parameters():
+                    param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
+
+        if optimizer_idx == 1:
+            self.critic.eval()
+            self.generator.train()
+
+            for p in self.critic.parameters(): p.requires_grad = False
+            for p in self.generator.parameters(): p.requires_grad = True
+
+        super().backward(trainer, loss, optimizer, optimizer_idx)
+
     def validation_epoch_end(self, outputs):
         ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
 
@@ -250,10 +271,6 @@ class GAN(pl.LightningModule):
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
         if optimizer_idx == 0:
-            if self.hparams.warmup_enabled:
-                for param in self.critic.features.parameters():
-                    param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
-
             optimizer.step()
 
             if self.hparams.strategy == "wgan-wc":
