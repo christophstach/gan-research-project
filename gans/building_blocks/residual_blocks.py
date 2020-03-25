@@ -9,20 +9,21 @@ class ResidualBlockTypeA(nn.Module):
         super().__init__()
 
         self.negative_slope = negative_slope
+        self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
 
         self.main = nn.Sequential(
             nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
-                out_channels=out_channels,
+                out_channels=in_channels,
                 kernel_size=kernel_size,
                 stride=1
             ),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(in_channels),
             nn.LeakyReLU(self.negative_slope, inplace=True),
             nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
-                in_channels=out_channels,
+                in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
                 stride=1
@@ -46,7 +47,7 @@ class ResidualBlockTypeA(nn.Module):
                 torch.nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x):
-        identity = x
+        identity = self.shortcut(x)
         x = self.main(x)
 
         return self.last(identity + x)
@@ -57,20 +58,21 @@ class ResidualBlockTypeB(nn.Module):
         super().__init__()
 
         self.negative_slope = negative_slope
+        self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
 
         self.main = nn.Sequential(
             nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
-                out_channels=out_channels,
+                out_channels=in_channels,
                 kernel_size=kernel_size,
                 stride=1
             ),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(in_channels),
             nn.LeakyReLU(self.negative_slope, inplace=True),
             nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
-                in_channels=out_channels,
+                in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
                 stride=1
@@ -92,7 +94,7 @@ class ResidualBlockTypeB(nn.Module):
                 torch.nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x):
-        identity = x
+        identity = self.shortcut(x)
         x = self.main(x)
 
         return identity + x
@@ -103,12 +105,13 @@ class ResidualBlockTypeC(nn.Module):
         super().__init__()
 
         self.negative_slope = negative_slope
+        self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
 
         self.main = nn.Sequential(
             nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
-                out_channels=out_channels,
+                out_channels=in_channels,
                 kernel_size=kernel_size,
                 stride=1
             ),
@@ -116,7 +119,7 @@ class ResidualBlockTypeC(nn.Module):
             nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
-                out_channels=in_channels,
+                out_channels=out_channels,
                 kernel_size=kernel_size,
                 stride=1
             )
@@ -136,7 +139,7 @@ class ResidualBlockTypeC(nn.Module):
                 torch.nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x):
-        identity = x
+        identity = self.shortcut(x)
         x = self.main(x)
 
         return identity + x

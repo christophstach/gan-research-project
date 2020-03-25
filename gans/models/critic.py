@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import accuracy_score
 
-from ..building_blocks import DownsampleStridedConv2d
+from ..building_blocks import DownsampleStridedConv2d, ResidualBlockTypeC
 
 
 class Critic(pl.LightningModule):
@@ -17,14 +17,19 @@ class Critic(pl.LightningModule):
 
         self.hparams = hparams
 
+        self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.image_size ** 2)
+
         self.features = nn.Sequential(
-            DownsampleStridedConv2d(self.hparams.image_channels + 1, self.hparams.critic_filters),
-            DownsampleStridedConv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2)
+            DownsampleStridedConv2d(self.hparams.image_channels + (1 if self.hparams.y_size > 1 else 0), self.hparams.critic_filters),
+            DownsampleStridedConv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2),
+            DownsampleStridedConv2d(self.hparams.critic_filters * 2, self.hparams.critic_filters * 4),
+            DownsampleStridedConv2d(self.hparams.critic_filters * 4, self.hparams.critic_filters * 8)
         )
 
-        self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.image_size ** 2)
         self.validator = nn.Sequential(
-            DownsampleStridedConv2d(self.hparams.critic_filters * 2, 1, activation=False)
+            ResidualBlockTypeC(self.hparams.critic_filters * 8, self.hparams.critic_filters, kernel_size=1),
+            ResidualBlockTypeC(self.hparams.critic_filters, self.hparams.critic_filters, kernel_size=1),
+            ResidualBlockTypeC(self.hparams.critic_filters, 1)
         )
 
     def init_weights(self, m):
@@ -39,10 +44,13 @@ class Critic(pl.LightningModule):
                 torch.nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x, y):
-        y = self.y_embedding(y)
-        y = y.view(y.size(0), -1, self.hparams.image_size, self.hparams.image_size)
+        if self.hparams.y_size > 1:
+            y = self.y_embedding(y)
+            y = y.view(y.size(0), -1, self.hparams.image_size, self.hparams.image_size)
+            data = torch.cat([x, y], dim=1)
+        else:
+            data = x
 
-        data = torch.cat([x, y], dim=1)
         data = self.features(data)
 
         validity = self.validator(data)

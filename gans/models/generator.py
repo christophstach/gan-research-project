@@ -13,20 +13,22 @@ class Generator(pl.LightningModule):
 
         self.hparams = hparams
 
+        self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.y_embedding_size)
+
         self.projection = nn.Sequential(
             # input is Z, going into a convolution
             nn.Linear(
-                self.hparams.noise_size + self.hparams.y_embedding_size,
-                self.hparams.generator_filters * 4 * 4 ** 2
+                self.hparams.noise_size + (self.hparams.y_embedding_size if self.hparams.y_size > 1 else 0),
+                self.hparams.generator_filters * 8 * 4 ** 2
             )
         )
 
         self.main = nn.Sequential(
+            UpsampleFractionalConv2d(self.hparams.generator_filters * 8, self.hparams.generator_filters * 4),
             UpsampleFractionalConv2d(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2),
             UpsampleFractionalConv2d(self.hparams.generator_filters * 2, self.hparams.generator_filters)
         )
 
-        self.y_embedding = nn.Embedding(num_embeddings=self.hparams.y_size, embedding_dim=self.hparams.y_embedding_size)
         self.out = nn.Sequential(
             UpsampleFractionalConv2d(self.hparams.generator_filters, self.hparams.image_channels, activation=False),
             nn.Tanh()
@@ -46,9 +48,12 @@ class Generator(pl.LightningModule):
                 torch.nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x, y):
-        y = self.y_embedding(y)
+        if self.hparams.y_size > 1:
+            y = self.y_embedding(y)
+            data = torch.cat([x, y], dim=1)
+        else:
+            data = x
 
-        data = torch.cat([x, y], dim=1)
         data = self.projection(data)
         data = data.view(data.size(0), -1, 4, 4)
         data = self.main(data)

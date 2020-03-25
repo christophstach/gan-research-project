@@ -13,7 +13,7 @@ import wandb
 from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 from torch.utils.data import DataLoader, random_split
-from torchvision.datasets import MNIST, FashionMNIST, CIFAR10
+from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet
 
 from ..helpers import inception_score
 
@@ -300,6 +300,9 @@ class GAN(pl.LightningModule):
         elif self.hparams.dataset == "cifar10":
             train_set = CIFAR10(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
             test_set = CIFAR10(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
+        elif self.hparams.dataset == "image_net":
+            train_set = ImageNet(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
+            test_set = ImageNet(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
 
@@ -323,7 +326,7 @@ class GAN(pl.LightningModule):
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
-        system_group.add_argument("-iw", "--image-size", type=int, default=32, help="Generated image size")
+        system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image size")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
         system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
         system_group.add_argument("-lt", "--strategy", type=str, choices=[
@@ -338,7 +341,7 @@ class GAN(pl.LightningModule):
         system_group.add_argument("-wi", "--warmup-epochs", type=int, default=5, help="Number of epochs to freeze the critics feature parameters")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        system_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
+        system_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
         system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         system_group.add_argument("-k", "--alternation-interval", type=int, default=5, help="Amount of steps the critic is trained for each training step of the generator")
         system_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
