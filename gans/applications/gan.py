@@ -343,17 +343,17 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         train_group.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
-        train_group.add_argument("-cb1", "--critic-beta1", type=float, default=0.5, help="Momentum term beta1 of the critic optimizer")
-        train_group.add_argument("-cb2", "--critic-beta2", type=float, default=0.999, help="Momentum term beta2 of the critic optimizer")
-        train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.5, help="Momentum term beta1 of the generator optimizer")
-        train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.999, help="Momentum term beta2 of the generator optimizer")
+        train_group.add_argument("-cb1", "--critic-beta1", type=float, default=0.0, help="Momentum term beta1 of the critic optimizer")
+        train_group.add_argument("-cb2", "--critic-beta2", type=float, default=0.9, help="Momentum term beta2 of the critic optimizer")
+        train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
+        train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image size")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
-        system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
+        system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=3e-4, help="Learning rate of the critic optimizers")
         system_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
         system_group.add_argument("-lt", "--strategy", type=str, choices=[
             "lsgan",
