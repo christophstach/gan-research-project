@@ -137,11 +137,16 @@ class GAN(pl.LightningModule):
         loss = self.critic_loss(real_validity, fake_validity)
 
         if len(self.trainer.lr_schedulers) >= 1:
-            lr = self.trainer.lr_schedulers[0]["scheduler"].get_lr()[0]
+            critic_lr = self.trainer.lr_schedulers[0]["scheduler"].get_lr()[0]
         else:
-            lr = self.hparams.learning_rate
+            critic_lr = self.hparams.critic_learning_rate
 
-        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": lr}
+        if len(self.trainer.lr_schedulers) >= 2:
+            generator_lr = self.trainer.lr_schedulers[1]["scheduler"].get_lr()[0]
+        else:
+            generator_lr = self.hparams.generator_learning_rate
+
+        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": critic_lr, "generator_lr": generator_lr}
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
