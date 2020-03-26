@@ -21,7 +21,7 @@ class UpsampleFractionalConv2d(nn.Module):
                     padding=stride - 1,
                     bias=False
                 ),
-                nn.BatchNorm2d(out_channels),
+                # nn.BatchNorm2d(out_channels),
                 nn.LeakyReLU(self.negative_slope, inplace=True)
             )
         else:
