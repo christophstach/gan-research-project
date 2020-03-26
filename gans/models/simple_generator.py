@@ -28,7 +28,7 @@ class SimpleGenerator(pl.LightningModule):
             # state size. (self.hparams.generator_filters) x 32 x 32
             nn.ConvTranspose2d(self.hparams.generator_filters, self.hparams.image_channels, 4, 2, 1, bias=False),
             nn.Tanh()
-            # state size. (nc) x 64 x 64
+            # state size. (self.hparams.image_channels) x 64 x 64
         )
 
         self.apply(self.init_weights)
