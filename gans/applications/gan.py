@@ -176,33 +176,6 @@ class GAN(pl.LightningModule):
         if optimizer_idx == 1:  # Train generator
             return self.training_step_generator(batch)
 
-    def backward(self, trainer, loss, optimizer, optimizer_idx):
-        if optimizer_idx == 0:
-            self.critic.train()
-            self.generator.eval()
-
-            for p in self.critic.parameters(): p.requires_grad = True
-            for p in self.generator.parameters(): p.requires_grad = False
-
-            #if self.hparams.warmup_enabled:
-            #    for param in self.critic.features.parameters():
-            #        param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
-
-        if optimizer_idx == 1:
-            self.critic.eval()
-            self.generator.train()
-
-            for p in self.critic.parameters(): p.requires_grad = False
-            for p in self.generator.parameters(): p.requires_grad = True
-
-        super().backward(trainer, loss, optimizer, optimizer_idx)
-
-    def validation_epoch_end(self, outputs):
-        ic_score_mean = torch.stack([x["ic_score"] for x in outputs]).mean()
-
-        logs = {"ic_score_mean": ic_score_mean}
-        return OrderedDict({"ic_score_mean": ic_score_mean, "progress_bar": logs, "log": logs})
-
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
@@ -268,6 +241,27 @@ class GAN(pl.LightningModule):
                 )
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
 
+    def backward2(self, trainer, loss, optimizer, optimizer_idx):
+        if optimizer_idx == 0:
+            self.critic.train()
+            self.generator.eval()
+
+            for p in self.critic.parameters(): p.requires_grad = True
+            for p in self.generator.parameters(): p.requires_grad = False
+
+            # if self.hparams.warmup_enabled:
+            #    for param in self.critic.features.parameters():
+            #        param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
+
+        if optimizer_idx == 1:
+            self.critic.eval()
+            self.generator.train()
+
+            for p in self.critic.parameters(): p.requires_grad = False
+            for p in self.generator.parameters(): p.requires_grad = True
+
+        super().backward(trainer, loss, optimizer, optimizer_idx)
+
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
         if optimizer_idx == 0:
@@ -279,8 +273,10 @@ class GAN(pl.LightningModule):
             optimizer.zero_grad()
 
         # update generator opt every {self.alternation_interval} steps
-        if optimizer_idx == 1 and batch_idx % self.hparams.alternation_interval == 0 and self.trainer.current_epoch >= self.hparams.warmup_epochs:
+        if optimizer_idx == 1:
+            # if batch_idx % self.hparams.alternation_interval == 0 and self.trainer.current_epoch >= self.hparams.warmup_epochs:
             optimizer.step()
+
             optimizer.zero_grad()
 
     def configure_optimizers(self):
@@ -350,14 +346,13 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
 
         system_group = parser.add_argument_group("System")
-        system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
+        system_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image size")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
         system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
         system_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
-
 
         system_group.add_argument("-lt", "--strategy", type=str, choices=[
             "lsgan",
