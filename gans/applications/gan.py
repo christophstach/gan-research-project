@@ -353,8 +353,12 @@ class GAN(pl.LightningModule):
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image size")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
+
+        # TTUR: https://arxiv.org/abs/1706.08500
         system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=3e-4, help="Learning rate of the critic optimizers")
         system_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
+
+
         system_group.add_argument("-lt", "--strategy", type=str, choices=[
             "lsgan",
             "wgan-wc",
