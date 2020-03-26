@@ -34,7 +34,7 @@ class SimpleGenerator(pl.LightningModule):
         self.apply(self.init_weights)
 
     def init_weights(self, m):
-        if False:
+        if True:
             if isinstance(m, nn.Conv2d):
                 nn.init.normal_(m.weight.data, 0.0, 0.02)
             elif isinstance(m, nn.BatchNorm2d):
