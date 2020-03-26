@@ -23,7 +23,7 @@ class Critic(pl.LightningModule):
             DownsampleStridedConv2d(self.hparams.image_channels + (1 if self.hparams.y_size > 1 else 0), self.hparams.critic_filters),
             DownsampleStridedConv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2),
             DownsampleStridedConv2d(self.hparams.critic_filters * 2, self.hparams.critic_filters * 4),
-            DownsampleStridedConv2d(self.hparams.critic_filters * 4, self.hparams.critic_filters * 8)
+            DownsampleStridedConv2d(self.hparams.critic_filters * 4, self.hparams.critic_filters * 8, kernel_size=5, stride=4, padding=False)
         )
 
         self.validator = nn.Sequential(
@@ -54,7 +54,10 @@ class Critic(pl.LightningModule):
         data = self.features(data)
 
         validity = self.validator(data)
+        print(validity.size())
+        exit(0)
         validity = validity.view(validity.size(0), -1)
+
         validity = validity.mean(1, keepdim=True)
 
         return validity

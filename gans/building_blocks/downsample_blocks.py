@@ -5,7 +5,7 @@ import torch.nn as nn
 
 
 class DownsampleStridedConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=5, negative_slope=0.2, activation=True):
+    def __init__(self, in_channels, out_channels, kernel_size=5, stride=2,  negative_slope=0.2, padding=True, activation=True):
         super().__init__()
 
         self.negative_slope = negative_slope
@@ -16,8 +16,8 @@ class DownsampleStridedConv2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=2,
-                    padding=kernel_size // 2,
+                    stride=stride,
+                    padding=kernel_size // 2 if padding else 0,
                     bias=False
                 ),
                 nn.LeakyReLU(self.negative_slope, inplace=True)
@@ -28,8 +28,8 @@ class DownsampleStridedConv2d(nn.Module):
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=2,
-                    padding=kernel_size // 2,
+                    stride=stride,
+                    padding=kernel_size // 2 if padding else 0,
                     bias=False
                 )
             )
