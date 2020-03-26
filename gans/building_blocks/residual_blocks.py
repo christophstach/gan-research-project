@@ -12,21 +12,23 @@ class ResidualBlockTypeA(nn.Module):
         self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
 
         self.main = nn.Sequential(
-            nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=in_channels,
                 kernel_size=kernel_size,
-                stride=1
+                stride=1,
+                padding=kernel_size // 2,
+                bias=False
             ),
             nn.BatchNorm2d(in_channels),
             nn.LeakyReLU(self.negative_slope, inplace=True),
-            nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
-                stride=1
+                stride=1,
+                padding=kernel_size // 2,
+                bias=False
             ),
             nn.BatchNorm2d(out_channels)
         )
@@ -61,21 +63,23 @@ class ResidualBlockTypeB(nn.Module):
         self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
 
         self.main = nn.Sequential(
-            nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=in_channels,
                 kernel_size=kernel_size,
-                stride=1
+                stride=1,
+                padding=kernel_size // 2,
+                bias=False
             ),
             nn.BatchNorm2d(in_channels),
             nn.LeakyReLU(self.negative_slope, inplace=True),
-            nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
-                stride=1
+                stride=1,
+                padding=kernel_size // 2,
+                bias=False
             ),
             nn.BatchNorm2d(out_channels)
         )
@@ -105,23 +109,25 @@ class ResidualBlockTypeC(nn.Module):
         super().__init__()
 
         self.negative_slope = negative_slope
-        self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
+        self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=False)
 
         self.main = nn.Sequential(
-            nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=in_channels,
                 kernel_size=kernel_size,
-                stride=1
+                stride=1,
+                padding=kernel_size // 2,
+                bias=False
             ),
             nn.LeakyReLU(self.negative_slope, inplace=True),
-            nn.ReflectionPad2d(kernel_size // 2),
             nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
-                stride=1
+                stride=1,
+                padding=kernel_size // 2,
+                bias=False
             )
         )
 

@@ -19,7 +19,8 @@ class Generator(pl.LightningModule):
             # input is Z, going into a convolution
             nn.Linear(
                 self.hparams.noise_size + (self.hparams.y_embedding_size if self.hparams.y_size > 1 else 0),
-                self.hparams.generator_filters * 8 * 4 ** 2
+                self.hparams.generator_filters * 8 * 4 ** 2,
+                bias=False
             )
         )
 

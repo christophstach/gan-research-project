@@ -18,7 +18,8 @@ class UpsampleFractionalConv2d(nn.Module):
                     out_channels=out_channels,
                     kernel_size=kernel_size,
                     stride=stride,
-                    padding=stride - 1
+                    padding=stride - 1,
+                    bias=False
                 ),
                 nn.BatchNorm2d(out_channels),
                 nn.LeakyReLU(self.negative_slope, inplace=True)
@@ -30,7 +31,8 @@ class UpsampleFractionalConv2d(nn.Module):
                     out_channels=out_channels,
                     kernel_size=kernel_size,
                     stride=stride,
-                    padding=stride - 1
+                    padding=stride - 1,
+                    bias=False
                 )
             )
 
@@ -65,12 +67,13 @@ class UpsampleInterpolateConv2d(nn.Module):
                     scale_factor=upscale_factor,
                     mode="nearest"
                 ),
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=1
+                    stride=1,
+                    padding=kernel_size // 2,
+                    bias=False
                 ),
                 nn.LeakyReLU(self.negative_slope, inplace=True)
             )
@@ -80,12 +83,13 @@ class UpsampleInterpolateConv2d(nn.Module):
                     scale_factor=upscale_factor,
                     mode="nearest"
                 ),
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=1
+                    stride=1,
+                    padding=kernel_size // 2,
+                    bias=False
                 )
             )
 
@@ -116,24 +120,26 @@ class UpsampleConv2dPixelShuffle(nn.Module):
 
         if activation:
             self.main = nn.Sequential(
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels * 2 ** upscale_factor,
                     kernel_size=kernel_size,
-                    stride=1
+                    stride=1,
+                    padding=kernel_size // 2,
+                    bias=False
                 ),
                 nn.PixelShuffle(upscale_factor),
                 nn.LeakyReLU(self.negative_slope, inplace=True)
             )
         else:
             self.main = nn.Sequential(
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels * 2 ** upscale_factor,
                     kernel_size=kernel_size,
-                    stride=1
+                    stride=1,
+                    padding=kernel_size // 2,
+                    bias=False
                 ),
                 nn.PixelShuffle(upscale_factor)
             )

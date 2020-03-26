@@ -12,23 +12,25 @@ class DownsampleStridedConv2d(nn.Module):
 
         if activation:
             self.main = nn.Sequential(
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=2
+                    stride=2,
+                    padding=kernel_size // 2,
+                    bias=False
                 ),
                 nn.LeakyReLU(self.negative_slope, inplace=True)
             )
         else:
             self.main = nn.Sequential(
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=2
+                    stride=2,
+                    padding=kernel_size // 2,
+                    bias=False
                 )
             )
 
@@ -60,24 +62,26 @@ class DownsampleMaxPoolConv2d(nn.Module):
         if activation:
             self.main = nn.Sequential(
                 nn.MaxPool2d(2),
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=1
+                    stride=1,
+                    padding=kernel_size // 2,
+                    bias=False
                 ),
                 nn.LeakyReLU(self.negative_slope, inplace=True)
             )
         else:
             self.main = nn.Sequential(
                 nn.MaxPool2d(2),
-                nn.ReflectionPad2d(kernel_size // 2),
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=kernel_size,
-                    stride=1
+                    stride=1,
+                    padding=kernel_size // 2,
+                    bias=False
                 )
             )
 
