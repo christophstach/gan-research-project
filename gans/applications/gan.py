@@ -285,11 +285,11 @@ class GAN(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div", "lsgan"]:
-            critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
-            generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.beta1, self.hparams.beta2))
+            critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.critic_beta1, self.hparams.critic_beta2))
+            generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
         elif self.hparams.strategy == "wgan-wc":
-            critic_optimizer = optim.RMSprop(self.critic.parameters(), lr=self.learning_rate)
-            generator_optimizer = optim.RMSprop(self.generator.parameters(), lr=self.learning_rate)
+            critic_optimizer = optim.RMSprop(self.critic.parameters(), lr=self.critic_learning_rate)
+            generator_optimizer = optim.RMSprop(self.generator.parameters(), lr=self.generator_learning_rate)
         else:
             raise NotImplementedError()
 
@@ -343,15 +343,18 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         train_group.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
         train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
-        train_group.add_argument("-b1", "--beta1", type=float, default=0.5, help="Momentum term beta1")
-        train_group.add_argument("-b2", "--beta2", type=float, default=0.999, help="Momentum term beta2")
+        train_group.add_argument("-cb1", "--critic-beta1", type=float, default=0.5, help="Momentum term beta1 of the critic optimizer")
+        train_group.add_argument("-cb2", "--critic-beta2", type=float, default=0.999, help="Momentum term beta2 of the critic optimizer")
+        train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.5, help="Momentum term beta1 of the generator optimizer")
+        train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.999, help="Momentum term beta2 of the generator optimizer")
         train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
 
         system_group = parser.add_argument_group("System")
         system_group.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image size")
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
-        system_group.add_argument("-lr", "--learning-rate", type=float, default=1e-4, help="Learning rate of both optimizers")
+        system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=1e-4, help="Learning rate of the critic optimizers")
+        system_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
         system_group.add_argument("-lt", "--strategy", type=str, choices=[
             "lsgan",
             "wgan-wc",
