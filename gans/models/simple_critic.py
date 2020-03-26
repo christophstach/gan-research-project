@@ -14,15 +14,12 @@ class SimpleCritic(pl.LightningModule):
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.critic_filters) x 32 x 32
             nn.Conv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(self.hparams.critic_filters * 2),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.critic_filters*2) x 16 x 16
             nn.Conv2d(self.hparams.critic_filters * 2, self.hparams.critic_filters * 4, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(self.hparams.critic_filters * 4),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.critic_filters*4) x 8 x 8
             nn.Conv2d(self.hparams.critic_filters * 4, self.hparams.critic_filters * 8, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(self.hparams.critic_filters * 8),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.critic_filters*8) x 4 x 4
             nn.Conv2d(self.hparams.critic_filters * 8, 1, 4, 1, 0, bias=False),
