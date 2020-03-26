@@ -54,10 +54,7 @@ class Critic(pl.LightningModule):
         data = self.features(data)
 
         validity = self.validator(data)
-        print(validity.size())
-        exit(0)
         validity = validity.view(validity.size(0), -1)
-
         validity = validity.mean(1, keepdim=True)
 
         return validity
