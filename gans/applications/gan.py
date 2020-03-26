@@ -355,7 +355,7 @@ class GAN(pl.LightningModule):
         system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=3e-4, help="Learning rate of the critic optimizers")
+        system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
         system_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
 
