@@ -184,9 +184,9 @@ class GAN(pl.LightningModule):
             for p in self.critic.parameters(): p.requires_grad = True
             for p in self.generator.parameters(): p.requires_grad = False
 
-            if self.hparams.warmup_enabled:
-                for param in self.critic.features.parameters():
-                    param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
+            #if self.hparams.warmup_enabled:
+            #    for param in self.critic.features.parameters():
+            #        param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
 
         if optimizer_idx == 1:
             self.critic.eval()
@@ -279,7 +279,7 @@ class GAN(pl.LightningModule):
             optimizer.zero_grad()
 
         # update generator opt every {self.alternation_interval} steps
-        if optimizer_idx == 1 and batch_idx % self.hparams.alternation_interval == 0:
+        if optimizer_idx == 1 and batch_idx % self.hparams.alternation_interval == 0 and self.trainer.current_epoch >= self.hparams.warmup_epochs:
             optimizer.step()
             optimizer.zero_grad()
 
@@ -368,7 +368,7 @@ class GAN(pl.LightningModule):
         ], default="wgan-0-gp")
 
         system_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
-        system_group.add_argument("-wi", "--warmup-epochs", type=int, default=5, help="Number of epochs to freeze the critics feature parameters")
+        system_group.add_argument("-wi", "--warmup-epochs", type=int, default=2, help="Number of epochs to freeze the critics feature parameters")
 
         system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         system_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
