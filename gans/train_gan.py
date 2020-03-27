@@ -7,12 +7,12 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 
 from gans.applications import GAN
-from gans.models import Generator, Critic, SimpleCritic, SimpleGenerator
+from gans.models import Generator, Critic, SimpleCritic, SimpleGenerator, SimpleSpectralNormGenerator, SimpleSpectralNormCritic
 
 
 def main(hparams):
     generator = SimpleGenerator(hparams)
-    critic = SimpleCritic(hparams)
+    critic = SimpleSpectralNormCritic(hparams)
     scorer = models.mobilenet_v2(pretrained=True)
     model = GAN(hparams, generator, critic, scorer)
 

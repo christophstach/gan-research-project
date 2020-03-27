@@ -73,12 +73,17 @@ class GAN(pl.LightningModule):
             return (fake_validity.mean() - real_validity.mean()).unsqueeze(0)
         elif self.hparams.strategy == "lsgan":
             return (0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()).unsqueeze(0)
+        elif self.hparams.strategy == "hinge":
+            # noinspection PyTypeChecker
+            return torch.min(0, -1 + real_validity) + torch.min(0, -1 - fake_validity)
 
     def generator_loss(self, fake_validity):
         if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div"]:
             return (-fake_validity.mean()).unsqueeze(0)
         elif self.hparams.strategy == "lsgan":
             return (0.5 * ((fake_validity - 1) ** 2).mean()).unsqueeze(0)
+        elif self.hparams.strategy == "hinge":
+            return - fake_validity
 
     def clip_weights(self):
         for weight in self.critic.parameters():
@@ -90,7 +95,8 @@ class GAN(pl.LightningModule):
         # Random weight term for interpolation between real and fake samples
         alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
         # Get random interpolation between real and fake samples
-        interpolates = alpha * real_images + ((torch.tensor(1.0, device=real_images.device) - alpha) * fake_images)
+        # noinspection PyTypeChecker
+        interpolates = alpha * real_images + (1 - alpha) * fake_images
 
         interpolates.requires_grad_()
 
@@ -107,7 +113,8 @@ class GAN(pl.LightningModule):
         elif self.hparams.strategy == "wgan-1-gp":
             penalties = (gradients.norm(2, dim=1) - 1).pow(2)
         elif self.hparams.strategy == "wgan-lp":
-            penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(2, dim=1) - 1).pow(2)
+            # noinspection PyTypeChecker
+            penalties = torch.max(0, gradients.norm(2, dim=1) - 1).pow(2)
         else:
             raise ValueError()
 
