@@ -345,7 +345,7 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="he")
 
         train_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
-        train_group.add_argument("-is", "--image-size", type=int, default=64, help="Generated image size")
+        train_group.add_argument("-is", "--image-size", type=int, default=32, help="Generated image size")
         train_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
@@ -361,7 +361,7 @@ class GAN(pl.LightningModule):
         ], default="wgan-0-gp")
 
         train_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
-        train_group.add_argument("-wen", "--warmup-epochs", type=int, default=2, help="Number of epochs to freeze the critics feature parameters")
+        train_group.add_argument("-wen", "--warmup-epochs", type=int, default=0, help="Number of epochs to freeze the critics feature parameters")
 
         train_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         train_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
