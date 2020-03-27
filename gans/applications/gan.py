@@ -241,13 +241,13 @@ class GAN(pl.LightningModule):
                 )
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
 
-    def backward2(self, trainer, loss, optimizer, optimizer_idx):
+    def backward(self, trainer, loss, optimizer, optimizer_idx):
         if optimizer_idx == 0:
             self.critic.train()
             self.generator.eval()
 
-            for p in self.critic.parameters(): p.requires_grad = True
-            for p in self.generator.parameters(): p.requires_grad = False
+            for p in self.critic.parameters(): p.requires_grad_(True)
+            for p in self.generator.parameters(): p.requires_grad_(False)
 
             # if self.hparams.warmup_enabled:
             #    for param in self.critic.features.parameters():
@@ -257,8 +257,8 @@ class GAN(pl.LightningModule):
             self.critic.eval()
             self.generator.train()
 
-            for p in self.critic.parameters(): p.requires_grad = False
-            for p in self.generator.parameters(): p.requires_grad = True
+            for p in self.critic.parameters(): p.requires_grad_(False)
+            for p in self.generator.parameters(): p.requires_grad_(True)
 
         super().backward(trainer, loss, optimizer, optimizer_idx)
 
@@ -366,7 +366,7 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-wen", "--warmup-epochs", type=int, default=2, help="Number of epochs to freeze the critics feature parameters")
 
         train_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        train_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
+        train_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         train_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         train_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
         train_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
@@ -375,7 +375,6 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
         train_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
         train_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=True, help="Find paper for this")
-
 
         train_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
         train_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
