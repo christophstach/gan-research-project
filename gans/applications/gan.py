@@ -253,8 +253,8 @@ class GAN(pl.LightningModule):
             self.critic.train()
             self.generator.eval()
 
-            for p in self.critic.parameters(): p.requires_grad_(True)
-            for p in self.generator.parameters(): p.requires_grad_(False)
+            # for p in self.critic.parameters(): p.requires_grad_(True)
+            # for p in self.generator.parameters(): p.requires_grad_(False)
 
             # if self.hparams.warmup_enabled:
             #    for param in self.critic.features.parameters():
@@ -264,8 +264,8 @@ class GAN(pl.LightningModule):
             self.critic.eval()
             self.generator.train()
 
-            for p in self.critic.parameters(): p.requires_grad_(False)
-            for p in self.generator.parameters(): p.requires_grad_(True)
+            # for p in self.critic.parameters(): p.requires_grad_(False)
+            # for p in self.generator.parameters(): p.requires_grad_(True)
 
         super().backward(trainer, loss, optimizer, optimizer_idx)
 
