@@ -270,14 +270,12 @@ class GAN(pl.LightningModule):
             if self.hparams.strategy == "wgan-wc":
                 self.clip_weights()
 
-            optimizer.zero_grad()
-
         # update generator opt every {self.alternation_interval} steps
         if optimizer_idx == 1:
-            # if batch_idx % self.hparams.alternation_interval == 0 and self.trainer.current_epoch >= self.hparams.warmup_epochs:
-            optimizer.step()
+            if batch_idx % self.hparams.alternation_interval == 0 and self.trainer.current_epoch >= self.hparams.warmup_epochs:
+                optimizer.step()
 
-            optimizer.zero_grad()
+        optimizer.zero_grad()
 
     def configure_optimizers(self):
         if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div", "lsgan"]:
