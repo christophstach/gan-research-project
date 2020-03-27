@@ -75,7 +75,7 @@ class GAN(pl.LightningModule):
             return (0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()).unsqueeze(0)
         elif self.hparams.strategy == "hinge":
             # noinspection PyTypeChecker
-            return torch.min(0, -1 + real_validity) + torch.min(0, -1 - fake_validity)
+            return torch.min(0, -1 + real_validity) + torch.min(0, -1 - fake_validity).unsqueeze(0)
 
     def generator_loss(self, fake_validity):
         if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div"]:
@@ -83,7 +83,7 @@ class GAN(pl.LightningModule):
         elif self.hparams.strategy == "lsgan":
             return (0.5 * ((fake_validity - 1) ** 2).mean()).unsqueeze(0)
         elif self.hparams.strategy == "hinge":
-            return - fake_validity
+            return (-fake_validity).unsqueeze()
 
     def clip_weights(self):
         for weight in self.critic.parameters():
@@ -349,7 +349,7 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
         train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
-        train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="he")
+        train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="default")
 
         train_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
         train_group.add_argument("-is", "--image-size", type=int, default=32, help="Generated image size")
@@ -365,7 +365,7 @@ class GAN(pl.LightningModule):
             "wgan-1-gp",  # Original WGAN-GP
             "wgan-0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
             "wgan-lp",  # On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
-        ], default="wgan-0-gp")
+        ], default="lsgan")
 
         train_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
         train_group.add_argument("-wen", "--warmup-epochs", type=int, default=0, help="Number of epochs to freeze the critics feature parameters")
