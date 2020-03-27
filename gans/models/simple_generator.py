@@ -14,19 +14,19 @@ class SimpleGenerator(pl.LightningModule):
             # input is Z, going into a convolution
             nn.ConvTranspose2d(self.hparams.noise_size, self.hparams.generator_filters * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(self.hparams.generator_filters * 8),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.generator_filters*8) x 4 x 4
             nn.ConvTranspose2d(self.hparams.generator_filters * 8, self.hparams.generator_filters * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(self.hparams.generator_filters * 4),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.generator_filters*4) x 8 x 8
             nn.ConvTranspose2d(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(self.hparams.generator_filters * 2),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.generator_filters*2) x 16 x 16
             nn.ConvTranspose2d(self.hparams.generator_filters * 2, self.hparams.generator_filters, 4, 2, 1, bias=False),
             nn.BatchNorm2d(self.hparams.generator_filters),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             # state size. (self.hparams.generator_filters) x 32 x 32
             nn.ConvTranspose2d(self.hparams.generator_filters, self.hparams.image_channels, 4, 2, 1, bias=False),
             nn.Tanh()
