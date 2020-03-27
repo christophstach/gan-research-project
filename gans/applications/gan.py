@@ -363,7 +363,7 @@ class GAN(pl.LightningModule):
         ], default="wgan-0-gp")
 
         train_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
-        train_group.add_argument("-wi", "--warmup-epochs", type=int, default=2, help="Number of epochs to freeze the critics feature parameters")
+        train_group.add_argument("-wen", "--warmup-epochs", type=int, default=2, help="Number of epochs to freeze the critics feature parameters")
 
         train_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
         train_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
