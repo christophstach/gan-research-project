@@ -344,17 +344,17 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
         train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
+        train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="dcgan")
 
-        system_group = parser.add_argument_group("System")
-        system_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
-        system_group.add_argument("-iw", "--image-size", type=int, default=64, help="Generated image size")
-        system_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
+        train_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
+        train_group.add_argument("-is", "--image-size", type=int, default=64, help="Generated image size")
+        train_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        system_group.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
-        system_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
+        train_group.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
+        train_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
-        system_group.add_argument("-lt", "--strategy", type=str, choices=[
+        train_group.add_argument("-lt", "--strategy", type=str, choices=[
             "lsgan",
             "wgan-wc",
             "wgan-1-gp",  # Original WGAN-GP
@@ -362,24 +362,24 @@ class GAN(pl.LightningModule):
             "wgan-lp",  # On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
         ], default="wgan-0-gp")
 
-        system_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
-        system_group.add_argument("-wi", "--warmup-epochs", type=int, default=2, help="Number of epochs to freeze the critics feature parameters")
+        train_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
+        train_group.add_argument("-wi", "--warmup-epochs", type=int, default=2, help="Number of epochs to freeze the critics feature parameters")
 
-        system_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        system_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
-        system_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
-        system_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
-        system_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
-        system_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
+        train_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
+        train_group.add_argument("-y", "--y-size", type=int, default=0, help="Length of the y/label vector")
+        train_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
+        train_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
+        train_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
+        train_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-        system_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
-        system_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
-        system_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=True, help="Find paper for this")
+        train_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
+        train_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
+        train_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=True, help="Find paper for this")
 
-        pretrain_group = parser.add_argument_group("Pretrain")
-        pretrain_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
-        pretrain_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
-        pretrain_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=50, help="Maximum pretrain epochs")
-        pretrain_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
+
+        train_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
+        train_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
+        train_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=50, help="Maximum pretrain epochs")
+        train_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
 
         return parser
