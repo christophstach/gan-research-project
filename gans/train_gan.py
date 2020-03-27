@@ -11,7 +11,7 @@ from gans.models import Generator, Critic, SimpleCritic, SimpleGenerator, Simple
 
 
 def main(hparams):
-    generator = SimpleGenerator(hparams)
+    generator = SimpleSpectralNormGenerator(hparams)
     critic = SimpleSpectralNormCritic(hparams)
     scorer = models.mobilenet_v2(pretrained=True)
     model = GAN(hparams, generator, critic, scorer)
