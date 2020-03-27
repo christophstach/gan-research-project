@@ -344,7 +344,7 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
         train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
-        train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="dcgan")
+        train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="he")
 
         train_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
         train_group.add_argument("-is", "--image-size", type=int, default=64, help="Generated image size")
