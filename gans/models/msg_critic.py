@@ -50,7 +50,7 @@ class MultiScaleGradientCritic(pl.LightningModule):
 
         validity = self.main(x_32x32)
 
-        if self.hparams.strategy == "ns":
+        if self.hparams.loss_strategy == "ns":
             return torch.sigmoid(validity)
         else:
             return validity

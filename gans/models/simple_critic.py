@@ -2,6 +2,7 @@ import math
 
 import pytorch_lightning as pl
 import torch.nn as nn
+import torch
 
 
 class SimpleCritic(pl.LightningModule):
@@ -47,4 +48,7 @@ class SimpleCritic(pl.LightningModule):
     def forward(self, x, y):
         validity = self.main(x)
 
-        return validity
+        if self.hparams.loss_strategy == "ns":
+            return torch.sigmoid(validity)
+        else:
+            return validity
