@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 
 from gans.applications import GAN
-from gans.models import Generator, Critic, SimpleCritic, SimpleGenerator, SimpleSpectralNormGenerator, SimpleSpectralNormCritic, MultiScaleGradientGenerator, MultiScaleGradientCritic
+from gans.models import SimpleCritic, SimpleGenerator, MultiScaleGradientGenerator, MultiScaleGradientCritic
 
 
 def main(hparams):
@@ -29,12 +29,12 @@ def main(hparams):
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
             project_name="gan-research-project",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-            experiment_name=hparams.strategy + " (" + hparams.dataset + ")"  # Optional
+            experiment_name=hparams.loss_strategy + "+" + hparams.gradient_penalty_strategy + " (" + hparams.dataset + ")"
         )
     elif hparams.logger == "wandb":
         logger = WandbLogger(
             project="gan-research-project",
-            name=hparams.strategy + " (" + hparams.dataset + ")"  # Optional
+            name=hparams.loss_strategy + "+" + hparams.gradient_penalty_strategy + " (" + hparams.dataset + ")"
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
