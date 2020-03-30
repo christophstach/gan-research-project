@@ -124,7 +124,7 @@ class GAN(pl.LightningModule):
             penalties = (gradients.norm(dim=1) - 1).pow(2)
         elif self.hparams.gradient_penalty_strategy == "lp":
             # noinspection PyTypeChecker
-            penalties = torch.max(torch.tensor(0.0), gradients.norm(dim=1) - 1).pow(2)
+            penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1).pow(2)
         else:
             raise ValueError()
 
