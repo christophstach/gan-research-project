@@ -1,3 +1,4 @@
+import math
 import os
 import random
 from argparse import ArgumentParser
@@ -29,6 +30,7 @@ class GAN(pl.LightningModule):
         self.scorer = scorer
 
         self.real_images = None
+        self.multi_scale_images = None
         self.y = None
         self.experience = None
 
@@ -74,9 +76,7 @@ class GAN(pl.LightningModule):
         elif self.hparams.loss_strategy == "lsgan":
             return (-((real_validity - 1) ** 2).mean() + (fake_validity ** 2).mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "hinge":
-            # noinspection PyTypeChecker
-            raise NotImplementedError()
-            return torch.min(0, -1 + real_validity) + torch.min(0, -1 - fake_validity).unsqueeze(0)
+            return (torch.relu(1.0 - real_validity).mean() + torch.relu(1.0 + fake_validity).mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "ns":
             # noinspection PyTypeChecker
             return (-(torch.log(torch.sigmoid(real_validity))).mean() - (torch.log(1 - torch.sigmoid(fake_validity))).mean()).unsqueeze(0)
@@ -89,8 +89,7 @@ class GAN(pl.LightningModule):
         elif self.hparams.loss_strategy == "lsgan":
             return (-((fake_validity - 1) ** 2).mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "hinge":
-            raise NotImplementedError()
-            return (-fake_validity).unsqueeze()
+            return (-fake_validity.mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "ns":
             return (-(torch.log(torch.sigmoid(fake_validity))).mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "mm":
@@ -142,6 +141,8 @@ class GAN(pl.LightningModule):
         else:
             if self.hparams.multi_scale_gradient:
                 fake_images = (x.detach() for x in self.forward(noise, self.y))
+
+                self.multi_scale_images = self.generate_multi_scale_images(self.real_images)
             else:
                 fake_images = self.forward(noise, self.y).detach()
 
@@ -194,6 +195,12 @@ class GAN(pl.LightningModule):
 
         if optimizer_idx == 1:  # Train generator
             return self.training_step_generator(batch)
+
+    def generate_multi_scale_images(self, source_images):
+        return [
+            F.interpolate(source_images, size=2 ** target_size)
+            for target_size in range(2, int(math.log2(self.hparams.image_size)))
+        ]
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
@@ -363,7 +370,7 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
         train_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
-        train_group.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns"], default="wgan")
+        train_group.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns"], default="hinge")
         train_group.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
@@ -383,7 +390,7 @@ class GAN(pl.LightningModule):
 
         train_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
         train_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
-        train_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=True, help="Find paper for this")
+        train_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=False, help="Find paper for this")
 
         train_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
         train_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
