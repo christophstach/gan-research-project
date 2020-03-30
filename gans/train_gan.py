@@ -11,8 +11,13 @@ from gans.models import Generator, Critic, SimpleCritic, SimpleGenerator, Simple
 
 
 def main(hparams):
-    generator = MultiScaleGradientGenerator(hparams)
-    critic = MultiScaleGradientCritic(hparams)
+    if hparams.multi_scale_gradient:
+        generator = MultiScaleGradientGenerator(hparams)
+        critic = MultiScaleGradientCritic(hparams)
+    else:
+        generator = SimpleGenerator(hparams)
+        critic = SimpleCritic(hparams)
+
     scorer = models.mobilenet_v2(pretrained=True)
     model = GAN(hparams, generator, critic, scorer)
 

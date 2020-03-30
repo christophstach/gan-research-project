@@ -46,7 +46,9 @@ class MultiScaleGradientCritic(pl.LightningModule):
                     nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x, y):
-        validity = self.main(x)
+        x_4x4, x_8x8, x_16x16, x_32x32 = x
+
+        validity = self.main(x_32x32)
 
         if self.hparams.strategy == "ns":
             return torch.sigmoid(validity)
