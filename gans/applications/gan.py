@@ -293,7 +293,7 @@ class GAN(pl.LightningModule):
         optimizer.zero_grad()
 
     def configure_optimizers(self):
-        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "lsgan"]:
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "lsgan", "ns"]:
             critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.critic_learning_rate, betas=(self.hparams.critic_beta1, self.hparams.critic_beta2))
             generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
         elif self.hparams.strategy == "wgan-wc":
