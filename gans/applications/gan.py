@@ -78,6 +78,7 @@ class GAN(pl.LightningModule):
             raise NotImplementedError()
             return torch.min(0, -1 + real_validity) + torch.min(0, -1 - fake_validity).unsqueeze(0)
         elif self.hparams.loss_strategy == "ns":
+            # noinspection PyTypeChecker
             return (-(torch.log(torch.sigmoid(real_validity))).mean() - (torch.log(1 - torch.sigmoid(fake_validity))).mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "mm":
             raise NotImplementedError()
