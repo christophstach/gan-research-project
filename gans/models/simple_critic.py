@@ -48,7 +48,4 @@ class SimpleCritic(pl.LightningModule):
     def forward(self, x, y):
         validity = self.main(x)
 
-        if self.hparams.loss_strategy == "ns":
-            return torch.sigmoid(validity)
-        else:
-            return validity
+        return validity

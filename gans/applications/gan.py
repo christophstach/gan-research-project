@@ -78,7 +78,7 @@ class GAN(pl.LightningModule):
             raise NotImplementedError()
             return torch.min(0, -1 + real_validity) + torch.min(0, -1 - fake_validity).unsqueeze(0)
         elif self.hparams.loss_strategy == "ns":
-            return (-(torch.log(real_validity)).mean() - (torch.log(1 - fake_validity)).mean()).unsqueeze(0)
+            return (-(torch.log(torch.sigmoid(real_validity))).mean() - (torch.log(1 - torch.sigmoid(fake_validity))).mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "mm":
             raise NotImplementedError()
 
@@ -91,7 +91,7 @@ class GAN(pl.LightningModule):
             raise NotImplementedError()
             return (-fake_validity).unsqueeze()
         elif self.hparams.loss_strategy == "ns":
-            return (-(torch.log(fake_validity)).mean()).unsqueeze(0)
+            return (-(torch.log(torch.sigmoid(fake_validity))).mean()).unsqueeze(0)
         elif self.hparams.loss_strategy == "mm":
             raise NotImplementedError()
 
