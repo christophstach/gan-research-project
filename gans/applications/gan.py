@@ -69,21 +69,31 @@ class GAN(pl.LightningModule):
         return self.generator(x, y)
 
     def critic_loss(self, real_validity, fake_validity):
-        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div"]:
-            return (fake_validity.mean() - real_validity.mean()).unsqueeze(0)
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp"]:
+            return (-real_validity.mean() + fake_validity.mean()).unsqueeze(0)
         elif self.hparams.strategy == "lsgan":
-            return (0.5 * ((real_validity - 1) ** 2).mean() + 0.5 * (fake_validity ** 2).mean()).unsqueeze(0)
+            return (-((real_validity - 1) ** 2).mean() + (fake_validity ** 2).mean()).unsqueeze(0)
         elif self.hparams.strategy == "hinge":
             # noinspection PyTypeChecker
+            raise NotImplementedError()
             return torch.min(0, -1 + real_validity) + torch.min(0, -1 - fake_validity).unsqueeze(0)
+        elif self.hparams.strategy == "ns":
+            return (-(torch.log(real_validity)).mean() - (torch.log(1 - fake_validity)).mean()).unsqueeze(0)
+        elif self.hparams.strategy == "mm":
+            raise NotImplementedError()
 
     def generator_loss(self, fake_validity):
-        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div"]:
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp"]:
             return (-fake_validity.mean()).unsqueeze(0)
         elif self.hparams.strategy == "lsgan":
-            return (0.5 * ((fake_validity - 1) ** 2).mean()).unsqueeze(0)
+            return (-((fake_validity - 1) ** 2).mean()).unsqueeze(0)
         elif self.hparams.strategy == "hinge":
+            raise NotImplementedError()
             return (-fake_validity).unsqueeze()
+        elif self.hparams.strategy == "ns":
+            return (-(torch.log(fake_validity)).mean()).unsqueeze(0)
+        elif self.hparams.strategy == "mm":
+            raise NotImplementedError()
 
     def clip_weights(self):
         for weight in self.critic.parameters():
@@ -136,8 +146,6 @@ class GAN(pl.LightningModule):
 
         if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp"]:
             gradient_penalty = self.hparams.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
-        elif self.hparams.strategy == "wgan-div":
-            gradient_penalty = self.divergence_gradient_penalty(real_validity, fake_validity, self.real_images, fake_images)
         else:
             gradient_penalty = 0
 
@@ -155,11 +163,11 @@ class GAN(pl.LightningModule):
         self.real_images, self.y = batch
 
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
-
         fake_images = self.forward(noise, self.y)
-        rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
 
         if self.hparams.enable_experience_replay:
+            rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
+
             if self.experience is None:
                 self.experience = rand_image
             else:
@@ -285,7 +293,7 @@ class GAN(pl.LightningModule):
         optimizer.zero_grad()
 
     def configure_optimizers(self):
-        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "wgan-div", "lsgan"]:
+        if self.hparams.strategy in ["wgan-0-gp", "wgan-1-gp", "wgan-lp", "lsgan"]:
             critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.critic_learning_rate, betas=(self.hparams.critic_beta1, self.hparams.critic_beta2))
             generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
         elif self.hparams.strategy == "wgan-wc":
@@ -349,6 +357,7 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
         train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
+        train_group.add_argument("-msg", "--multi-scale-gradient", type=bool, default=False, help="Enable Multi-Scale Gradient")
         train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="default")
 
         train_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
@@ -365,7 +374,8 @@ class GAN(pl.LightningModule):
             "wgan-1-gp",  # Original WGAN-GP
             "wgan-0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
             "wgan-lp",  # On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
-        ], default="lsgan")
+            "ns"
+        ], default="wgan-1-gp")
 
         train_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
         train_group.add_argument("-wen", "--warmup-epochs", type=int, default=0, help="Number of epochs to freeze the critics feature parameters")
