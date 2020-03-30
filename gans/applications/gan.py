@@ -366,7 +366,7 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
-            "lp"  # 1-Sided: On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
+            "lp",  # 1-Sided: On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
             "none"
         ], default="1-gp")
 
