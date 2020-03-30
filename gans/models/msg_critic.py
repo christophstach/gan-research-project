@@ -1,8 +1,8 @@
 import math
 
 import pytorch_lightning as pl
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class MultiScaleGradientCritic(pl.LightningModule):
@@ -49,6 +49,6 @@ class MultiScaleGradientCritic(pl.LightningModule):
         validity = self.main(x)
 
         if self.hparams.strategy == "ns":
-            return validity
+            return torch.sigmoid(validity)
         else:
-            return F.sigmoid(validity)
+            return validity
