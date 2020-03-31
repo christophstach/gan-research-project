@@ -95,7 +95,7 @@ class GAN(pl.LightningModule):
             fake_loss = -fake_validity
         elif self.hparams.loss_strategy == "lsgan":
             fake_loss = -((fake_validity - 1) ** 2)
-        elif self.hparams.loss_strategy == "hinge1":
+        elif self.hparams.loss_strategy == "hinge":
             fake_loss = -fake_validity
         elif self.hparams.loss_strategy == "ns":
             fake_loss = -torch.log(torch.sigmoid(fake_validity))
