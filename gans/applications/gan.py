@@ -72,28 +72,37 @@ class GAN(pl.LightningModule):
 
     def critic_loss(self, real_validity, fake_validity):
         if self.hparams.loss_strategy == "wgan":
-            return (-real_validity.mean() + fake_validity.mean()).unsqueeze(0)
+            real_loss = -real_validity
+            fake_loss = fake_validity
         elif self.hparams.loss_strategy == "lsgan":
-            return (-((real_validity - 1) ** 2).mean() + (fake_validity ** 2).mean()).unsqueeze(0)
+            real_loss = -(real_validity - 1) ** 2
+            fake_loss = fake_validity ** 2
         elif self.hparams.loss_strategy == "hinge":
-            return (torch.relu(1.0 - real_validity).mean() + torch.relu(1.0 + fake_validity).mean()).unsqueeze(0)
+            real_loss = torch.relu(1.0 - real_validity)
+            fake_loss = torch.relu(1.0 + fake_validity)
         elif self.hparams.loss_strategy == "ns":
+            real_loss = -torch.log(torch.sigmoid(real_validity))
             # noinspection PyTypeChecker
-            return (-(torch.log(torch.sigmoid(real_validity))).mean() - (torch.log(1 - torch.sigmoid(fake_validity))).mean()).unsqueeze(0)
-        elif self.hparams.loss_strategy == "mm":
+            fake_loss = -torch.log(1.0 - torch.sigmoid(fake_validity))
+        else:
             raise NotImplementedError()
+
+        loss = real_loss.mean() + fake_loss.mean()
+        return loss.unsqueeze(0)
 
     def generator_loss(self, fake_validity):
         if self.hparams.loss_strategy == "wgan":
-            return (-fake_validity.mean()).unsqueeze(0)
+            fake_loss = -fake_validity
         elif self.hparams.loss_strategy == "lsgan":
-            return (-((fake_validity - 1) ** 2).mean()).unsqueeze(0)
-        elif self.hparams.loss_strategy == "hinge":
-            return (-fake_validity.mean()).unsqueeze(0)
+            fake_loss = -((fake_validity - 1) ** 2)
+        elif self.hparams.loss_strategy == "hinge1":
+            fake_loss = -fake_validity
         elif self.hparams.loss_strategy == "ns":
-            return (-(torch.log(torch.sigmoid(fake_validity))).mean()).unsqueeze(0)
-        elif self.hparams.loss_strategy == "mm":
+            fake_loss = -torch.log(torch.sigmoid(fake_validity))
+        else:
             raise NotImplementedError()
+
+        loss = fake_loss.mean().unsqueeze(0)
 
     def clip_weights(self):
         for weight in self.critic.parameters():
