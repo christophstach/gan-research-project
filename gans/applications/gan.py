@@ -102,7 +102,8 @@ class GAN(pl.LightningModule):
         else:
             raise NotImplementedError()
 
-        loss = fake_loss.mean().unsqueeze(0)
+        loss = fake_loss.mean()
+        return loss.unsqueeze(0)
 
     def clip_weights(self):
         for weight in self.critic.parameters():
