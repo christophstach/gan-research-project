@@ -110,8 +110,6 @@ class GAN(pl.LightningModule):
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
     def gradient_penalty(self, real_images, fake_images, y):
-        """Calculates the gradient penalty loss for WGAN GP"""
-
         # Random weight term for interpolation between real and fake samples
         alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
         # Get random interpolation between real and fake samples
@@ -129,12 +127,12 @@ class GAN(pl.LightningModule):
         gradients = gradients.view(gradients.size(0), -1)
 
         if self.hparams.gradient_penalty_strategy == "0-gp":
-            penalties = gradients.norm(dim=1).pow(2)
+            penalties = gradients.norm(dim=1) ** 2
         elif self.hparams.gradient_penalty_strategy == "1-gp":
-            penalties = (gradients.norm(dim=1) - 1).pow(2)
+            penalties = (gradients.norm(dim=1) - 1) ** 2
         elif self.hparams.gradient_penalty_strategy == "lp":
             # noinspection PyTypeChecker
-            penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1).pow(2)
+            penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1) ** 2
         else:
             raise ValueError()
 
