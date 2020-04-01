@@ -1,8 +1,8 @@
 import math
 
+import torch
 import pytorch_lightning as pl
 import torch.nn as nn
-import torch
 
 
 class SimpleCritic(pl.LightningModule):
@@ -11,19 +11,25 @@ class SimpleCritic(pl.LightningModule):
 
         self.hparams = hparams
 
-        self.main = nn.Sequential(
+        self.block1 = nn.Sequential(
             # input is (nc) x 32 x 32
             nn.Conv2d(self.hparams.image_channels, self.hparams.critic_filters, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
+        )
+
+        self.block2 = nn.Sequential(
             # state size. (self.hparams.critic_filters) x 16 x 16
             nn.Conv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
+        )
+
+        self.block3 = nn.Sequential(
             # state size. (self.hparams.critic_filters*2) x 8 x 8
             nn.Conv2d(self.hparams.critic_filters * 2, self.hparams.critic_filters * 4, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (self.hparams.critic_filters*4) x 4 x 4
-            nn.Conv2d(self.hparams.critic_filters * 4, 1, 4, 1, 0, bias=False),
         )
+
+        self.validator = nn.Conv2d(self.hparams.critic_filters * 4, 1, 4, 1, 0, bias=False)
 
         self.hparams = hparams
 
@@ -45,7 +51,17 @@ class SimpleCritic(pl.LightningModule):
                     bound = 1 / math.sqrt(fan_in)
                     nn.init.uniform_(m.bias, -bound, bound)
 
-    def forward(self, x, y):
-        validity = self.main(x)
+    def forward(self, x, y, dropout=0.0, intermediate_output=False):
+        x = self.block1(x)
+        x = torch.dropout(x, p=dropout, train=True)
+        x = self.block2(x)
+        x = torch.dropout(x, p=dropout, train=True)
+        x = self.block3(x)
+        x = torch.dropout(x, p=dropout, train=True)
 
-        return validity
+        validity = self.validator(x)
+
+        if intermediate_output:
+            return validity, x.mean()
+        else:
+            return validity

@@ -110,33 +110,49 @@ class GAN(pl.LightningModule):
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
     def gradient_penalty(self, real_images, fake_images, y):
-        # Random weight term for interpolation between real and fake samples
-        alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
-        # Get random interpolation between real and fake samples
-        # noinspection PyTypeChecker
-        interpolates = alpha * real_images + (1 - alpha) * fake_images
-
-        interpolates.requires_grad_()
-
-        # Get gradient w.r.t. interpolates
-        interpolate_validity = self.critic(interpolates, y)
-        gradients = torch.autograd.grad(
-            outputs=interpolate_validity, inputs=interpolates, grad_outputs=torch.ones_like(interpolate_validity, device=real_images.device), create_graph=True
-        )[0]
-
-        gradients = gradients.view(gradients.size(0), -1)
-
-        if self.hparams.gradient_penalty_strategy == "0-gp":
-            penalties = gradients.norm(dim=1) ** 2
-        elif self.hparams.gradient_penalty_strategy == "1-gp":
-            penalties = (gradients.norm(dim=1) - 1) ** 2
-        elif self.hparams.gradient_penalty_strategy == "lp":
+        if self.hparams.gradient_penalty_weight != 0:
+            # Random weight term for interpolation between real and fake samples
+            alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
+            # Get random interpolation between real and fake samples
             # noinspection PyTypeChecker
-            penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1) ** 2
-        else:
-            raise ValueError()
+            interpolates = alpha * real_images + (1 - alpha) * fake_images
 
-        return penalties.mean().unsqueeze(0)
+            interpolates.requires_grad_()
+
+            # Get gradient w.r.t. interpolates
+            interpolate_validity = self.critic(interpolates, y)
+            gradients = torch.autograd.grad(
+                outputs=interpolate_validity, inputs=interpolates, grad_outputs=torch.ones_like(interpolate_validity, device=real_images.device), create_graph=True
+            )[0]
+
+            gradients = gradients.view(gradients.size(0), -1)
+
+            if self.hparams.gradient_penalty_strategy == "0-gp":
+                penalties = gradients.norm(dim=1) ** 2
+            elif self.hparams.gradient_penalty_strategy == "1-gp":
+                penalties = (gradients.norm(dim=1) - 1) ** 2
+            elif self.hparams.gradient_penalty_strategy == "lp":
+                # noinspection PyTypeChecker
+                penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1) ** 2
+            else:
+                raise ValueError()
+
+            return penalties.mean().unsqueeze(0) * self.hparams.gradient_penalty_weight
+        else:
+            return 0
+
+    def consistency_term(self, real_images, y, m=0):
+        if self.hparams.consistency_term_weight != 0:
+            # Need to check if correct
+
+            d_x1, d_x1_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True)
+            d_x2, d_x2_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True)
+
+            consistency_term = torch.relu(torch.dist(d_x1, d_x2, p=2) + 0.1 * torch.dist(d_x1_, d_x2_, p=2) - m)
+
+            return consistency_term.unsqueeze(0) * self.hparams.consistency_term_weight
+        else:
+            return 0
 
     def training_step_critic(self, batch):
         self.real_images, self.y = batch
@@ -157,10 +173,8 @@ class GAN(pl.LightningModule):
         real_validity = self.critic(self.real_images, self.y)
         fake_validity = self.critic(fake_images, self.y)
 
-        if self.hparams.gradient_penalty_strategy in ["0-gp", "1-gp", "lp"]:
-            gradient_penalty = self.hparams.gradient_penalty_term * self.gradient_penalty(self.real_images, fake_images, self.y)
-        else:
-            gradient_penalty = 0
+        gradient_penalty = self.gradient_penalty(self.real_images, fake_images, self.y)
+        consistency_term = self.consistency_term(self.real_images, self.y)
 
         loss = self.critic_loss(real_validity, fake_validity)
 
@@ -169,7 +183,7 @@ class GAN(pl.LightningModule):
         else:
             critic_lr = self.hparams.critic_learning_rate
 
-        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "critic_lr": critic_lr}
+        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "consistency_term": consistency_term, "critic_lr": critic_lr}
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
@@ -198,6 +212,9 @@ class GAN(pl.LightningModule):
         return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
     def training_step(self, batch, batch_idx, optimizer_idx):
+        self.critic.train(optimizer_idx == 0)
+        self.generator.train(optimizer_idx == 1)
+
         if optimizer_idx == 0:  # Train critic
             return self.training_step_critic(batch)
 
@@ -274,27 +291,6 @@ class GAN(pl.LightningModule):
                     image_channels="first"
                 )
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
-
-    def backward(self, trainer, loss, optimizer, optimizer_idx):
-        if optimizer_idx == 0:
-            self.critic.train()
-            self.generator.eval()
-
-            # for p in self.critic.parameters(): p.requires_grad_(True)
-            # for p in self.generator.parameters(): p.requires_grad_(False)
-
-            # if self.hparams.warmup_enabled:
-            #    for param in self.critic.features.parameters():
-            #        param.requires_grad = self.trainer.current_epoch >= self.hparams.warmup_epochs
-
-        if optimizer_idx == 1:
-            self.critic.eval()
-            self.generator.train()
-
-            # for p in self.critic.parameters(): p.requires_grad_(False)
-            # for p in self.generator.parameters(): p.requires_grad_(True)
-
-        super().backward(trainer, loss, optimizer, optimizer_idx)
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
@@ -393,7 +389,8 @@ class GAN(pl.LightningModule):
         train_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         train_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         train_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
-        train_group.add_argument("-gpt", "--gradient-penalty-term", type=float, default=10, help="Gradient penalty term")
+        train_group.add_argument("-gpw", "--gradient-penalty-weight", type=float, default=10, help="Gradient penalty weight")
+        train_group.add_argument("-ctw", "--consistency-term-weight", type=float, default=2, help="Consistency term weight")
         train_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         train_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
