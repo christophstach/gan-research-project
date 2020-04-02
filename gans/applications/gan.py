@@ -29,7 +29,7 @@ class GAN(pl.LightningModule):
                 self.hparams.gradient_penalty_coefficient = 10
             elif self.hparams.gradient_penalty_strategy == "lp":
                 self.hparams.gradient_penalty_coefficient = 0.1
-            if self.hparams.gradient_penalty_strategy == "div":
+            elif self.hparams.gradient_penalty_strategy == "div":
                 self.hparams.gradient_penalty_coefficient = 2
             else:
                 raise ValueError()
@@ -41,7 +41,7 @@ class GAN(pl.LightningModule):
                 self.hparams.gradient_penalty_coefficient = 2
             elif self.hparams.gradient_penalty_strategy == "lp":
                 self.hparams.gradient_penalty_coefficient = 2
-            if self.hparams.gradient_penalty_strategy == "div":
+            elif self.hparams.gradient_penalty_strategy == "div":
                 self.hparams.gradient_penalty_coefficient = 6
             else:
                 raise ValueError()
@@ -85,7 +85,7 @@ class GAN(pl.LightningModule):
             # noinspection PyTypeChecker
             fake_loss = -torch.log(1.0 - torch.sigmoid(fake_validity))
         else:
-            raise NotImplementedError()
+            raise ValueError()
 
         loss = real_loss.mean() + fake_loss.mean()
         return loss.unsqueeze(0)
@@ -100,7 +100,7 @@ class GAN(pl.LightningModule):
         elif self.hparams.loss_strategy == "ns":
             fake_loss = -torch.log(torch.sigmoid(fake_validity))
         else:
-            raise NotImplementedError()
+            raise ValueError()
 
         loss = fake_loss.mean()
         return loss.unsqueeze(0)
@@ -140,7 +140,7 @@ class GAN(pl.LightningModule):
             elif self.hparams.gradient_penalty_strategy == "lp":
                 # noinspection PyTypeChecker
                 penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1) ** self.hparams.gradient_penalty_power
-            if self.hparams.gradient_penalty_strategy == "div":
+            elif self.hparams.gradient_penalty_strategy == "div":
                 penalties = gradients.norm(dim=1) ** self.hparams.gradient_penalty_power
             else:
                 raise ValueError()
@@ -156,7 +156,7 @@ class GAN(pl.LightningModule):
             d_x1, d_x1_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True)
             d_x2, d_x2_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True)
 
-            consistency_term = torch.relu(torch.dist(d_x1, d_x2, p=2) + 0.1 * torch.dist(d_x1_, d_x2_, p=2) - m)
+            consistency_term = torch.relu(torch.dist(d_x1, d_x2) + 0.1 * torch.dist(d_x1_, d_x2_) - m)
 
             return self.hparams.consistency_term_coefficient * consistency_term.unsqueeze(0)
         else:
