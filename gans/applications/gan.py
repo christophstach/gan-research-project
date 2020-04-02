@@ -22,6 +22,30 @@ class GAN(pl.LightningModule):
     def __init__(self, hparams, generator, critic, scorer):
         super().__init__()
 
+        if self.hparams.gradient_penalty_coefficient is None:
+            if self.hparams.gradient_penalty_strategy == "0-gp":
+                self.hparams.gradient_penalty_coefficient = 10
+            elif self.hparams.gradient_penalty_strategy == "1-gp":
+                self.hparams.gradient_penalty_coefficient = 10
+            elif self.hparams.gradient_penalty_strategy == "lp":
+                self.hparams.gradient_penalty_coefficient = 0.1
+            if self.hparams.gradient_penalty_strategy == "div":
+                self.hparams.gradient_penalty_coefficient = 2
+            else:
+                raise ValueError()
+            
+        if self.hparams.gradient_penalty_power is None:
+            if self.hparams.gradient_penalty_strategy == "0-gp":
+                self.hparams.gradient_penalty_coefficient = 2
+            elif self.hparams.gradient_penalty_strategy == "1-gp":
+                self.hparams.gradient_penalty_coefficient = 2
+            elif self.hparams.gradient_penalty_strategy == "lp":
+                self.hparams.gradient_penalty_coefficient = 2
+            if self.hparams.gradient_penalty_strategy == "div":
+                self.hparams.gradient_penalty_coefficient = 6
+            else:
+                raise ValueError()
+
         self.hparams = hparams
 
         self.generator = generator
@@ -87,33 +111,40 @@ class GAN(pl.LightningModule):
 
     def gradient_penalty(self, real_images, fake_images, y):
         if self.hparams.gradient_penalty_weight != 0:
-            # Random weight term for interpolation between real and fake samples
             alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
-            # Get random interpolation between real and fake samples
-            # noinspection PyTypeChecker
-            interpolates = alpha * real_images + (1 - alpha) * fake_images
+            
+            if self.hparams.gradient_penalty_strategy == "div":
+                # noinspection PyTypeChecker
+                x_hat = alpha * fake_images + (1 - alpha) * real_images
+            else:
+                # noinspection PyTypeChecker
+                x_hat = alpha * real_images + (1 - alpha) * fake_images
 
-            interpolates.requires_grad_()
 
             # Get gradient w.r.t. interpolates
-            interpolate_validity = self.critic(interpolates, y)
+            x_hat_validity = self.critic(x_hat, y)
             gradients = torch.autograd.grad(
-                outputs=interpolate_validity, inputs=interpolates, grad_outputs=torch.ones_like(interpolate_validity, device=real_images.device), create_graph=True
+                outputs=x_hat_validity,
+                inputs=x_hat,
+                grad_outputs=torch.ones_like(interpolate_validity, device=real_images.device),
+                create_graph=True
             )[0]
 
             gradients = gradients.view(gradients.size(0), -1)
 
             if self.hparams.gradient_penalty_strategy == "0-gp":
-                penalties = gradients.norm(dim=1) ** 2
+                penalties = gradients.norm(dim=1) ** self.hparams.gradient_penalty_power
             elif self.hparams.gradient_penalty_strategy == "1-gp":
-                penalties = (gradients.norm(dim=1) - 1) ** 2
+                penalties = (gradients.norm(dim=1) - 1) ** self.hparams.gradient_penalty_power
             elif self.hparams.gradient_penalty_strategy == "lp":
                 # noinspection PyTypeChecker
-                penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1) ** 2
+                penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1) ** self.hparams.gradient_penalty_power
+            if self.hparams.gradient_penalty_strategy == "div":
+                penalties = gradients.norm(dim=1) ** self.hparams.gradient_penalty_power
             else:
                 raise ValueError()
 
-            return penalties.mean().unsqueeze(0) * self.hparams.gradient_penalty_weight
+            return self.hparams.gradient_penalty_coefficient * penalties.mean().unsqueeze(0) 
         else:
             return 0
 
@@ -126,7 +157,7 @@ class GAN(pl.LightningModule):
 
             consistency_term = torch.relu(torch.dist(d_x1, d_x2, p=2) + 0.1 * torch.dist(d_x1_, d_x2_, p=2) - m)
 
-            return consistency_term.unsqueeze(0) * self.hparams.consistency_term_weight
+            return self.hparams.consistency_term_coefficient * consistency_term.unsqueeze(0)
         else:
             return 0
 
@@ -357,8 +388,9 @@ class GAN(pl.LightningModule):
         parser.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         parser.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         parser.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
-        parser.add_argument("-gpw", "--gradient-penalty-weight", type=float, default=10, help="Gradient penalty weight")
-        parser.add_argument("-ctw", "--consistency-term-weight", type=float, default=2, help="Consistency term weight")
+        parser.add_argument("-gpc", "--gradient-penalty-coefficient", type=float, default=None, help="Gradient penalty coefficient")
+        parser.add_argument("-gpp", "--gradient-penalty-power", type=float, default=None, help="Gradient penalty coefficient")
+        parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=2, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
         parser.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
