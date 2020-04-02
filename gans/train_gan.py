@@ -75,7 +75,6 @@ def main(hparams):
 if __name__ == "__main__":
     parser = ArgumentParser(add_help=False)
     parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard", "wandb"], required=True)
-    parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "wandb"], required=True)
     parser.add_argument("--gpus", type=int, nargs="+", default=0)
     parser.add_argument("--nodes", type=int, default=1)
     parser.add_argument("--save-checkpoints", type=bool, default=False)

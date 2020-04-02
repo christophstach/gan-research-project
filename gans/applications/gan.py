@@ -11,10 +11,9 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import wandb
-from pytorch_lightning import Trainer
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
-from torch.utils.data import DataLoader, random_split
-from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet
+from torch.utils.data import DataLoader
+from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN
 
 from ..helpers import inception_score
 
@@ -44,29 +43,6 @@ class GAN(pl.LightningModule):
         elif isinstance(self.logger, WandbLogger):
             pass
 
-        if self.hparams.pretrain_enabled:
-            train_set, val_set = random_split(self.train_dataset, [int(len(self.train_dataset) * 0.8), int(len(self.train_dataset) * 0.2)])
-
-            train_loader = DataLoader(train_set, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
-            val_loader = DataLoader(val_set, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
-
-            critic_trainer = Trainer(
-                min_epochs=self.hparams.pretrain_min_epochs,
-                max_epochs=self.hparams.pretrain_max_epochs,
-                gpus=self.hparams.gpus,
-                nb_gpu_nodes=self.hparams.nodes,
-                accumulate_grad_batches=self.hparams.pretrain_accumulate_grad_batches,
-                progress_bar_refresh_rate=20,
-                early_stop_callback=False,
-                checkpoint_callback=False,
-                logger=False,
-                distributed_backend="dp"
-            )
-
-            self.critic.pretrain = True
-            critic_trainer.fit(self.critic, train_loader, val_loader)
-            self.critic.pretrain = False
-
     def forward(self, x, y):
         return self.generator(x, y)
 
@@ -94,7 +70,7 @@ class GAN(pl.LightningModule):
         if self.hparams.loss_strategy == "wgan":
             fake_loss = -fake_validity
         elif self.hparams.loss_strategy == "lsgan":
-            fake_loss = -((fake_validity - 1) ** 2)
+            fake_loss = -(fake_validity - 1) ** 2
         elif self.hparams.loss_strategy == "hinge":
             fake_loss = -fake_validity
         elif self.hparams.loss_strategy == "ns":
@@ -154,6 +130,16 @@ class GAN(pl.LightningModule):
         else:
             return 0
 
+    def training_step(self, batch, batch_idx, optimizer_idx):
+        self.critic.train(optimizer_idx == 0)
+        self.generator.train(optimizer_idx == 1)
+
+        if optimizer_idx == 0:  # Train critic
+            return self.training_step_critic(batch)
+
+        if optimizer_idx == 1:  # Train generator
+            return self.training_step_generator(batch)
+
     def training_step_critic(self, batch):
         self.real_images, self.y = batch
 
@@ -211,16 +197,6 @@ class GAN(pl.LightningModule):
         logs = {"generator_loss": loss, "generator_lr": generator_lr}
         return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        self.critic.train(optimizer_idx == 0)
-        self.generator.train(optimizer_idx == 1)
-
-        if optimizer_idx == 0:  # Train critic
-            return self.training_step_critic(batch)
-
-        if optimizer_idx == 1:  # Train generator
-            return self.training_step_generator(batch)
-
     def generate_multi_scale_images(self, source_images):
         return [
             F.interpolate(source_images, size=2 ** target_size)
@@ -230,9 +206,9 @@ class GAN(pl.LightningModule):
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
-            if self.hparams.validations > 0:
+            if self.hparams.score_iterations > 0:
                 outputs = []
-                for _ in range(self.hparams.validations):
+                for _ in range(self.hparams.score_iterations):
                     noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
                     y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
 
@@ -294,13 +270,9 @@ class GAN(pl.LightningModule):
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update critic opt every step
-        if optimizer_idx == 0:
-            optimizer.step()
-
+        if optimizer_idx == 0:  optimizer.step()
         # update generator opt every {self.alternation_interval} steps
-        if optimizer_idx == 1:
-            if batch_idx % self.hparams.alternation_interval == 0 and self.trainer.current_epoch >= self.hparams.warmup_epochs:
-                optimizer.step()
+        if optimizer_idx == 1 and batch_idx % self.hparams.alternation_interval == 0: optimizer.step()
 
         optimizer.zero_grad()
 
@@ -317,35 +289,35 @@ class GAN(pl.LightningModule):
 
     def prepare_data(self):
         train_resize = transforms.Resize((self.hparams.image_size, self.hparams.image_size))
-        test_resize = transforms.Resize(224, 224)
+        # test_resize = transforms.Resize(224, 224)
 
         if self.hparams.image_channels == 3:
             train_normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         else:
             train_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
         # prepare images for the usage with torchvision models: https://pytorch.org/docs/stable/torchvision/models.html
-        test_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        # test_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
         train_transform = transforms.Compose([train_resize, transforms.ToTensor(), train_normalize])
-        test_transform = transforms.Compose([test_resize, transforms.ToTensor(), test_normalize])
+        # test_transform = transforms.Compose([test_resize, transforms.ToTensor(), test_normalize])
 
         if self.hparams.dataset == "mnist":
-            train_set = MNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
-            test_set = MNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
+            self.train_dataset = MNIST(self.hparams.dataset_path, train=True, download=True, transform=train_transform)
+            # self.test_dataset = MNIST(self.hparams.dataset_path, train=False, download=True, transform=test_transform)
         elif self.hparams.dataset == "fashion_mnist":
-            train_set = FashionMNIST(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
-            test_set = FashionMNIST(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
+            self.train_dataset = FashionMNIST(self.hparams.dataset_path, train=True, download=True, transform=train_transform)
+            # self.test_dataset = FashionMNIST(self.hparams.dataset_path, train=False, download=True, transform=test_transform)
         elif self.hparams.dataset == "cifar10":
-            train_set = CIFAR10(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
-            test_set = CIFAR10(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
+            self.train_dataset = CIFAR10(self.hparams.dataset_path, train=True, download=True, transform=train_transform)
+            # self.test_dataset = CIFAR10(self.hparams.dataset_path, train=False, download=True, transform=test_transform)
         elif self.hparams.dataset == "image_net":
-            train_set = ImageNet(os.getcwd() + "/.datasets", train=True, download=True, transform=train_transform)
-            test_set = ImageNet(os.getcwd() + "/.datasets", train=False, download=True, transform=test_transform)
+            self.train_dataset = ImageNet(self.hparams.dataset_path, train=True, download=True, transform=train_transform)
+            # self.test_dataset = ImageNet(self.hparams.dataset_path, train=False, download=True, transform=test_transform)
+        elif self.hparams.dataset == "lsun":
+            self.train_dataset = LSUN(self.hparams.dataset_path, classes=[cls + "_train" for cls in self.hparams.dataset_classes], transform=train_transform)
+            # self.test_dataset = LSUN(self.hparams.dataset_path, classes=[cls + "_test" for cls in self.hparams.dataset_classes], transform=test_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
-
-        self.train_dataset = train_set
-        # self.test_dataset, self.val_dataset = random_split(test_set, [len(test_set) - 1000, 1000])
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
@@ -353,53 +325,48 @@ class GAN(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser])
-        train_group = parser.add_argument_group("Training")
-        train_group.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
-        train_group.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
-        train_group.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
-        train_group.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
-        train_group.add_argument("-cb1", "--critic-beta1", type=float, default=0.0, help="Momentum term beta1 of the critic optimizer")
-        train_group.add_argument("-cb2", "--critic-beta2", type=float, default=0.9, help="Momentum term beta2 of the critic optimizer")
-        train_group.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
-        train_group.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
-        train_group.add_argument("-v", "--validations", type=int, default=20, help="Number of validations each epoch")
-        train_group.add_argument("-msg", "--multi-scale-gradient", type=bool, default=False, help="Enable Multi-Scale Gradient")
-        train_group.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="default")
+        parser.add_argument("-mine", "--min-epochs", type=int, default=1, help="Minimum number of epochs to train")
+        parser.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
+        parser.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
+        parser.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
+        parser.add_argument("-cb1", "--critic-beta1", type=float, default=0.0, help="Momentum term beta1 of the critic optimizer")
+        parser.add_argument("-cb2", "--critic-beta2", type=float, default=0.9, help="Momentum term beta2 of the critic optimizer")
+        parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
+        parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
+        parser.add_argument("-v", "--score-iterations", type=int, default=50, help="Number of score iterations each epoch")
+        parser.add_argument("-msg", "--multi-scale-gradient", type=bool, default=False, help="Enable Multi-Scale Gradient")
+        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="default")
 
-        train_group.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
-        train_group.add_argument("-is", "--image-size", type=int, default=32, help="Generated image size")
-        train_group.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
+        parser.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
+        parser.add_argument("-is", "--image-size", type=int, default=32, help="Generated image size")
+        parser.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        train_group.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
-        train_group.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
+        parser.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
+        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
-        train_group.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns"], default="hinge")
-        train_group.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
+        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns"], default="hinge")
+        parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
             "lp",  # 1-Sided: On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
             "none"
         ], default="1-gp")
 
-        train_group.add_argument("-we", "--warmup-enabled", type=bool, default=False, help="Enables freezing of feature layers in the beginning of the training")
-        train_group.add_argument("-wen", "--warmup-epochs", type=int, default=0, help="Number of epochs to freeze the critics feature parameters")
+        parser.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
+        parser.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
+        parser.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
+        parser.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
+        parser.add_argument("-gpw", "--gradient-penalty-weight", type=float, default=10, help="Gradient penalty weight")
+        parser.add_argument("-ctw", "--consistency-term-weight", type=float, default=2, help="Consistency term weight")
+        parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-        train_group.add_argument("-z", "--noise-size", type=int, default=100, help="Length of the noise vector")
-        train_group.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
-        train_group.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
-        train_group.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
-        train_group.add_argument("-gpw", "--gradient-penalty-weight", type=float, default=10, help="Gradient penalty weight")
-        train_group.add_argument("-ctw", "--consistency-term-weight", type=float, default=2, help="Consistency term weight")
-        train_group.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
+        parser.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
+        parser.add_argument("-eer", "--enable-experience-replay", type=bool, default=False, help="Find paper for this")
 
-        train_group.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
-        train_group.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
-        train_group.add_argument("-eer", "--enable-experience-replay", type=bool, default=False, help="Find paper for this")
-
-        train_group.add_argument("-pe", "--pretrain-enabled", type=bool, default=False, help="Enables pretraining of the critic with an classification layer on the real data")
-        train_group.add_argument("-pmine", "--pretrain-min-epochs", type=int, default=1, help="Minimum pretrain epochs")
-        train_group.add_argument("-pmaxe", "--pretrain-max-epochs", type=int, default=50, help="Maximum pretrain epochs")
-        train_group.add_argument("-pagb", "--pretrain-accumulate-grad-batches", type=float, default=1, help="Number of gradient batches to accumulate during pretraining")
+        parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net"], required=True)
+        parser.add_argument("--dataset-path", type=str, default=os.getcwd() + "/.datasets")
+        parser.add_argument("--dataset-classes", type=int, nargs="+", default=["church_outdoor"])
 
         return parser
