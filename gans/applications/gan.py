@@ -115,17 +115,18 @@ class GAN(pl.LightningModule):
             
             if self.hparams.gradient_penalty_strategy == "div":
                 # noinspection PyTypeChecker
-                x_hat = alpha * fake_images + (1 - alpha) * real_images
+                interpolates = alpha * fake_images + (1 - alpha) * real_images
             else:
                 # noinspection PyTypeChecker
-                x_hat = alpha * real_images + (1 - alpha) * fake_images
+                interpolates = alpha * real_images + (1 - alpha) * fake_images
 
 
             # Get gradient w.r.t. interpolates
-            x_hat_validity = self.critic(x_hat, y)
+            interpolates_validity = self.critic(interpolates, y)
+
             gradients = torch.autograd.grad(
-                outputs=x_hat_validity,
-                inputs=x_hat,
+                outputs=interpolates_validity,
+                inputs=interpolates,
                 grad_outputs=torch.ones_like(interpolate_validity, device=real_images.device),
                 create_graph=True
             )[0]
