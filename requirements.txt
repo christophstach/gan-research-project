@@ -8,3 +8,4 @@ Pillow
 jupyter
 scikit-learn
 wandb
+lmdb
