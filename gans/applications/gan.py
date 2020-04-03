@@ -22,6 +22,8 @@ class GAN(pl.LightningModule):
     def __init__(self, hparams, generator, critic, scorer):
         super().__init__()
 
+        self.hparams = hparams
+
         if self.hparams.gradient_penalty_coefficient is None:
             if self.hparams.gradient_penalty_strategy == "0-gp":
                 self.hparams.gradient_penalty_coefficient = 10
@@ -33,7 +35,7 @@ class GAN(pl.LightningModule):
                 self.hparams.gradient_penalty_coefficient = 2
             else:
                 raise ValueError()
-            
+
         if self.hparams.gradient_penalty_power is None:
             if self.hparams.gradient_penalty_strategy == "0-gp":
                 self.hparams.gradient_penalty_coefficient = 2
@@ -45,8 +47,6 @@ class GAN(pl.LightningModule):
                 self.hparams.gradient_penalty_coefficient = 6
             else:
                 raise ValueError()
-
-        self.hparams = hparams
 
         self.generator = generator
         self.critic = critic
@@ -112,14 +112,13 @@ class GAN(pl.LightningModule):
     def gradient_penalty(self, real_images, fake_images, y):
         if self.hparams.gradient_penalty_weight != 0:
             alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
-            
+
             if self.hparams.gradient_penalty_strategy == "div":
                 # noinspection PyTypeChecker
                 interpolates = alpha * fake_images + (1 - alpha) * real_images
             else:
                 # noinspection PyTypeChecker
                 interpolates = alpha * real_images + (1 - alpha) * fake_images
-
 
             # Get gradient w.r.t. interpolates
             interpolates_validity = self.critic(interpolates, y)
@@ -145,7 +144,7 @@ class GAN(pl.LightningModule):
             else:
                 raise ValueError()
 
-            return self.hparams.gradient_penalty_coefficient * penalties.mean().unsqueeze(0) 
+            return self.hparams.gradient_penalty_coefficient * penalties.mean().unsqueeze(0)
         else:
             return 0
 
