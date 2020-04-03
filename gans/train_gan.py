@@ -68,8 +68,6 @@ def main(hparams):
         num_sanity_val_steps=0,
         distributed_backend="dp"
     )
-    print(hparams.gpus)
-    exit(0)
 
     trainer.fit(model)
 
