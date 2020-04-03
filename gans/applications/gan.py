@@ -367,7 +367,7 @@ class GAN(pl.LightningModule):
             self.train_dataset = ImageNet(self.hparams.dataset_path, train=True, download=True, transform=train_transform)
             # self.test_dataset = ImageNet(self.hparams.dataset_path, train=False, download=True, transform=test_transform)
         elif self.hparams.dataset == "lsun":
-            self.train_dataset = LSUN(self.hparams.dataset_path, classes=[cls + "_train" for cls in self.hparams.dataset_classes], transform=train_transform)
+            self.train_dataset = LSUN(self.hparams.dataset_path + "/lsun", classes=[cls + "_train" for cls in self.hparams.dataset_classes], transform=train_transform)
             # self.test_dataset = LSUN(self.hparams.dataset_path, classes=[cls + "_test" for cls in self.hparams.dataset_classes], transform=test_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
