@@ -46,8 +46,6 @@ class SimpleCritic(pl.LightningModule):
                     nn.init.uniform_(m.bias, -bound, bound)
 
     def forward(self, x, y, dropout=0.0, intermediate_output=False):
-        print(x.size())
-
         x = self.block1(x)
         x = torch.dropout(x, p=dropout, train=True)
         x = self.block2(x)
