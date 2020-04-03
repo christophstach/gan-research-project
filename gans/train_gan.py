@@ -45,7 +45,7 @@ def main(hparams):
 
     if hparams.save_checkpoints:
         checkpoint_callback = ModelCheckpoint(
-            filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.strategy + "-{negative_critic_loss:.5f}",
+            filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.strategy + "-{critic_loss:.5f}-{ic_score_mean:.5f}",
             monitor="critic_loss",
             mode="max",
             save_top_k=1,
