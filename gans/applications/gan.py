@@ -161,6 +161,8 @@ class GAN(pl.LightningModule):
                 penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients.norm(dim=1) - 1) ** self.hparams.gradient_penalty_power
             elif self.hparams.gradient_penalty_strategy == "div":
                 penalties = gradients.norm(dim=1) ** self.hparams.gradient_penalty_power
+            elif self.hparams.gradient_penalty_strategy == "ct":
+                penalties = (gradients.norm(dim=1) - 1) ** self.hparams.gradient_penalty_power
             else:
                 raise ValueError()
 
@@ -401,6 +403,7 @@ class GAN(pl.LightningModule):
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
             "lp",  # 1-Sided: On the regularization of Wasserstein GANs: https://arxiv.org/abs/1709.08894
+            "div",
             "ct",
             "none"
         ], default="1-gp")
