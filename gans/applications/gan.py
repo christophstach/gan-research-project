@@ -110,7 +110,7 @@ class GAN(pl.LightningModule):
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
     def gradient_penalty(self, real_images, fake_images, y):
-        if self.hparams.gradient_penalty_weight != 0:
+        if self.hparams.gradient_penalty_coefficient != 0:
             alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
 
             if self.hparams.gradient_penalty_strategy == "div":
