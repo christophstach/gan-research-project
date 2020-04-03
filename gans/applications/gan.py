@@ -127,7 +127,7 @@ class GAN(pl.LightningModule):
             gradients = torch.autograd.grad(
                 outputs=interpolates_validity,
                 inputs=interpolates,
-                grad_outputs=torch.ones_like(interpolate_validity, device=real_images.device),
+                grad_outputs=torch.ones_like(interpolates_validity, device=real_images.device),
                 create_graph=True
             )[0]
 
