@@ -38,13 +38,13 @@ class GAN(pl.LightningModule):
 
         if self.hparams.gradient_penalty_power is None:
             if self.hparams.gradient_penalty_strategy == "0-gp":
-                self.hparams.gradient_penalty_coefficient = 2
+                self.hparams.gradient_penalty_power = 2
             elif self.hparams.gradient_penalty_strategy == "1-gp":
-                self.hparams.gradient_penalty_coefficient = 2
+                self.hparams.gradient_penalty_power = 2
             elif self.hparams.gradient_penalty_strategy == "lp":
-                self.hparams.gradient_penalty_coefficient = 2
+                self.hparams.gradient_penalty_power = 2
             elif self.hparams.gradient_penalty_strategy == "div":
-                self.hparams.gradient_penalty_coefficient = 6
+                self.hparams.gradient_penalty_power = 6
             else:
                 raise ValueError()
 
@@ -120,6 +120,8 @@ class GAN(pl.LightningModule):
                 # noinspection PyTypeChecker
                 interpolates = alpha * real_images + (1 - alpha) * fake_images
 
+            interpolates.requires_grad_()
+
             # Get gradient w.r.t. interpolates
             interpolates_validity = self.critic(interpolates, y)
 
@@ -149,7 +151,7 @@ class GAN(pl.LightningModule):
             return 0
 
     def consistency_term(self, real_images, y, m=0):
-        if self.hparams.consistency_term_weight != 0:
+        if self.hparams.consistency_term_coefficient != 0:
             # Need to check if correct
 
             d_x1, d_x1_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True)
