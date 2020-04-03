@@ -48,7 +48,7 @@ def main(hparams):
             filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.strategy + "-{negative_critic_loss:.5f}",
             monitor="critic_loss",
             mode="max",
-            save_top_k=10,
+            save_top_k=1,
             period=1
         )
     else:
