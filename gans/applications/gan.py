@@ -338,7 +338,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="default")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=4, help="Generated image shape channels")
-        parser.add_argument("-is", "--image-size", type=int, default=32, help="Generated image size")
+        parser.add_argument("-is", "--image-size", type=int, default=64, help="Generated image size")
         parser.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500

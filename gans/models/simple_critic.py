@@ -1,8 +1,15 @@
 import math
 
-import torch
 import pytorch_lightning as pl
+import torch
 import torch.nn as nn
+
+
+def block(in_channels, out_channels):
+    return nn.Sequential(
+        nn.Conv2d(in_channels, out_channels, 4, 2, 1, bias=False),
+        nn.LeakyReLU(0.2, inplace=True),
+    )
 
 
 class SimpleCritic(pl.LightningModule):
@@ -11,25 +18,12 @@ class SimpleCritic(pl.LightningModule):
 
         self.hparams = hparams
 
-        self.block1 = nn.Sequential(
-            # input is (nc) x 32 x 32
-            nn.Conv2d(self.hparams.image_channels, self.hparams.critic_filters, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
+        self.block1 = block(self.hparams.image_channels, self.hparams.critic_filters)  # in: 64 x 64, out: 32 x 32
+        self.block2 = block(self.hparams.critic_filters, self.hparams.critic_filters * 2)  # in: 32 x 32, out: 16 x 16
+        self.block3 = block(self.hparams.critic_filters * 2, self.hparams.critic_filters * 4)  # in: 16 x 16, out: 8 x 8
+        self.block4 = block(self.hparams.critic_filters * 4, self.hparams.critic_filters * 8)  # in: 8 x 8, out: 4 x 4
 
-        self.block2 = nn.Sequential(
-            # state size. (self.hparams.critic_filters) x 16 x 16
-            nn.Conv2d(self.hparams.critic_filters, self.hparams.critic_filters * 2, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
-
-        self.block3 = nn.Sequential(
-            # state size. (self.hparams.critic_filters*2) x 8 x 8
-            nn.Conv2d(self.hparams.critic_filters * 2, self.hparams.critic_filters * 4, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
-
-        self.validator = nn.Conv2d(self.hparams.critic_filters * 4, 1, 4, 1, 0, bias=False)
+        self.validator = nn.Conv2d(self.hparams.critic_filters * 8, 1, 4, 1, 0, bias=False)
 
         self.hparams = hparams
 
@@ -57,6 +51,8 @@ class SimpleCritic(pl.LightningModule):
         x = self.block2(x)
         x = torch.dropout(x, p=dropout, train=True)
         x = self.block3(x)
+        x = torch.dropout(x, p=dropout, train=True)
+        x = self.block4(x)
         x = torch.dropout(x, p=dropout, train=True)
 
         validity = self.validator(x)

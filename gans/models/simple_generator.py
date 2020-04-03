@@ -4,29 +4,34 @@ import pytorch_lightning as pl
 import torch.nn as nn
 
 
+def block(in_channels, out_channels):
+    return nn.Sequential(
+        nn.ConvTranspose2d(in_channels, out_channels, 4, 2, 1, bias=False),
+        nn.BatchNorm2d(out_channels),
+        nn.LeakyReLU(0.2, inplace=True)
+    )
+
+
 class SimpleGenerator(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
 
         self.hparams = hparams
 
-        self.main = nn.Sequential(
+        self.projection = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(self.hparams.noise_size, self.hparams.generator_filters * 4, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(self.hparams.generator_filters * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (self.hparams.generator_filters*4) x 4 x 4
-            nn.ConvTranspose2d(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(self.hparams.generator_filters * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (self.hparams.generator_filters*2) x 8 x 8
-            nn.ConvTranspose2d(self.hparams.generator_filters * 2, self.hparams.generator_filters, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(self.hparams.generator_filters),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (self.hparams.generator_filters) x 32 x 32
+            nn.ConvTranspose2d(self.hparams.noise_size, self.hparams.generator_filters * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(self.hparams.generator_filters * 8),
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+
+        self.block1 = block(self.hparams.generator_filters * 8, self.hparams.generator_filters * 4)  # in: 4 x 4, out: 8 x 8
+        self.block2 = block(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2)  # in: 8 x 8, out: 16 x 16
+        self.block3 = block(self.hparams.generator_filters * 2, self.hparams.generator_filters)  # in: 16 x 16, out: 32 x 32
+
+        self.toRGB = nn.Sequential(
             nn.ConvTranspose2d(self.hparams.generator_filters, self.hparams.image_channels, 4, 2, 1, bias=False),
             nn.Tanh()
-            # state size. (self.hparams.image_channels) x 32 x 32
         )
 
         self.apply(self.init_weights)
@@ -51,6 +56,13 @@ class SimpleGenerator(pl.LightningModule):
 
     def forward(self, x, y):
         x = x.view(x.size(0), -1, 1, 1)
-        data = self.main(x)
 
-        return data
+        x = self.projection(x)
+
+        x = self.block1(x)
+        x = self.block2(x)
+        x = self.block3(x)
+
+        x = self.toRGB(x)
+
+        return x
