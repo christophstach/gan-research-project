@@ -74,8 +74,7 @@ class SimpleGenerator(pl.LightningModule):
                 stride=1,
                 padding=0,
                 bias=False
-            ),
-            nn.Tanh()
+            )
         )
 
     def forward(self, x, y):
