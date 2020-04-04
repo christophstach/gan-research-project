@@ -20,12 +20,14 @@ class LinCatCombiner(nn.Module):
     def __init__(self, hparams, in_channels):
         super().__init__()
 
+        # TODO: to fix
+
         self.hparams = hparams
         self.in_channels = in_channels
 
         self.conv = nn.Conv2d(
             in_channels=self.hparams.image_channels,
-            out_channels=in_channels,
+            out_channels=self.hparams.image_channels,
             kernel_size=1,
             stride=1,
             padding=0,
@@ -66,7 +68,17 @@ class SimpleCritic(pl.LightningModule):
 
         self.hparams = hparams
 
-        additional_channels = self.hparams.image_channels if self.hparams.multi_scale_gradient else 0
+        if self.hparams.multi_scale_gradient:
+            if self.hparams.multi_scale_gradient_combiner == "simple":
+                additional_channels = self.hparams.image_channels
+            elif self.hparams.multi_scale_gradient_combiner == "cat_lin":
+                additional_channels = 0
+            elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
+                additional_channels = self.hparams.image_channels
+            else:
+                raise ValueError()
+        else:
+            additional_channels = 0
 
         self.block1 = self.block_fn(self.hparams.image_channels, self.hparams.critic_filters)  # in: 64 x 64, out: 32 x 32
         self.block2 = self.block_fn(self.hparams.critic_filters + additional_channels, self.hparams.critic_filters * 2)  # in: 32 x 32, out: 16 x 16
@@ -75,10 +87,10 @@ class SimpleCritic(pl.LightningModule):
 
         self.validator = nn.Conv2d(self.hparams.critic_filters * 8 + additional_channels, 1, 4, 1, 0, bias=False)
 
-        self.combine1 = self.combine_fn(self.hparams, self.hparams.critic_filters)
-        self.combine2 = self.combine_fn(self.hparams, self.hparams.critic_filters * 2)
-        self.combine3 = self.combine_fn(self.hparams, self.hparams.critic_filters * 4)
-        self.combine4 = self.combine_fn(self.hparams, self.hparams.critic_filters * 8)
+        self.combine1 = self.combine_fn(self.hparams.critic_filters)
+        self.combine2 = self.combine_fn(self.hparams.critic_filters * 2)
+        self.combine3 = self.combine_fn(self.hparams.critic_filters * 4)
+        self.combine4 = self.combine_fn(self.hparams.critic_filters * 8)
 
         self.apply(self.init_weights)
 
@@ -113,8 +125,15 @@ class SimpleCritic(pl.LightningModule):
             nn.LeakyReLU(0.2, inplace=True),
         )
 
-    def combine_fn(self, hparams, in_channels):
-        return SimpleCombiner(hparams, in_channels)
+    def combine_fn(self, in_channels):
+        if self.hparams.multi_scale_gradient_combiner == "simple":
+            return SimpleCombiner(self.hparams, in_channels)
+        elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
+            return LinCatCombiner(self.hparams, in_channels)
+        elif self.hparams.multi_scale_gradient_combiner == "cat_lin":
+            return CatLinCombiner(self.hparams, in_channels)
+        else:
+            raise ValueError()
 
     # Dropout is just used for WGAN-CT
     def forward(self, x, y, dropout=0.0, intermediate_output=False, scaled_inputs=None):
