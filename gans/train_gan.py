@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 
 from gans.applications import GAN
-from gans.models import SimpleCritic, SimpleGenerator, MultiScaleGradientGenerator, MultiScaleGradientCritic
+from gans.models import SimpleCritic, SimpleGenerator
 
 
 def main(hparams):
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard", "wandb"], required=True)
     parser.add_argument("--gpus", type=int, nargs="+", default=0)
     parser.add_argument("--nodes", type=int, default=1)
-    parser.add_argument("--save-checkpoints", type=bool, action="store_true")
+    parser.add_argument("--save-checkpoints", action="store_true")
 
     parser = GAN.add_model_specific_args(parser)
 
