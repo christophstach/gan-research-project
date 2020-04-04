@@ -1,6 +1,5 @@
 import math
 import os
-import random
 from argparse import ArgumentParser
 from collections import OrderedDict
 
@@ -71,7 +70,6 @@ class GAN(pl.LightningModule):
         self.scorer = scorer
 
         self.real_images = None
-        self.multi_scale_images = None
         self.y = None
         self.experience = None
 
@@ -127,6 +125,7 @@ class GAN(pl.LightningModule):
         for weight in self.critic.parameters():
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
+    # TODO: Need to check if gradient penalty works well with multi-scale gradient
     def gradient_penalty(self, real_images, fake_images, y):
         if self.hparams.gradient_penalty_coefficient != 0:
             alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
@@ -140,8 +139,11 @@ class GAN(pl.LightningModule):
 
             interpolates.requires_grad_()
 
-            # Get gradient w.r.t. interpolates
-            interpolates_validity = self.critic(interpolates, y)
+            if self.hparams.multi_scale_gradient:
+                scaled_interpolates = self.to_scaled_images(interpolates)
+                interpolates_validity = self.critic(interpolates, y, scaled_inputs=scaled_interpolates)
+            else:
+                interpolates_validity = self.critic(interpolates, y)
 
             gradients = torch.autograd.grad(
                 outputs=interpolates_validity,
@@ -170,12 +172,11 @@ class GAN(pl.LightningModule):
         else:
             return 0
 
-    def consistency_term(self, real_images, y, m=0):
+    def consistency_term(self, real_images, y, scaled_real_images=None, m=0):
         if self.hparams.consistency_term_coefficient != 0:
-            # Need to check if correct
-
-            d_x1, d_x1_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True)
-            d_x2, d_x2_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True)
+            # TODO: Need to check if correct
+            d_x1, d_x1_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
+            d_x2, d_x2_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
 
             consistency_term = torch.relu(torch.dist(d_x1, d_x2) + 0.1 * torch.dist(d_x1_, d_x2_) - m)
 
@@ -198,22 +199,31 @@ class GAN(pl.LightningModule):
 
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
-        if self.experience is not None and self.experience.size(0) == self.real_images.size(0):
-            fake_images = self.experience.detach()
-            self.experience = None
+        # if self.experience is not None and self.experience.size(0) == self.real_images.size(0):
+        #    fake_images = self.experience.detach()
+        #    self.experience = None
+        # else:
+
+        if self.hparams.multi_scale_gradient:
+            scaled_real_images = self.to_scaled_images(self.real_images)
+            fake_images, scaled_fake_images = self.forward(noise, self.y)
+            scaled_fake_images = [x.detach() for x in scaled_fake_images]
+            fake_images = fake_images.detach()
+
+            real_validity = self.critic(self.real_images, self.y, scaled_inputs=scaled_real_images)
+            fake_validity = self.critic(fake_images, self.y, scaled_inputs=scaled_fake_images)
+
+            # TODO: Need to check if gradient penalty works well
+            gradient_penalty = self.gradient_penalty(self.real_images, fake_images, self.y)
+            consistency_term = self.consistency_term(self.real_images, self.y, scaled_real_images)
         else:
-            if self.hparams.multi_scale_gradient:
-                fake_images = (x.detach() for x in self.forward(noise, self.y))
+            fake_images = self.forward(noise, self.y).detach()
 
-                self.multi_scale_images = self.generate_multi_scale_images(self.real_images)
-            else:
-                fake_images = self.forward(noise, self.y).detach()
+            real_validity = self.critic(self.real_images, self.y)
+            fake_validity = self.critic(fake_images, self.y)
 
-        real_validity = self.critic(self.real_images, self.y)
-        fake_validity = self.critic(fake_images, self.y)
-
-        gradient_penalty = self.gradient_penalty(self.real_images, fake_images, self.y)
-        consistency_term = self.consistency_term(self.real_images, self.y)
+            gradient_penalty = self.gradient_penalty(self.real_images, fake_images, self.y)
+            consistency_term = self.consistency_term(self.real_images, self.y)
 
         loss = self.critic_loss(real_validity, fake_validity)
 
@@ -229,17 +239,22 @@ class GAN(pl.LightningModule):
         self.real_images, self.y = batch
 
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
-        fake_images = self.forward(noise, self.y)
 
-        if self.hparams.enable_experience_replay:
-            rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
+        if self.hparams.multi_scale_gradient:
+            fake_images, scaled_fake_images = self.forward(noise, self.y)
+            fake_validity = self.critic(fake_images, self.y, scaled_inputs=scaled_fake_images)
+        else:
+            fake_images = self.forward(noise, self.y)
+            fake_validity = self.critic(fake_images, self.y)
 
-            if self.experience is None:
-                self.experience = rand_image
-            else:
-                self.experience = torch.cat([self.experience, rand_image], dim=0)
+        # if self.hparams.enable_experience_replay:
+        #    rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
 
-        fake_validity = self.critic(fake_images, self.y)
+        #    if self.experience is None:
+        #        self.experience = rand_image
+        #    else:
+        #        self.experience = torch.cat([self.experience, rand_image], dim=0)
+
         loss = self.generator_loss(fake_validity)
 
         if len(self.trainer.lr_schedulers) >= 2:
@@ -250,7 +265,7 @@ class GAN(pl.LightningModule):
         logs = {"generator_loss": loss, "generator_lr": generator_lr}
         return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
 
-    def generate_multi_scale_images(self, source_images):
+    def to_scaled_images(self, source_images):
         return [
             F.interpolate(source_images, size=2 ** target_size)
             for target_size in range(2, int(math.log2(self.hparams.image_size)))
@@ -265,7 +280,11 @@ class GAN(pl.LightningModule):
                     noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
                     y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
 
-                    fake_images = self.forward(noise, y).detach()
+                    if self.hparams.multi_scale_gradient:
+                        fake_images = self.forward(noise, y)[0].detach()
+                    else:
+                        fake_images = self.forward(noise, y).detach()
+
                     fake_images = F.interpolate(fake_images, (299, 299))
 
                     if fake_images.size(1) == 1:
@@ -288,7 +307,11 @@ class GAN(pl.LightningModule):
                 noise = torch.randn(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device).repeat(grid_size)
 
-                fake_images = self.forward(noise, y)
+                if self.hparams.multi_scale_gradient:
+                    fake_images = self.forward(noise, y)[0].detach()
+                else:
+                    fake_images = self.forward(noise, y).detach()
+
                 grid = torchvision.utils.make_grid(fake_images, nrow=grid_size, padding=0)
 
                 self.logger.experiment.add_image("example_images", grid, 0)
@@ -299,19 +322,26 @@ class GAN(pl.LightningModule):
                 noise = torch.randn(grid_size, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device)
 
-                fake_images = self.forward(noise, y)
+                if self.hparams.multi_scale_gradient:
+                    fake_images = self.forward(noise, y)[0].detach()
+                else:
+                    fake_images = self.forward(noise, y).detach()
 
-                self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
+                self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()}, step=self.current_epoch)
                 self.logger.experiment.log({
                     "generated_images": [wandb.Image(fake_image, caption=str(idx)) for idx, fake_image in enumerate(fake_images)]
-                })
+                }, step=self.current_epoch)
             elif isinstance(self.logger, CometLogger):
                 grid_size = self.hparams.y_size if self.hparams.y_size > 1 else 5
 
                 noise = torch.randn(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device).repeat(grid_size)
 
-                fake_images = self.forward(noise, y)
+                if self.hparams.multi_scale_gradient:
+                    fake_images = self.forward(noise, y)[0].detach()
+                else:
+                    fake_images = self.forward(noise, y).detach()
+
                 grid = torchvision.utils.make_grid(fake_images, nrow=grid_size, padding=0)
 
                 self.logger.experiment.log_image(
