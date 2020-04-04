@@ -11,7 +11,6 @@ from gans.models import SimpleCritic, SimpleGenerator, MultiScaleGradientGenerat
 
 
 def main(hparams):
-
     generator = SimpleGenerator(hparams)
     critic = SimpleCritic(hparams)
 
@@ -74,7 +73,7 @@ if __name__ == "__main__":
     parser.add_argument("--logger", type=str, choices=["none", "comet.ml", "tensorboard", "wandb"], required=True)
     parser.add_argument("--gpus", type=int, nargs="+", default=0)
     parser.add_argument("--nodes", type=int, default=1)
-    parser.add_argument("--save-checkpoints", type=bool, default=False)
+    parser.add_argument("--save-checkpoints", type=bool, action="store_true")
 
     parser = GAN.add_model_specific_args(parser)
 

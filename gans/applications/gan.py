@@ -417,7 +417,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
         parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         parser.add_argument("-v", "--score-iterations", type=int, default=50, help="Number of score iterations each epoch")
-        parser.add_argument("-msg", "--multi-scale-gradient", type=bool, default=False, help="Enable Multi-Scale Gradient")
+        parser.add_argument("-msg", "--multi-scale-gradient", type=bool, action="store_true", help="Enable Multi-Scale Gradient")
         parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="default")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
@@ -449,7 +449,7 @@ class GAN(pl.LightningModule):
 
         parser.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
         parser.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
-        parser.add_argument("-eer", "--enable-experience-replay", type=bool, default=False, help="Find paper for this")
+        parser.add_argument("-eer", "--enable-experience-replay", type=bool, action="store_true", help="Find paper for this")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net"], required=True)
         parser.add_argument("--dataset-path", type=str, default=os.getcwd() + "/.datasets")
