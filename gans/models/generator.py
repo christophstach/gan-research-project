@@ -60,10 +60,10 @@ class Generator(pl.LightningModule):
 
     def block_fn(self, in_channels, out_channels):
         return nn.Sequential(
-            nn.Upsample(scale_factor=2.0),
-            nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.Upsample(scale_factor=2),
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
             nn.LeakyReLU(0.2, inplace=True)
         )
 
