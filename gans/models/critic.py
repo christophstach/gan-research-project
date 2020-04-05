@@ -80,17 +80,19 @@ class Critic(pl.LightningModule):
         else:
             additional_channels = 0
 
-        self.block1 = self.block_fn(self.hparams.image_channels, self.hparams.critic_filters)  # in: 64 x 64, out: 32 x 32
-        self.block2 = self.block_fn(self.hparams.critic_filters + additional_channels, self.hparams.critic_filters * 2)  # in: 32 x 32, out: 16 x 16
-        self.block3 = self.block_fn(self.hparams.critic_filters * 2 + additional_channels, self.hparams.critic_filters * 4)  # in: 16 x 16, out: 8 x 8
-        self.block4 = self.block_fn(self.hparams.critic_filters * 4 + additional_channels, self.hparams.critic_filters * 8)  # in: 8 x 8, out: 4 x 4
+        self.block1 = self.block_fn(self.hparams.image_channels, self.hparams.critic_filters)  # in: 128 x 128, out: 64 x 64
+        self.block2 = self.block_fn(self.hparams.critic_filters + additional_channels, self.hparams.critic_filters * 2)  # in: 64 x 64, out: 32 x 32
+        self.block3 = self.block_fn(self.hparams.critic_filters * 2 + additional_channels, self.hparams.critic_filters * 4)  # in: 32 x 32, out: 16 x 16
+        self.block4 = self.block_fn(self.hparams.critic_filters * 4 + additional_channels, self.hparams.critic_filters * 8)  # in: 16 x 16, out: 8 x 8
+        self.block5 = self.block_fn(self.hparams.critic_filters * 8 + additional_channels, self.hparams.critic_filters * 16)  # in: 8 x 8, out: 4 x 4
 
-        self.validator = nn.Conv2d(self.hparams.critic_filters * 8 + additional_channels, 1, 4, 1, 0, bias=False)
+        self.validator = nn.Conv2d(self.hparams.critic_filters * 16 + additional_channels, 1, 4, 1, 0, bias=False)
 
         self.combine1 = self.combine_fn(self.hparams.critic_filters)
         self.combine2 = self.combine_fn(self.hparams.critic_filters * 2)
         self.combine3 = self.combine_fn(self.hparams.critic_filters * 4)
         self.combine4 = self.combine_fn(self.hparams.critic_filters * 8)
+        self.combine5 = self.combine_fn(self.hparams.critic_filters * 16)
 
         self.apply(self.init_weights)
 
@@ -137,20 +139,24 @@ class Critic(pl.LightningModule):
 
     # Dropout is just used for WGAN-CT
     def forward(self, x, y, dropout=0.0, intermediate_output=False, scaled_inputs=None):
-        x_32x32 = self.block1(x)
-        if self.hparams.multi_scale_gradient: x_32x32 = self.combine1(scaled_inputs[3], x_32x32)
+        x_64x64 = self.block1(x)
+        if self.hparams.multi_scale_gradient: x_64x64 = self.combine1(scaled_inputs[4], x_64x64)
+        x_64x64 = torch.dropout(x_64x64, p=dropout, train=True)
+
+        x_32x32 = self.block2(x_64x64)
+        if self.hparams.multi_scale_gradient: x_32x32 = self.combine2(scaled_inputs[3], x_32x32)
         x_32x32 = torch.dropout(x_32x32, p=dropout, train=True)
 
-        x_16x16 = self.block2(x_32x32)
-        if self.hparams.multi_scale_gradient: x_16x16 = self.combine2(scaled_inputs[2], x_16x16)
+        x_16x16 = self.block3(x_32x32)
+        if self.hparams.multi_scale_gradient: x_16x16 = self.combine3(scaled_inputs[2], x_16x16)
         x_16x16 = torch.dropout(x_16x16, p=dropout, train=True)
 
-        x_8x8 = self.block3(x_16x16)
-        if self.hparams.multi_scale_gradient: x_8x8 = self.combine3(scaled_inputs[1], x_8x8)
+        x_8x8 = self.block4(x_16x16)
+        if self.hparams.multi_scale_gradient: x_8x8 = self.combine4(scaled_inputs[1], x_8x8)
         x_8x8 = torch.dropout(x_8x8, p=dropout, train=True)
 
-        x_4x4 = self.block4(x_8x8)
-        if self.hparams.multi_scale_gradient: x_4x4 = self.combine4(scaled_inputs[0], x_4x4)
+        x_4x4 = self.block5(x_8x8)
+        if self.hparams.multi_scale_gradient: x_4x4 = self.combine5(scaled_inputs[0], x_4x4)
         x_4x4 = torch.dropout(x_4x4, p=dropout, train=True)
 
         validity = self.validator(x_4x4)
