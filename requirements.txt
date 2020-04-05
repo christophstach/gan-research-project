@@ -9,3 +9,4 @@ jupyter
 scikit-learn
 wandb
 lmdb
+attn-gan-pytorch

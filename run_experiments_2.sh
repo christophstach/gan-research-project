@@ -1,1 +1,1 @@
-python gans/train_gan.py --gpus 1 --dataloader-num-workers 10 --batch-size 64 --logger wandb --max-epochs 10000 --dataset lsun --loss-strategy wgan --gradient-penalty-strategy 0-gp --multi-scale-gradient --save-checkpoints
+python gans/train_gan.py --gpus 1 --dataloader-num-workers 10 --batch-size 64 --logger wandb --max-epochs 10000 --dataset lsun --loss-strategy wgan --gradient-penalty-strategy 0-gp
