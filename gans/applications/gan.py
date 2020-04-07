@@ -90,7 +90,10 @@ class GAN(pl.LightningModule):
             pass
 
     def forward(self, x, y):
-        return self.generator(x, y)
+        output = self.generator(x, y)
+
+        print(output.size())
+        return output
 
     def critic_loss(self, real_validity, fake_validity):
         if self.hparams.loss_strategy == "wgan":
