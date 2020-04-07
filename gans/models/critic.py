@@ -151,9 +151,6 @@ class Critic(pl.LightningModule):
         validity = self.validator(x_hats[-1])
 
         if intermediate_output:
-            return [
-                validity,
-                x.mean()
-            ]
+            return validity, x.mean()
         else:
             return validity
