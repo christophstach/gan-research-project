@@ -1,7 +1,40 @@
 import math
 
-import pytorch_lightning as pl
+import attn_gan_pytorch.CustomLayers as attn
 import torch.nn as nn
+import torch.nn.functional as F
+
+
+class UpsampleResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+
+        self.upsample = nn.Upsample(scale_factor=2)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+
+    def forward(self, x):
+        x = self.upsample(x)
+
+        identity = x
+        x = F.leaky_relu(self.conv1(x), 0.2)
+        x = self.conv2(x)
+
+        return x + identity
+
+
+class UpsampleFullAttentionBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+
+        self.upsample = nn.Upsample(scale_factor=2)
+        self.attn1 = attn.FullAttention(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False, use_batch_norm=False, use_spectral_norm=False)
+
+    def forward(self, x):
+        x = self.upsample(x)
+        x, _ = self.attn1(x)
+
+        return x
 
 
 class Generator(nn.Module):
@@ -60,13 +93,8 @@ class Generator(nn.Module):
                     nn.init.uniform_(m.bias, -bound, bound)
 
     def block_fn(self, in_channels, out_channels):
-        return nn.Sequential(
-            nn.Upsample(scale_factor=2),
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
+        return UpsampleFullAttentionBlock(in_channels, out_channels)
+        # return UpsampleResidualBlock(in_channels, out_channels)
 
     def rgb_fn(self, in_channels):
         return nn.Sequential(
