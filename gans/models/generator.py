@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import torch.nn as nn
 
 
-class Generator(pl.LightningModule):
+class Generator(nn.Module):
     def __init__(self, hparams):
         super().__init__()
 

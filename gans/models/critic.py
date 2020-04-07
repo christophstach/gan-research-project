@@ -62,7 +62,7 @@ class CatLinCombiner(nn.Module):
         return self.conv(x)
 
 
-class Critic(pl.LightningModule):
+class Critic(nn.Module):
     def __init__(self, hparams):
         super().__init__()
 
