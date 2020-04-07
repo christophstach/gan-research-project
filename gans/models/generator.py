@@ -93,8 +93,8 @@ class Generator(nn.Module):
                     nn.init.uniform_(m.bias, -bound, bound)
 
     def block_fn(self, in_channels, out_channels):
-        return UpsampleFullAttentionBlock(in_channels, out_channels)
-        # return UpsampleResidualBlock(in_channels, out_channels)
+        # return UpsampleFullAttentionBlock(in_channels, out_channels)
+        return UpsampleResidualBlock(in_channels, out_channels)
 
     def rgb_fn(self, in_channels):
         return nn.Sequential(
