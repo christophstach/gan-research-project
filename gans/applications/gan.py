@@ -34,6 +34,8 @@ class GAN(pl.LightningModule):
                 self.hparams.gradient_penalty_coefficient = 2
             elif self.hparams.gradient_penalty_strategy == "ct":
                 self.hparams.gradient_penalty_coefficient = 10
+            elif self.hparams.gradient_penalty_strategy == "none":
+                self.hparams.gradient_penalty_coefficient = 0
             else:
                 raise ValueError()
 
@@ -48,6 +50,8 @@ class GAN(pl.LightningModule):
                 self.hparams.gradient_penalty_power = 6
             elif self.hparams.gradient_penalty_strategy == "ct":
                 self.hparams.gradient_penalty_power = 2
+            elif self.hparams.gradient_penalty_strategy == "none":
+                self.hparams.gradient_penalty_power = 0
             else:
                 raise ValueError()
 
@@ -62,6 +66,8 @@ class GAN(pl.LightningModule):
                 self.hparams.consistency_term_coefficient = 0
             elif self.hparams.gradient_penalty_strategy == "ct":
                 self.hparams.consistency_term_coefficient = 2
+            elif self.hparams.gradient_penalty_strategy == "none":
+                self.hparams.gradient_penalty_strategy = 0
             else:
                 raise ValueError()
 
