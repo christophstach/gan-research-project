@@ -93,9 +93,12 @@ class Generator(pl.LightningModule):
         x = self.output(x_hats[-1])
 
         if self.hparams.multi_scale_gradient:
-            return x, [
-                self.to_rgb_converts[i](x_hat)
-                for i, x_hat in enumerate(x_hats)
+            return [
+                x,
+                [
+                    self.to_rgb_converts[i](x_hat)
+                    for i, x_hat in enumerate(x_hats)
+                ]
             ]
         else:
             return x
