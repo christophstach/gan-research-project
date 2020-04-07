@@ -91,6 +91,7 @@ class GAN(pl.LightningModule):
 
     def forward(self, x, y):
         output = self.generator(x, y)
+        output.requires_grad_()
 
         print(output.size())
         return output
