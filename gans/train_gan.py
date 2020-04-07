@@ -1,6 +1,8 @@
 import os
 from argparse import ArgumentParser
 
+import numpy as np
+import torch
 import torchvision.models as models
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -8,6 +10,10 @@ from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogge
 
 from gans.applications import GAN
 from gans.models import Generator, Critic
+
+SEED = 1337
+torch.manual_seed(SEED)
+np.random.seed(SEED)
 
 
 def main(hparams):

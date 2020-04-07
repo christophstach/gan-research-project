@@ -10,34 +10,34 @@ class Generator(pl.LightningModule):
 
         self.hparams = hparams
 
-        self.block1 = nn.Sequential(
-            # input is Z, going into a convolution
-            nn.ConvTranspose2d(
-                self.hparams.noise_size,
-                self.hparams.generator_filters * 16,
-                kernel_size=4,
-                stride=1,
-                padding=0,
-                bias=False
-            ),
-            nn.LeakyReLU(0.2, inplace=True)
+        self.blocks = nn.ModuleList()
+        self.to_rgb_converts = nn.ModuleList()
+
+        self.blocks.append(
+            nn.Sequential(
+                # input is Z, going into a convolution
+                nn.ConvTranspose2d(
+                    self.hparams.noise_size,
+                    self.hparams.generator_filters,
+                    kernel_size=4,
+                    stride=1,
+                    padding=0,
+                    bias=False
+                ),
+                nn.LeakyReLU(0.2, inplace=True)
+            )
         )
 
-        self.block2 = self.block_fn(self.hparams.generator_filters * 16, self.hparams.generator_filters * 8)  # in: 4 x 4, out: 8 x 8
-        self.block3 = self.block_fn(self.hparams.generator_filters * 8, self.hparams.generator_filters * 4)  # in: 8 x 8, out: 16 x 16
-        self.block4 = self.block_fn(self.hparams.generator_filters * 4, self.hparams.generator_filters * 2)  # in: 16 x 16, out: 32 x 32
-        self.block5 = self.block_fn(self.hparams.generator_filters * 2, self.hparams.generator_filters)  # in: 32 x 32, out: 64 x 64
+        for _ in range(2, int(math.log2(self.hparams.image_size)) - 1):
+            self.blocks.append(self.block_fn(self.hparams.generator_filters, self.hparams.generator_filters))
+
+        for _ in range(1, int(math.log2(self.hparams.image_size)) - 1):
+            self.to_rgb_converts.append(self.rgb_fn(self.hparams.generator_filters))
 
         self.output = nn.Sequential(
             nn.ConvTranspose2d(self.hparams.generator_filters, self.hparams.image_channels, 4, 2, 1, bias=False),
             nn.Tanh()
         )
-
-        self.rgb_4x4 = self.rgb_fn(self.hparams.generator_filters * 8)
-        self.rgb_8x8 = self.rgb_fn(self.hparams.generator_filters * 4)
-        self.rgb_16x16 = self.rgb_fn(self.hparams.generator_filters * 2)
-        self.rgb_32x32 = self.rgb_fn(self.hparams.generator_filters)
-        self.rgb_64x64 = self.rgb_fn(self.hparams.generator_filters)
 
         self.apply(self.init_weights)
 
@@ -83,21 +83,19 @@ class Generator(pl.LightningModule):
     def forward(self, x, y):
         x = x.view(x.size(0), -1, 1, 1)
 
-        x_4x4 = self.block1(x)
-        x_8x8 = self.block2(x_4x4)
-        x_16x16 = self.block3(x_8x8)
-        x_32x32 = self.block4(x_16x16)
-        x_64x64 = self.block5(x_32x32)
+        x_hats = None
+        for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
+            if x_hats is None:
+                x_hats = [self.blocks[i - 1](x)]
+            else:
+                x_hats.append(self.blocks[i - 1](x_hats[-1]))
 
-        x = self.output(x_64x64)
+        x = self.output(x_hats[-1])
 
         if self.hparams.multi_scale_gradient:
             return x, [
-                self.rgb_4x4(x_4x4),
-                self.rgb_8x8(x_8x8),
-                self.rgb_16x16(x_16x16),
-                self.rgb_32x32(x_32x32),
-                self.rgb_64x64(x_64x64)
+                self.to_rgb_converts[i](x_hat)
+                for i, x_hat in enumerate(x_hats)
             ]
         else:
             return x
