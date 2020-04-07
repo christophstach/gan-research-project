@@ -91,9 +91,6 @@ class GAN(pl.LightningModule):
 
     def forward(self, x, y):
         output = self.generator(x, y)
-        output.requires_grad_()
-
-        print(output.size())
         return output
 
     def critic_loss(self, real_validity, fake_validity):
