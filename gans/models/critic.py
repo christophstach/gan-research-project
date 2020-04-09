@@ -92,7 +92,11 @@ class Critic(nn.Module):
         for _ in range(1, int(math.log2(self.hparams.image_size)) - 1):
             self.combiners.append(self.combine_fn(self.hparams.critic_filters, self.bias))
 
-        self.validator = nn.Conv2d(self.hparams.critic_filters + additional_channels, 1, 4, 1, 0, bias=self.bias)
+        self.validator = nn.Sequential(
+            SelfAttention2d(self.hparams.critic_filters + additional_channels, bias=self.bias),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(self.hparams.critic_filters + additional_channels, 1, 4, 1, 0, bias=self.bias)
+        )
 
         self.apply(self.init_weights)
 
@@ -124,8 +128,6 @@ class Critic(nn.Module):
                 padding=1,
                 bias=bias
             ),
-            nn.LeakyReLU(0.2, inplace=True),
-            SelfAttention2d(out_channels, bias=bias),
             nn.LeakyReLU(0.2, inplace=True)
         )
 
