@@ -2,7 +2,6 @@ import math
 
 import torch
 import torch.nn as nn
-from ..building_blocks import SelfAttention2d
 
 
 class SimpleCombiner(nn.Module):
