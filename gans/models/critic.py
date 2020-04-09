@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+from ..building_blocks import MinibatchStdDev
 
 
 class SimpleCombiner(nn.Module):
@@ -101,8 +102,9 @@ class Critic(nn.Module):
                 bias=self.bias
             ),
             nn.LeakyReLU(0.2, inplace=True),
+            MinibatchStdDev(),
             nn.Conv2d(
-                self.hparams.critic_filters + additional_channels,
+                self.hparams.critic_filters + additional_channels + 1,
                 1,
                 kernel_size=1,
                 stride=1,
