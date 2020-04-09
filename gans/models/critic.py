@@ -125,8 +125,8 @@ class Critic(nn.Module):
                 bias=bias
             ),
             nn.LeakyReLU(0.2, inplace=True),
-            # SelfAttention2d(out_channels, bias=bias),
-            # nn.LeakyReLU(0.2, inplace=True)
+            SelfAttention2d(out_channels, bias=bias),
+            nn.LeakyReLU(0.2, inplace=True)
         )
 
     def combine_fn(self, in_channels, bias=False):
