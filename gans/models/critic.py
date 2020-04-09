@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+from ..building_blocks import SelfAttention2d
 
 
 class SimpleCombiner(nn.Module):
@@ -16,7 +17,7 @@ class SimpleCombiner(nn.Module):
 
 
 class LinCatCombiner(nn.Module):
-    def __init__(self, hparams, in_channels):
+    def __init__(self, hparams, in_channels, bias=False):
         super().__init__()
 
         # TODO: to fix
@@ -30,7 +31,7 @@ class LinCatCombiner(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            bias=False
+            bias=bias
         )
 
     def forward(self, x1, x2):
@@ -40,7 +41,7 @@ class LinCatCombiner(nn.Module):
 
 
 class CatLinCombiner(nn.Module):
-    def __init__(self, hparams, in_channels):
+    def __init__(self, hparams, in_channels, bias=False):
         super().__init__()
 
         self.hparams = hparams
@@ -52,7 +53,7 @@ class CatLinCombiner(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            bias=False
+            bias=bias
         )
 
     def forward(self, x1, x2):
@@ -66,6 +67,7 @@ class Critic(nn.Module):
         super().__init__()
 
         self.hparams = hparams
+        self.bias = False
 
         if self.hparams.multi_scale_gradient:
             if self.hparams.multi_scale_gradient_combiner == "simple":
@@ -82,15 +84,15 @@ class Critic(nn.Module):
         self.blocks = nn.ModuleList()
         self.combiners = nn.ModuleList()
 
-        self.blocks.append(self.block_fn(self.hparams.image_channels, self.hparams.critic_filters))
+        self.blocks.append(self.block_fn(self.hparams.image_channels, self.hparams.critic_filters, self.bias))
 
         for _ in range(2, int(math.log2(self.hparams.image_size)) - 1):
-            self.blocks.append(self.block_fn(self.hparams.critic_filters + additional_channels, self.hparams.critic_filters))
+            self.blocks.append(self.block_fn(self.hparams.critic_filters + additional_channels, self.hparams.critic_filters, self.bias))
 
         for _ in range(1, int(math.log2(self.hparams.image_size)) - 1):
-            self.combiners.append(self.combine_fn(self.hparams.critic_filters))
+            self.combiners.append(self.combine_fn(self.hparams.critic_filters, self.bias))
 
-        self.validator = nn.Conv2d(self.hparams.critic_filters + additional_channels, 1, 4, 1, 0, bias=False)
+        self.validator = nn.Conv2d(self.hparams.critic_filters + additional_channels, 1, 4, 1, 0, bias=self.bias)
 
         self.apply(self.init_weights)
 
@@ -112,7 +114,7 @@ class Critic(nn.Module):
                     bound = 1 / math.sqrt(fan_in)
                     nn.init.uniform_(m.bias, -bound, bound)
 
-    def block_fn(self, in_channels, out_channels):
+    def block_fn(self, in_channels, out_channels, bias=False):
         return nn.Sequential(
             nn.Conv2d(
                 in_channels=in_channels,
@@ -120,18 +122,20 @@ class Critic(nn.Module):
                 kernel_size=4,
                 stride=2,
                 padding=1,
-                bias=False
+                bias=bias
             ),
             nn.LeakyReLU(0.2, inplace=True),
+            # SelfAttention2d(out_channels, bias=bias),
+            # nn.LeakyReLU(0.2, inplace=True)
         )
 
-    def combine_fn(self, in_channels):
+    def combine_fn(self, in_channels, bias=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":
             return SimpleCombiner(self.hparams, in_channels)
         elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
-            return LinCatCombiner(self.hparams, in_channels)
+            return LinCatCombiner(self.hparams, in_channels, bias=bias)
         elif self.hparams.multi_scale_gradient_combiner == "cat_lin":
-            return CatLinCombiner(self.hparams, in_channels)
+            return CatLinCombiner(self.hparams, in_channels, bias=bias)
         else:
             raise ValueError()
 

@@ -1,17 +1,17 @@
 import math
 
-import attn_gan_pytorch.CustomLayers as attn
 import torch.nn as nn
 import torch.nn.functional as F
+from ..building_blocks import SelfAttention2d
 
 
 class UpsampleResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
     def forward(self, x):
         x = self.upsample(x)
@@ -23,16 +23,18 @@ class UpsampleResidualBlock(nn.Module):
         return x + identity
 
 
-class UpsampleFullAttentionBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+class UpsampleSelfAttentionBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.attn1 = attn.FullAttention(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False, use_batch_norm=False, use_spectral_norm=False)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.att = SelfAttention2d(out_channels, bias=bias)
 
     def forward(self, x):
         x = self.upsample(x)
-        x, _ = self.attn1(x)
+        x = F.leaky_relu(self.conv(x), 0.2)
+        x = F.leaky_relu(self.att(x), 0.2)
 
         return x
 
@@ -42,6 +44,7 @@ class Generator(nn.Module):
         super().__init__()
 
         self.hparams = hparams
+        self.bias = False
 
         self.blocks = nn.ModuleList()
         self.to_rgb_converts = nn.ModuleList()
@@ -55,20 +58,20 @@ class Generator(nn.Module):
                     kernel_size=4,
                     stride=1,
                     padding=0,
-                    bias=False
+                    bias=self.bias
                 ),
                 nn.LeakyReLU(0.2, inplace=True)
             )
         )
 
         for _ in range(2, int(math.log2(self.hparams.image_size)) - 1):
-            self.blocks.append(self.block_fn(self.hparams.generator_filters, self.hparams.generator_filters))
+            self.blocks.append(self.block_fn(self.hparams.generator_filters, self.hparams.generator_filters, self.bias))
 
         for _ in range(1, int(math.log2(self.hparams.image_size)) - 1):
-            self.to_rgb_converts.append(self.rgb_fn(self.hparams.generator_filters))
+            self.to_rgb_converts.append(self.rgb_fn(self.hparams.generator_filters, self.bias))
 
         self.output = nn.Sequential(
-            nn.ConvTranspose2d(self.hparams.generator_filters, self.hparams.image_channels, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(self.hparams.generator_filters, self.hparams.image_channels, 4, 2, 1, bias=self.bias),
             nn.Tanh()
         )
 
@@ -92,11 +95,11 @@ class Generator(nn.Module):
                     bound = 1 / math.sqrt(fan_in)
                     nn.init.uniform_(m.bias, -bound, bound)
 
-    def block_fn(self, in_channels, out_channels):
-        # return UpsampleFullAttentionBlock(in_channels, out_channels)
-        return UpsampleResidualBlock(in_channels, out_channels)
+    def block_fn(self, in_channels, out_channels, bias=False):
+        return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias)
+        # return UpsampleResidualBlock(in_channels, out_channels, bias=bias)
 
-    def rgb_fn(self, in_channels):
+    def rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
             nn.Conv2d(
                 in_channels=in_channels,
@@ -104,7 +107,7 @@ class Generator(nn.Module):
                 kernel_size=1,
                 stride=1,
                 padding=0,
-                bias=False
+                bias=bias
             )
         )
 
