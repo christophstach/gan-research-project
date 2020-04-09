@@ -93,9 +93,23 @@ class Critic(nn.Module):
             self.combiners.append(self.combine_fn(self.hparams.critic_filters, self.bias))
 
         self.validator = nn.Sequential(
-            SelfAttention2d(self.hparams.critic_filters + additional_channels, bias=self.bias),
+            nn.Conv2d(
+                self.hparams.critic_filters + additional_channels,
+                self.hparams.critic_filters + additional_channels,
+                kernel_size=4,
+                stride=1,
+                padding=0,
+                bias=self.bias
+            ),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(self.hparams.critic_filters + additional_channels, 1, 4, 1, 0, bias=self.bias)
+            nn.Conv2d(
+                self.hparams.critic_filters + additional_channels,
+                1,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=self.bias
+            )
         )
 
         self.apply(self.init_weights)
