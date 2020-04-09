@@ -61,8 +61,6 @@ class Generator(nn.Module):
                     padding=0,
                     bias=self.bias
                 ),
-                nn.LeakyReLU(0.2, inplace=True),
-                SelfAttention2d(self.hparams.generator_filters, bias=self.bias),
                 nn.LeakyReLU(0.2, inplace=True)
             )
         )
