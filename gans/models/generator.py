@@ -2,6 +2,7 @@ import math
 
 import torch.nn as nn
 import torch.nn.functional as F
+
 from ..building_blocks import SelfAttention2d
 
 
@@ -60,6 +61,8 @@ class Generator(nn.Module):
                     padding=0,
                     bias=self.bias
                 ),
+                nn.LeakyReLU(0.2, inplace=True),
+                SelfAttention2d(self.hparams.generator_filters, bias=self.bias),
                 nn.LeakyReLU(0.2, inplace=True)
             )
         )
@@ -96,8 +99,8 @@ class Generator(nn.Module):
                     nn.init.uniform_(m.bias, -bound, bound)
 
     def block_fn(self, in_channels, out_channels, bias=False):
-        return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias)
-        # return UpsampleResidualBlock(in_channels, out_channels, bias=bias)
+        # return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias)
+        return UpsampleResidualBlock(in_channels, out_channels, bias=bias)
 
     def rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
