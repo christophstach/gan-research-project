@@ -62,6 +62,8 @@ class CatLinCombiner(nn.Module):
         return self.conv(x)
 
 
+
+
 class Critic(nn.Module):
     def __init__(self, hparams):
         super().__init__()
@@ -93,6 +95,16 @@ class Critic(nn.Module):
             self.combiners.append(self.combine_fn(self.hparams.critic_filters, self.bias))
 
         self.validator = nn.Sequential(
+            MinibatchStdDev(),
+            nn.Conv2d(
+                self.hparams.critic_filters + additional_channels + 1,
+                self.hparams.critic_filters + additional_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                bias=self.bias
+            ),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(
                 self.hparams.critic_filters + additional_channels,
                 self.hparams.critic_filters + additional_channels,
@@ -102,9 +114,8 @@ class Critic(nn.Module):
                 bias=self.bias
             ),
             nn.LeakyReLU(0.2, inplace=True),
-            MinibatchStdDev(),
             nn.Conv2d(
-                self.hparams.critic_filters + additional_channels + 1,
+                self.hparams.critic_filters + additional_channels,
                 1,
                 kernel_size=1,
                 stride=1,
@@ -168,7 +179,11 @@ class Critic(nn.Module):
             if self.hparams.multi_scale_gradient: x_hats[i - 1] = self.combiners[i - 1](scaled_inputs[len(scaled_inputs) - i], x_hats[i - 1])
             x_hats[i - 1] = torch.dropout(x_hats[i - 1], p=dropout, train=True)
 
+
+
         validity = self.validator(x_hats[-1])
+        print(validity.shape)
+        exit(0)
 
         if intermediate_output:
             return validity, x.mean()
