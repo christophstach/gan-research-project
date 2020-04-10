@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+
 from ..building_blocks import MinibatchStdDev
 
 
@@ -60,8 +61,6 @@ class CatLinCombiner(nn.Module):
         x = torch.cat([x1, x2], dim=1)
 
         return self.conv(x)
-
-
 
 
 class Critic(nn.Module):
@@ -179,11 +178,7 @@ class Critic(nn.Module):
             if self.hparams.multi_scale_gradient: x_hats[i - 1] = self.combiners[i - 1](scaled_inputs[len(scaled_inputs) - i], x_hats[i - 1])
             x_hats[i - 1] = torch.dropout(x_hats[i - 1], p=dropout, train=True)
 
-
-
         validity = self.validator(x_hats[-1])
-        print(validity.shape)
-        exit(0)
 
         if intermediate_output:
             return validity, x.mean()
