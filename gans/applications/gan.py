@@ -455,7 +455,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=0, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-        parser.add_argument("-gf", "--generator-filters", type=int, default=128, help="Number of filters in the generator")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
         parser.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
