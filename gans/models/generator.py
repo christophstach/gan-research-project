@@ -3,7 +3,7 @@ import math
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..building_blocks import SelfAttention2d
+from ..building_blocks import SelfAttention2d, PixelNorm
 
 
 class UpsampleResidualBlock(nn.Module):
@@ -13,13 +13,14 @@ class UpsampleResidualBlock(nn.Module):
         self.upsample = nn.Upsample(scale_factor=2)
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.pixelNorm = PixelNorm()
 
     def forward(self, x):
         x = self.upsample(x)
 
         identity = x
-        x = F.leaky_relu(self.conv1(x), 0.2)
-        x = self.conv2(x)
+        x = self.pixelNorm(F.leaky_relu(self.conv1(x), 0.2))
+        x = self.pixelNorm(self.conv2(x))
 
         return x + identity
 
@@ -61,7 +62,8 @@ class Generator(nn.Module):
                     padding=0,
                     bias=self.bias
                 ),
-                nn.LeakyReLU(0.2, inplace=True)
+                nn.LeakyReLU(0.2, inplace=True),
+                PixelNorm()
             )
         )
 

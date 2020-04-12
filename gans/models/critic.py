@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ..building_blocks import MinibatchStdDev
 
@@ -61,6 +62,34 @@ class CatLinCombiner(nn.Module):
         x = torch.cat([x1, x2], dim=1)
 
         return self.conv(x)
+
+
+class DownsampleResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, bias=False):
+        super().__init__()
+
+        self.downsample = nn.Sequential(
+            nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=4,
+                stride=2,
+                padding=1,
+                bias=bias
+            ),
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+        self.conv1 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+
+    def forward(self, x):
+        x = self.downsample(x)
+
+        identity = x
+        x = F.leaky_relu(self.conv1(x), 0.2)
+        x = self.conv2(x)
+
+        return x + identity
 
 
 class Critic(nn.Module):
@@ -144,17 +173,7 @@ class Critic(nn.Module):
                     nn.init.uniform_(m.bias, -bound, bound)
 
     def block_fn(self, in_channels, out_channels, bias=False):
-        return nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=4,
-                stride=2,
-                padding=1,
-                bias=bias
-            ),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
+        return DownsampleResidualBlock(in_channels, out_channels, bias=bias)
 
     def combine_fn(self, in_channels, bias=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":
