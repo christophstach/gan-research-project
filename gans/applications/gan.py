@@ -465,8 +465,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="he")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
-        parser.add_argument("-is", "--image-size", type=int, default=128, help="Generated image size")
-        parser.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
+        parser.add_argument("-is", "--image-size", type=int, default=256, help="Generated image size")
+        parser.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
         parser.add_argument("-clr", "--critic-learning-rate", type=float, default=1e-4, help="Learning rate of the critic optimizers")
@@ -491,8 +491,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=0, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-        parser.add_argument("-gf", "--generator-filters", type=int, default=64, help="Number of filters in the generator")
-        parser.add_argument("-cf", "--critic-filters", type=int, default=64, help="Number of filters in the critic")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=256, help="Number of filters in the generator")
+        parser.add_argument("-cf", "--critic-filters", type=int, default=256, help="Number of filters in the critic")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net"], required=True)

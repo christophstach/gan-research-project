@@ -11,12 +11,14 @@ class UpsampleResidualBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv_skip = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias)
+        self.conv1 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.pixelNorm = PixelNorm()
 
     def forward(self, x):
         x = self.upsample(x)
+        x = self.pixelNorm(F.leaky_relu(self.conv_skip(x), 0.2))
 
         identity = x
         x = self.pixelNorm(F.leaky_relu(self.conv1(x), 0.2))
@@ -67,14 +69,32 @@ class Generator(nn.Module):
             )
         )
 
-        for _ in range(2, int(math.log2(self.hparams.image_size)) - 1):
-            self.blocks.append(self.block_fn(self.hparams.generator_filters, self.hparams.generator_filters, self.bias))
+        for i in range(2, int(math.log2(self.hparams.image_size)) - 1):
+            self.blocks.append(
+                self.block_fn(
+                    self.hparams.generator_filters // 2 ** (i - 2),
+                    self.hparams.generator_filters // 2 ** (i - 1),
+                    self.bias
+                )
+            )
 
-        for _ in range(1, int(math.log2(self.hparams.image_size)) - 1):
-            self.to_rgb_converts.append(self.rgb_fn(self.hparams.generator_filters, self.bias))
+        for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
+            self.to_rgb_converts.append(
+                self.rgb_fn(
+                    self.hparams.generator_filters // 2 ** (i - 1),
+                    self.bias
+                )
+            )
 
         self.output = nn.Sequential(
-            nn.ConvTranspose2d(self.hparams.generator_filters, self.hparams.image_channels, 4, 2, 1, bias=self.bias),
+            nn.ConvTranspose2d(
+                self.hparams.generator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
+                self.hparams.image_channels,
+                kernel_size=4,
+                stride=2,
+                padding=1,
+                bias=self.bias
+            ),
             nn.Tanh()
         )
 

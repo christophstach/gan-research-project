@@ -114,13 +114,41 @@ class Critic(nn.Module):
         self.blocks = nn.ModuleList()
         self.combiners = nn.ModuleList()
 
-        self.blocks.append(self.block_fn(self.hparams.image_channels, self.hparams.critic_filters, self.bias))
+        self.blocks.append(
+            self.block_fn(
+                self.hparams.image_channels,
+                self.hparams.critic_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
+                self.bias
+            )
+        )
 
-        for _ in range(2, int(math.log2(self.hparams.image_size)) - 1):
-            self.blocks.append(self.block_fn(self.hparams.critic_filters + additional_channels, self.hparams.critic_filters, self.bias))
+        # print(self.hparams.critic_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3))
 
-        for _ in range(1, int(math.log2(self.hparams.image_size)) - 1):
-            self.combiners.append(self.combine_fn(self.hparams.critic_filters, self.bias))
+        for i in range(2, int(math.log2(self.hparams.image_size)) - 1):
+            o = int(math.log2(self.hparams.image_size)) - i
+
+            self.blocks.append(
+                self.block_fn(
+                    self.hparams.critic_filters // 2 ** (o - 1) + additional_channels,
+                    self.hparams.critic_filters // 2 ** (o - 2),
+                    self.bias
+                )
+            )
+
+            # print(
+            #    self.hparams.critic_filters // 2 ** (o - 1),
+            #    self.hparams.critic_filters // 2 ** (o - 2)
+            # )
+
+        for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
+            o = int(math.log2(self.hparams.image_size)) - i
+
+            self.combiners.append(
+                self.combine_fn(
+                    self.hparams.critic_filters // 2 ** (o - 2),
+                    self.bias
+                )
+            )
 
         self.validator = nn.Sequential(
             MinibatchStdDev(),
