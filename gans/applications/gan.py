@@ -103,6 +103,18 @@ class GAN(pl.LightningModule):
         elif self.hparams.loss_strategy == "hinge":
             real_loss = torch.relu(1.0 - real_validity)
             fake_loss = torch.relu(1.0 + fake_validity)
+        elif self.hparams.loss_strategy == "r-hinge":
+            relativistic_real_validity = real_validity - fake_validity
+            relativistic_fake_validity = fake_validity - real_validity
+
+            real_loss = torch.relu(1.0 - relativistic_real_validity)
+            fake_loss = torch.relu(1.0 + relativistic_fake_validity)
+        elif self.hparams.loss_strategy == "ra-hinge":
+            relativistic_real_validity = real_validity - fake_validity.mean()
+            relativistic_fake_validity = fake_validity - real_validity.mean()
+
+            real_loss = torch.relu(1.0 - relativistic_real_validity)
+            fake_loss = torch.relu(1.0 + relativistic_fake_validity)
         elif self.hparams.loss_strategy == "ns":
             real_loss = -torch.log(torch.sigmoid(real_validity))
             # noinspection PyTypeChecker
@@ -113,19 +125,38 @@ class GAN(pl.LightningModule):
         loss = real_loss.mean() + fake_loss.mean()
         return loss.unsqueeze(0)
 
-    def generator_loss(self, fake_validity):
+    def generator_loss(self, real_validity, fake_validity):
         if self.hparams.loss_strategy == "wgan":
             fake_loss = -fake_validity
+            loss = fake_loss.mean()
         elif self.hparams.loss_strategy == "lsgan":
             fake_loss = -(fake_validity - 1) ** 2
+            loss = fake_loss.mean()
         elif self.hparams.loss_strategy == "hinge":
             fake_loss = -fake_validity
+            loss = fake_loss.mean()
+        elif self.hparams.loss_strategy == "r-hinge":
+            relativistic_real_validity = real_validity - fake_validity
+            relativistic_fake_validity = fake_validity - real_validity
+
+            real_loss = torch.relu(1.0 - relativistic_fake_validity)
+            fake_loss = torch.relu(1.0 + relativistic_real_validity)
+
+            loss = fake_loss.mean() + real_loss.mean()
+        elif self.hparams.loss_strategy == "ra-hinge":
+            relativistic_real_validity = real_validity - fake_validity.mean()
+            relativistic_fake_validity = fake_validity - real_validity.mean()
+
+            real_loss = torch.relu(1.0 - relativistic_fake_validity)
+            fake_loss = torch.relu(1.0 + relativistic_real_validity)
+
+            loss = fake_loss.mean() + real_loss.mean()
         elif self.hparams.loss_strategy == "ns":
             fake_loss = -torch.log(torch.sigmoid(fake_validity))
+            loss = fake_loss.mean()
         else:
             raise ValueError()
 
-        loss = fake_loss.mean()
         return loss.unsqueeze(0)
 
     def clip_weights(self):
@@ -248,10 +279,15 @@ class GAN(pl.LightningModule):
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
         if self.hparams.multi_scale_gradient:
+            scaled_real_images = self.to_scaled_images(self.real_images)
             fake_images, scaled_fake_images = self.forward(noise, self.y)
+
+            real_validity = self.critic(self.real_images, self.y, scaled_inputs=scaled_real_images)
             fake_validity = self.critic(fake_images, self.y, scaled_inputs=scaled_fake_images)
         else:
             fake_images = self.forward(noise, self.y)
+
+            real_validity = self.critic(self.real_images, self.y)
             fake_validity = self.critic(fake_images, self.y)
 
         # if self.hparams.enable_experience_replay:
@@ -262,7 +298,7 @@ class GAN(pl.LightningModule):
         #    else:
         #        self.experience = torch.cat([self.experience, rand_image], dim=0)
 
-        loss = self.generator_loss(fake_validity)
+        loss = self.generator_loss(real_validity, fake_validity)
 
         if len(self.trainer.lr_schedulers) >= 2:
             generator_lr = self.trainer.lr_schedulers[1]["scheduler"].get_lr()[0]
@@ -433,10 +469,10 @@ class GAN(pl.LightningModule):
         parser.add_argument("-bs", "--batch-size", type=int, default=64, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        parser.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
+        parser.add_argument("-clr", "--critic-learning-rate", type=float, default=1e-4, help="Learning rate of the critic optimizers")
         parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
-        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns"], default="hinge")
+        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge"], default="ra-hinge")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ

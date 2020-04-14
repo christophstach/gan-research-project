@@ -68,6 +68,9 @@ class DownsampleResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
 
+        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+
         self.downsample = nn.Sequential(
             nn.Conv2d(
                 in_channels=in_channels,
@@ -79,17 +82,14 @@ class DownsampleResidualBlock(nn.Module):
             ),
             nn.LeakyReLU(0.2, inplace=True)
         )
-        self.conv1 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
     def forward(self, x):
-        x = self.downsample(x)
-
         identity = x
         x = F.leaky_relu(self.conv1(x), 0.2)
-        x = self.conv2(x)
+        x = F.leaky_relu(self.conv2(x), 0.2)
+        x = self.downsample(x + identity)
 
-        return x + identity
+        return x
 
 
 class Critic(nn.Module):
@@ -97,7 +97,7 @@ class Critic(nn.Module):
         super().__init__()
 
         self.hparams = hparams
-        self.bias = False
+        self.bias = True
 
         if self.hparams.multi_scale_gradient:
             if self.hparams.multi_scale_gradient_combiner == "simple":

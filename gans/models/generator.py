@@ -20,7 +20,7 @@ class UpsampleResidualBlock(nn.Module):
 
         identity = x
         x = self.pixelNorm(F.leaky_relu(self.conv1(x), 0.2))
-        x = self.pixelNorm(self.conv2(x))
+        x = self.pixelNorm(F.leaky_relu(self.conv2(x), 0.2))
 
         return x + identity
 
@@ -46,7 +46,7 @@ class Generator(nn.Module):
         super().__init__()
 
         self.hparams = hparams
-        self.bias = False
+        self.bias = True
 
         self.blocks = nn.ModuleList()
         self.to_rgb_converts = nn.ModuleList()
