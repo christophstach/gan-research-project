@@ -179,7 +179,7 @@ class GAN(pl.LightningModule):
 
             if self.hparams.multi_scale_gradient:
                 scaled_interpolates = self.to_scaled_images(interpolates)
-                interpolates_validity = self.critic(interpolates, y, scaled_inputs=scaled_interpolates)
+                interpolates_validity = self.critic(scaled_interpolates, y)
             else:
                 interpolates_validity = self.critic(interpolates, y)
 
@@ -244,23 +244,21 @@ class GAN(pl.LightningModule):
 
         if self.hparams.multi_scale_gradient:
             scaled_real_images = self.to_scaled_images(self.real_images)
-            fake_images, scaled_fake_images = self.forward(noise, self.y)
-            scaled_fake_images = [x.detach() for x in scaled_fake_images]
-            fake_images = fake_images.detach()
+            fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
-            real_validity = self.critic(self.real_images, self.y, scaled_inputs=scaled_real_images)
-            fake_validity = self.critic(fake_images, self.y, scaled_inputs=scaled_fake_images)
-
-            # TODO: Need to check if gradient penalty works well
-            gradient_penalty = self.gradient_penalty(self.real_images, fake_images, self.y)
-            consistency_term = self.consistency_term(self.real_images, self.y, scaled_real_images)
-        else:
-            fake_images = self.forward(noise, self.y).detach()
-
-            real_validity = self.critic(self.real_images, self.y)
+            real_validity = self.critic(scaled_real_images, self.y)
             fake_validity = self.critic(fake_images, self.y)
 
-            gradient_penalty = self.gradient_penalty(self.real_images, fake_images, self.y)
+            # TODO: Need to check if gradient penalty works well
+            gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
+            consistency_term = self.consistency_term(self.real_images, self.y, scaled_real_images)
+        else:
+            fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
+
+            real_validity = self.critic(self.real_images, self.y)
+            fake_validity = self.critic(fake_images[-1], self.y)
+
+            gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
             consistency_term = self.consistency_term(self.real_images, self.y)
 
         loss = self.critic_loss(real_validity, fake_validity)
@@ -280,15 +278,15 @@ class GAN(pl.LightningModule):
 
         if self.hparams.multi_scale_gradient:
             scaled_real_images = self.to_scaled_images(self.real_images)
-            fake_images, scaled_fake_images = self.forward(noise, self.y)
+            fake_images = self.forward(noise, self.y)
 
-            real_validity = self.critic(self.real_images, self.y, scaled_inputs=scaled_real_images)
-            fake_validity = self.critic(fake_images, self.y, scaled_inputs=scaled_fake_images)
+            real_validity = self.critic(scaled_real_images, self.y)
+            fake_validity = self.critic(fake_images, self.y)
         else:
             fake_images = self.forward(noise, self.y)
 
             real_validity = self.critic(self.real_images, self.y)
-            fake_validity = self.critic(fake_images, self.y)
+            fake_validity = self.critic(fake_images[-1], self.y)
 
         # if self.hparams.enable_experience_replay:
         #    rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
@@ -310,8 +308,11 @@ class GAN(pl.LightningModule):
 
     def to_scaled_images(self, source_images):
         return [
-            F.interpolate(source_images, size=2 ** target_size)
-            for target_size in range(2, int(math.log2(self.hparams.image_size)))
+            *[
+                F.interpolate(source_images, size=2 ** target_size)
+                for target_size in range(2, int(math.log2(self.hparams.image_size)))
+            ],
+            source_images
         ]
 
     # Logs an image for each class defined as noise size
@@ -323,11 +324,7 @@ class GAN(pl.LightningModule):
                     noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
                     y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
 
-                    if self.hparams.multi_scale_gradient:
-                        fake_images = self.forward(noise, y)[0].detach()
-                    else:
-                        fake_images = self.forward(noise, y).detach()
-
+                    fake_images = self.forward(noise, y)[-1].detach()
                     fake_images = F.interpolate(fake_images, (299, 299))
 
                     if fake_images.size(1) == 1:
@@ -349,11 +346,7 @@ class GAN(pl.LightningModule):
 
                 noise = torch.randn(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device).repeat(grid_size)
-
-                if self.hparams.multi_scale_gradient:
-                    fake_images = self.forward(noise, y)[0].detach()
-                else:
-                    fake_images = self.forward(noise, y).detach()
+                fake_images = self.forward(noise, y)[-1].detach()
 
                 grid = torchvision.utils.make_grid(fake_images, nrow=grid_size, padding=0)
 
@@ -364,11 +357,7 @@ class GAN(pl.LightningModule):
 
                 noise = torch.randn(grid_size, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device)
-
-                if self.hparams.multi_scale_gradient:
-                    fake_images = self.forward(noise, y)[0].detach()
-                else:
-                    fake_images = self.forward(noise, y).detach()
+                fake_images = self.forward(noise, y)[-1].detach()
 
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
                 self.logger.experiment.log({
@@ -379,11 +368,7 @@ class GAN(pl.LightningModule):
 
                 noise = torch.randn(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device).repeat(grid_size)
-
-                if self.hparams.multi_scale_gradient:
-                    fake_images = self.forward(noise, y)[0].detach()
-                else:
-                    fake_images = self.forward(noise, y).detach()
+                fake_images = self.forward(noise, y)[-1].detach()
 
                 grid = torchvision.utils.make_grid(fake_images, nrow=grid_size, padding=0)
 

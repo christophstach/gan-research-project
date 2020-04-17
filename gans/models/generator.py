@@ -161,10 +161,10 @@ class Generator(nn.Module):
 
         x = self.output(x_hats[-1])
 
-        if self.hparams.multi_scale_gradient:
-            return x, [
+        return [
+            *[
                 self.to_rgb_converts[i](x_hat)
                 for i, x_hat in enumerate(x_hats)
-            ]
-        else:
-            return x
+            ],
+            x
+        ]

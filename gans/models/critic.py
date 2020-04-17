@@ -231,15 +231,19 @@ class Critic(nn.Module):
             raise ValueError()
 
     # Dropout is just used for WGAN-CT
-    def forward(self, x, y, dropout=0.0, intermediate_output=False, scaled_inputs=None):
+    def forward(self, x, y, dropout=0.0, intermediate_output=False):
         x_hats = None
+
         for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
             if x_hats is None:
-                x_hats = [self.blocks[i - 1](x)]
+                if isinstance(x, list):
+                    x_hats = [self.blocks[i - 1](x[-1])]
+                else:
+                    x_hats = [self.blocks[i - 1](x)]
             else:
                 x_hats.append(self.blocks[i - 1](x_hats[-1]))
 
-            if self.hparams.multi_scale_gradient: x_hats[i - 1] = self.combiners[i - 1](scaled_inputs[len(scaled_inputs) - i], x_hats[i - 1])
+            if isinstance(x, list): x_hats[i - 1] = self.combiners[i - 1](x[len(x) - i - 1], x_hats[i - 1])
             x_hats[i - 1] = torch.dropout(x_hats[i - 1], p=dropout, train=True)
 
         validity = self.validator(x_hats[-1])
