@@ -11,8 +11,6 @@ from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogge
 from gans.applications import GAN
 from gans.models import Generator, Critic
 
-from wandb import magic
-
 SEED = 1337
 torch.manual_seed(SEED)
 np.random.seed(SEED)
