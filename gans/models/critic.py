@@ -128,7 +128,7 @@ class Critic(nn.Module):
             additional_channels = 0
 
         self.blocks = nn.ModuleList()
-        self.combiners = nn.ModuleList()
+        self.from_rgb_combiners = nn.ModuleList()
 
         self.blocks.append(
             self.block_fn(
@@ -159,8 +159,8 @@ class Critic(nn.Module):
         for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
             o = int(math.log2(self.hparams.image_size)) - i
 
-            self.combiners.append(
-                self.combine_fn(
+            self.from_rgb_combiners.append(
+                self.from_rgb_fn(
                     self.hparams.critic_filters // 2 ** (o - 2),
                     self.bias
                 )
@@ -220,7 +220,7 @@ class Critic(nn.Module):
         # return DownsampleResidualBlock(in_channels, out_channels, bias=bias)
         return DownsampleSimpleBlock(in_channels, out_channels, bias=bias)
 
-    def combine_fn(self, in_channels, bias=False):
+    def from_rgb_fn(self, in_channels, bias=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":
             return SimpleCombiner(self.hparams, in_channels)
         elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
@@ -243,7 +243,7 @@ class Critic(nn.Module):
             else:
                 x_hats.append(self.blocks[i - 1](x_hats[-1]))
 
-            if isinstance(x, list): x_hats[i - 1] = self.combiners[i - 1](x[len(x) - i - 1], x_hats[i - 1])
+            if isinstance(x, list): x_hats[i - 1] = self.from_rgb_combiners[i - 1](x[len(x) - i - 1], x_hats[i - 1])
             x_hats[i - 1] = torch.dropout(x_hats[i - 1], p=dropout, train=True)
 
         validity = self.validator(x_hats[-1])

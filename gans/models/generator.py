@@ -94,7 +94,7 @@ class Generator(nn.Module):
 
         for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
             self.to_rgb_converts.append(
-                self.rgb_fn(
+                self.to_rgb_fn(
                     self.hparams.generator_filters // 2 ** (i - 1),
                     self.bias
                 )
@@ -137,7 +137,7 @@ class Generator(nn.Module):
         # return UpsampleResidualBlock(in_channels, out_channels, bias=bias)
         return UpsampleSimpleBlock(in_channels, out_channels, bias=bias)
 
-    def rgb_fn(self, in_channels, bias=False):
+    def to_rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
             nn.Conv2d(
                 in_channels=in_channels,
