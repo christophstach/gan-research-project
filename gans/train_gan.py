@@ -23,6 +23,13 @@ def main(hparams):
     scorer = models.mobilenet_v2(pretrained=True)
     model = GAN(hparams, generator, critic, scorer)
 
+    experiment_name = hparams.loss_strategy
+    experiment_name += "+" + hparams.gradient_penalty_strategy
+    if hparams.multi_scale_gradient:
+        experiment_name += "+msg"
+
+    experiment_name += " (" + hparams.dataset + ")"
+
     if hparams.logger == "none":
         logger = False
     elif hparams.logger == "comet.ml":
@@ -31,12 +38,12 @@ def main(hparams):
             workspace=os.environ["COMET_WORKSPACE"],  # Optional
             project_name="gan-research-project",  # Optional
             rest_api_key=os.environ["COMET_REST_KEY"],  # Optional
-            experiment_name=hparams.loss_strategy + "+" + hparams.gradient_penalty_strategy + " (" + hparams.dataset + ")"
+            experiment_name=experiment_name
         )
     elif hparams.logger == "wandb":
         logger = WandbLogger(
             project="gan-research-project",
-            name=hparams.loss_strategy + "+" + hparams.gradient_penalty_strategy + " (" + hparams.dataset + ")"
+            name=experiment_name
         )
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
