@@ -1,1 +1,1 @@
-python gans/train_gan.py --gpus 0 --dataloader-num-workers 10 --batch-size 32 --logger wandb --max-epochs 10000 --dataset lsun --loss-strategy ra-hinge --gradient-penalty-strategy 1-gp --image-size 128
+python gans/train_gan.py --gpus 0 --dataloader-num-workers 10 --batch-size 32 --logger wandb --max-epochs 10000 --dataset lsun --loss-strategy wgan --gradient-penalty-strategy 1-gp --image-size 128

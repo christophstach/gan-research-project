@@ -11,6 +11,8 @@ from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogge
 from gans.applications import GAN
 from gans.models import Generator, Critic
 
+from wandb import magic
+
 SEED = 1337
 torch.manual_seed(SEED)
 np.random.seed(SEED)
@@ -45,6 +47,9 @@ def main(hparams):
             project="gan-research-project",
             name=experiment_name
         )
+
+        logger.watch(generator)
+        logger.watch(critic)
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
             save_dir=os.getcwd() + "/lightning_logs"
