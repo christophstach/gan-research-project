@@ -78,8 +78,8 @@ class Generator(nn.Module):
                     padding=0,
                     bias=self.bias
                 ),
-                nn.LeakyReLU(0.2, inplace=True),
-                PixelNorm()
+                nn.LeakyReLU(0.2, inplace=True)
+                # PixelNorm()
             )
         )
 
