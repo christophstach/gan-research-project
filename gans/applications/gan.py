@@ -454,7 +454,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        parser.add_argument("-clr", "--critic-learning-rate", type=float, default=1e-4, help="Learning rate of the critic optimizers")
+        parser.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
         parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
         parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge"], default="ra-hinge")
