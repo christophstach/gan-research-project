@@ -71,16 +71,13 @@ class DownsampleResidualBlock(nn.Module):
         self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
-        self.downsample = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=4,
-                stride=2,
-                padding=1,
-                bias=bias
-            ),
-            nn.LeakyReLU(0.2, inplace=True)
+        self.downsample = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
+            bias=bias
         )
 
     def forward(self, x):
@@ -88,6 +85,25 @@ class DownsampleResidualBlock(nn.Module):
         x = F.leaky_relu(self.conv1(x), 0.2)
         x = F.leaky_relu(self.conv2(x), 0.2)
         x = self.downsample(x + identity)
+
+        return x
+
+
+class DownsampleSimpleBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, bias=False):
+        super().__init__()
+
+        self.downsample = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
+            bias=bias
+        )
+
+    def forward(self, x):
+        x = F.leaky_relu(self.downsample(x))
 
         return x
 
@@ -201,7 +217,8 @@ class Critic(nn.Module):
                     nn.init.uniform_(m.bias, -bound, bound)
 
     def block_fn(self, in_channels, out_channels, bias=False):
-        return DownsampleResidualBlock(in_channels, out_channels, bias=bias)
+        # return DownsampleResidualBlock(in_channels, out_channels, bias=bias)
+        return DownsampleSimpleBlock(in_channels, out_channels, bias=bias)
 
     def combine_fn(self, in_channels, bias=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":

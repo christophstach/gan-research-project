@@ -6,6 +6,20 @@ import torch.nn.functional as F
 from ..building_blocks import SelfAttention2d, PixelNorm
 
 
+class UpsampleSimpleBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, bias=False):
+        super().__init__()
+
+        self.upsample = nn.Upsample(scale_factor=2)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+
+    def forward(self, x):
+        x = self.upsample(x)
+        x = F.leaky_relu(self.conv(x), 0.2)
+
+        return x
+
+
 class UpsampleResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
@@ -120,7 +134,8 @@ class Generator(nn.Module):
 
     def block_fn(self, in_channels, out_channels, bias=False):
         # return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias)
-        return UpsampleResidualBlock(in_channels, out_channels, bias=bias)
+        # return UpsampleResidualBlock(in_channels, out_channels, bias=bias)
+        return UpsampleSimpleBlock(in_channels, out_channels, bias=bias)
 
     def rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
