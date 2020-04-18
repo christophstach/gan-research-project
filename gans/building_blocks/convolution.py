@@ -9,7 +9,7 @@ from torch.nn.modules.utils import _pair
 
 # https://github.com/tkarras/progressive_growing_of_gans/blob/master/networks.py#L120
 class Conv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eql_lr=True):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eq_lr=False):
         super().__init__()
 
         self.stride = stride
@@ -32,7 +32,7 @@ class Conv2d(nn.Module):
         else:
             self.bias = None
 
-        if eql_lr:
+        if eq_lr:
             fan_in = prod(_pair(kernel_size)) * in_channels
             self.weight_scale = sqrt(2) / sqrt(fan_in)
         else:
@@ -51,7 +51,7 @@ class Conv2d(nn.Module):
 
 
 class ConvTranspose2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, bias=True, dilation=1, padding_mode="zeros", eql_lr=True):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, bias=True, dilation=1, padding_mode="zeros", eq_lr=False):
         super().__init__()
 
         self.stride = stride
@@ -75,7 +75,7 @@ class ConvTranspose2d(nn.Module):
         else:
             self.bias = None
 
-        if eql_lr:
+        if eq_lr:
             fan_in = in_channels
             self.weight_scale = sqrt(2) / sqrt(fan_in)
         else:
