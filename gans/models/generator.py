@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#from ..building_blocks import bb.SelfAttention2d, bb.PixelNorm, nn.Conv2d, bb.ConvTranspose2d
+#from ..building_blocks import bb.SelfAttention2d, bb.PixelNorm, bb.Conv2d, bb.ConvTranspose2d
 
 import gans.building_blocks as bb
 
@@ -14,7 +14,7 @@ class UpsampleSimpleBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv = bb.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
     def forward(self, x):
         x = self.upsample(x)
@@ -28,9 +28,9 @@ class UpsampleResidualBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv_skip = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias)
-        self.conv1 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv_skip = bb.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias)
+        self.conv1 = bb.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = bb.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.pixelNorm = bb.PixelNorm()
 
     def forward(self, x):
@@ -49,7 +49,7 @@ class UpsampleSelfAttentionBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv = bb.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.att = bb.SelfAttention2d(out_channels, bias=bias)
 
     def forward(self, x):
@@ -107,13 +107,13 @@ class Generator(nn.Module):
 
     def init_weights(self, m):
         if self.hparams.weight_init == "dcgan":
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, bb.Conv2d):
                 nn.init.normal_(m.weight.data, 0.0, 0.02)
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.normal_(m.weight.data, 1.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
         elif self.hparams.weight_init == "he":
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, bb.Conv2d):
                 # Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification
                 # https://arxiv.org/abs/1502.01852
 
@@ -130,7 +130,7 @@ class Generator(nn.Module):
 
     def to_rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
-            nn.Conv2d(
+            bb.Conv2d(
                 in_channels=in_channels,
                 out_channels=self.hparams.image_channels,
                 kernel_size=1,
