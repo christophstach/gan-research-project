@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..building_blocks import SelfAttention2d, PixelNorm
+from ..building_blocks import SelfAttention2d, PixelNorm, Conv2d, ConvTranspose2d
 
 
 class UpsampleSimpleBlock(nn.Module):
@@ -12,7 +12,7 @@ class UpsampleSimpleBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv = Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
     def forward(self, x):
         x = self.upsample(x)
@@ -26,9 +26,9 @@ class UpsampleResidualBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv_skip = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias)
-        self.conv1 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv_skip = Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias)
+        self.conv1 = Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.pixelNorm = PixelNorm()
 
     def forward(self, x):
@@ -47,7 +47,7 @@ class UpsampleSelfAttentionBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv = Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
         self.att = SelfAttention2d(out_channels, bias=bias)
 
     def forward(self, x):
@@ -71,7 +71,7 @@ class Generator(nn.Module):
         self.blocks.append(
             nn.Sequential(
                 # input is Z, going into a convolution
-                nn.ConvTranspose2d(
+                ConvTranspose2d(
                     self.hparams.noise_size,
                     self.hparams.generator_filters,
                     kernel_size=4,
@@ -128,7 +128,7 @@ class Generator(nn.Module):
 
     def to_rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
-            nn.Conv2d(
+            Conv2d(
                 in_channels=in_channels,
                 out_channels=self.hparams.image_channels,
                 kernel_size=1,
