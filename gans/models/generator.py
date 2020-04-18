@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#from ..building_blocks import bb.SelfAttention2d, bb.PixelNorm, nn.Conv2d, nn.ConvTranspose2d
+#from ..building_blocks import bb.SelfAttention2d, bb.PixelNorm, nn.Conv2d, bb.ConvTranspose2d
 
 import gans.building_blocks as bb
 
@@ -73,7 +73,7 @@ class Generator(nn.Module):
         self.blocks.append(
             nn.Sequential(
                 # input is Z, going into a convolution
-                nn.ConvTranspose2d(
+                bb.ConvTranspose2d(
                     self.hparams.noise_size,
                     self.hparams.generator_filters,
                     kernel_size=4,

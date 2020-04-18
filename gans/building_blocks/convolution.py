@@ -18,15 +18,13 @@ class Conv2d(nn.Module):
         self.groups = groups
 
         self.weight = nn.Parameter(
-            nn.init.normal_(
-                torch.empty(out_channels, in_channels, *_pair(kernel_size))
-            ),
+            torch.tensor(out_channels, in_channels // groups, *_pair(kernel_size)),
             requires_grad=True
         )
 
         if bias:
             self.bias = nn.Parameter(
-                torch.zeros(out_channels),
+                torch.tensor(out_channels),
                 requires_grad=True
             )
         else:
@@ -37,6 +35,13 @@ class Conv2d(nn.Module):
             self.weight_scale = sqrt(2) / sqrt(fan_in)
         else:
             self.weight_scale = 1
+
+    def reset_parameters(self):
+        nn.init.kaiming_uniform_(self.weight, a=0.2, nonlinearity="leaky_relu")
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / sqrt(fan_in)
+            nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         return F.conv2d(
@@ -61,9 +66,7 @@ class ConvTranspose2d(nn.Module):
         self.dilation = dilation
 
         self.weight = nn.Parameter(
-            torch.nn.init.normal_(
-                torch.empty(in_channels, out_channels, *_pair(kernel_size))
-            ),
+            torch.tensor(in_channels, out_channels // groups, *_pair(kernel_size)),
             requires_grad=True
         )
 
@@ -80,6 +83,15 @@ class ConvTranspose2d(nn.Module):
             self.weight_scale = sqrt(2) / sqrt(fan_in)
         else:
             self.weight_scale = 1
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.kaiming_uniform_(self.weight, a=0.2, nonlinearity="leaky_relu")
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / sqrt(fan_in)
+            nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         return F.conv_transpose2d(
