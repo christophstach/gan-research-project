@@ -1,5 +1,6 @@
 import math
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -83,7 +84,7 @@ class Generator(nn.Module):
             )
         )
 
-        for i in range(2, int(math.log2(self.hparams.image_size)) - 1):
+        for i in range(2, int(math.log2(self.hparams.image_size))):
             self.blocks.append(
                 self.block_fn(
                     self.hparams.generator_filters // 2 ** (i - 2),
@@ -92,25 +93,13 @@ class Generator(nn.Module):
                 )
             )
 
-        for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
+        for i in range(1, int(math.log2(self.hparams.image_size))):
             self.to_rgb_converts.append(
                 self.to_rgb_fn(
                     self.hparams.generator_filters // 2 ** (i - 1),
                     self.bias
                 )
             )
-
-        self.output = nn.Sequential(
-            nn.ConvTranspose2d(
-                self.hparams.generator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
-                self.hparams.image_channels,
-                kernel_size=4,
-                stride=2,
-                padding=1,
-                bias=self.bias
-            ),
-            nn.Tanh()
-        )
 
         self.apply(self.init_weights)
 
@@ -150,21 +139,11 @@ class Generator(nn.Module):
         )
 
     def forward(self, x, y):
+        outputs = []
         x = x.view(x.size(0), -1, 1, 1)
 
-        x_hats = None
-        for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
-            if x_hats is None:
-                x_hats = [self.blocks[i - 1](x)]
-            else:
-                x_hats.append(self.blocks[i - 1](x_hats[-1]))
+        for block, to_rgb in zip(self.blocks, self.to_rgb_converts):
+            x = block(x)
+            outputs.append(torch.tanh(to_rgb(x)))
 
-        x = self.output(x_hats[-1])
-
-        return [
-            *[
-                self.to_rgb_converts[i](x_hat)
-                for i, x_hat in enumerate(x_hats)
-            ],
-            x
-        ]
+        return outputs
