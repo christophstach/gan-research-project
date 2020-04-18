@@ -4,7 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..building_blocks import SelfAttention2d, PixelNorm, Conv2d, ConvTranspose2d
+#from ..building_blocks import bb.SelfAttention2d, bb.PixelNorm, nn.Conv2d, nn.ConvTranspose2d
+
+import gans.building_blocks as bb
 
 
 class UpsampleSimpleBlock(nn.Module):
@@ -12,7 +14,7 @@ class UpsampleSimpleBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv = Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
     def forward(self, x):
         x = self.upsample(x)
@@ -26,10 +28,10 @@ class UpsampleResidualBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv_skip = Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias)
-        self.conv1 = Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.conv2 = Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.pixelNorm = PixelNorm()
+        self.conv_skip = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias)
+        self.conv1 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.pixelNorm = bb.PixelNorm()
 
     def forward(self, x):
         x = self.upsample(x)
@@ -47,8 +49,8 @@ class UpsampleSelfAttentionBlock(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2)
-        self.conv = Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.att = SelfAttention2d(out_channels, bias=bias)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.att = bb.SelfAttention2d(out_channels, bias=bias)
 
     def forward(self, x):
         x = self.upsample(x)
@@ -71,7 +73,7 @@ class Generator(nn.Module):
         self.blocks.append(
             nn.Sequential(
                 # input is Z, going into a convolution
-                ConvTranspose2d(
+                nn.ConvTranspose2d(
                     self.hparams.noise_size,
                     self.hparams.generator_filters,
                     kernel_size=4,
@@ -80,7 +82,7 @@ class Generator(nn.Module):
                     bias=self.bias
                 ),
                 nn.LeakyReLU(0.2, inplace=True)
-                # PixelNorm()
+                # bb.PixelNorm()
             )
         )
 
@@ -128,7 +130,7 @@ class Generator(nn.Module):
 
     def to_rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
-            Conv2d(
+            nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=self.hparams.image_channels,
                 kernel_size=1,
