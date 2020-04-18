@@ -1,8 +1,9 @@
-import math
+from math import sqrt
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from numpy import prod
 from torch.nn.modules.utils import _pair
 
 
@@ -11,9 +12,6 @@ class Conv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eql_lr=True):
         super().__init__()
 
-        # self.in_channels = in_channels
-        # self.out_channels = out_channels
-        # self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
@@ -35,8 +33,8 @@ class Conv2d(nn.Module):
             self.bias = None
 
         if eql_lr:
-            fan_in = math.prod(_pair(kernel_size)) * in_channels
-            self.weight_scale = math.sqrt(2) / math.sqrt(fan_in)
+            fan_in = prod(_pair(kernel_size)) * in_channels
+            self.weight_scale = sqrt(2) / sqrt(fan_in)
         else:
             self.weight_scale = 1
 
@@ -79,7 +77,7 @@ class ConvTranspose2d(nn.Module):
 
         if eql_lr:
             fan_in = in_channels
-            self.weight_scale = math.sqrt(2) / math.sqrt(fan_in)
+            self.weight_scale = sqrt(2) / sqrt(fan_in)
         else:
             self.weight_scale = 1
 
