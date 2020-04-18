@@ -467,7 +467,7 @@ class GAN(pl.LightningModule):
             "none"
         ], default="1-gp")
 
-        parser.add_argument("-z", "--noise-size", type=int, default=128, help="Length of the noise vector")
+        parser.add_argument("-z", "--noise-size", type=int, default=64, help="Length of the noise vector")
         parser.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         parser.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         parser.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
@@ -476,8 +476,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=0, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
 
-        parser.add_argument("-gf", "--generator-filters", type=int, default=256, help="Number of filters in the generator")
-        parser.add_argument("-cf", "--critic-filters", type=int, default=256, help="Number of filters in the critic")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=128, help="Number of filters in the generator")
+        parser.add_argument("-cf", "--critic-filters", type=int, default=128, help="Number of filters in the critic")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net"], required=True)
