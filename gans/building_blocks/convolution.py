@@ -66,13 +66,12 @@ class ConvTranspose2d(nn.Module):
         self.dilation = dilation
 
         self.weight = nn.Parameter(
-            torch.tensor(in_channels, out_channels // groups, *_pair(kernel_size)),
+            torch.empty(in_channels, out_channels // groups, *_pair(kernel_size)),
             requires_grad=True
         )
-
         if bias:
             self.bias = nn.Parameter(
-                torch.zeros(out_channels),
+                torch.empty(out_channels),
                 requires_grad=True
             )
         else:
