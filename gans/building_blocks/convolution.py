@@ -11,9 +11,9 @@ class Conv2d(nn.Conv2d):
 
         if eq_lr:
             fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
-            self.weight_scale = sqrt(fan_in / 2)
+            self.weight_scale = sqrt(fan_in / 2.0)
         else:
-            self.weight_scale = 1
+            self.weight_scale = 1.0
 
     def forward(self, x):
         if self.padding_mode != "zeros":
@@ -43,9 +43,9 @@ class ConvTranspose2d(nn.ConvTranspose2d):
 
         if eq_lr:
             fan_in = in_channels
-            self.weight_scale = sqrt(fan_in / 2)
+            self.weight_scale = sqrt(fan_in / 2.0)
         else:
-            self.weight_scale = 1
+            self.weight_scale = 1.0
 
     def forward(self, x, output_size=None):
         if self.padding_mode != "zeros":
