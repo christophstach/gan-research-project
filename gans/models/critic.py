@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..building_blocks import MinibatchStdDev
+import gans.building_blocks as bb
 
 
 class SimpleCombiner(nn.Module):
@@ -27,7 +27,7 @@ class LinCatCombiner(nn.Module):
         self.hparams = hparams
         self.in_channels = in_channels
 
-        self.conv = nn.Conv2d(
+        self.conv = bb.Conv2d(
             in_channels=self.hparams.image_channels,
             out_channels=self.hparams.image_channels,
             kernel_size=1,
@@ -49,7 +49,7 @@ class CatLinCombiner(nn.Module):
         self.hparams = hparams
         self.in_channels = in_channels
 
-        self.conv = nn.Conv2d(
+        self.conv = bb.Conv2d(
             in_channels=in_channels + self.hparams.image_channels,
             out_channels=in_channels,
             kernel_size=1,
@@ -68,10 +68,10 @@ class DownsampleResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
 
-        self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.conv2 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv1 = bb.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv2 = bb.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
-        self.downsample = nn.Conv2d(
+        self.downsample = bb.Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=4,
@@ -93,7 +93,7 @@ class DownsampleSimpleBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
 
-        self.downsample = nn.Conv2d(
+        self.downsample = bb.Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=4,
@@ -167,8 +167,8 @@ class Critic(nn.Module):
             )
 
         self.validator = nn.Sequential(
-            MinibatchStdDev(),
-            nn.Conv2d(
+            bb.MinibatchStdDev(),
+            bb.Conv2d(
                 self.hparams.critic_filters + additional_channels + 1,
                 self.hparams.critic_filters + additional_channels,
                 kernel_size=3,
@@ -177,7 +177,7 @@ class Critic(nn.Module):
                 bias=self.bias
             ),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(
+            bb.Conv2d(
                 self.hparams.critic_filters + additional_channels,
                 self.hparams.critic_filters + additional_channels,
                 kernel_size=4,
@@ -186,7 +186,7 @@ class Critic(nn.Module):
                 bias=self.bias
             ),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(
+            bb.Conv2d(
                 self.hparams.critic_filters + additional_channels,
                 1,
                 kernel_size=1,
@@ -200,13 +200,13 @@ class Critic(nn.Module):
 
     def init_weights(self, m):
         if self.hparams.weight_init == "dcgan":
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, bb.Conv2d):
                 nn.init.normal_(m.weight.data, 0.0, 0.02)
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.normal_(m.weight.data, 1.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
         elif self.hparams.weight_init == "he":
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, bb.Conv2d):
                 # Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification
                 # https://arxiv.org/abs/1502.01852
 

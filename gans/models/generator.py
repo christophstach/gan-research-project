@@ -4,9 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#from ..building_blocks import bb.SelfAttention2d, bb.PixelNorm, bb.Conv2d, bb.ConvTranspose2d
-
 import gans.building_blocks as bb
+
+from torch.nn.utils import spectral_norm
 
 
 class UpsampleSimpleBlock(nn.Module):
