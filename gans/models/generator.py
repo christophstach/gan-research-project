@@ -6,8 +6,6 @@ import torch.nn.functional as F
 
 import gans.building_blocks as bb
 
-from torch.nn.utils import spectral_norm
-
 
 class UpsampleSimpleBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
@@ -102,26 +100,6 @@ class Generator(nn.Module):
                     self.bias
                 )
             )
-
-        self.apply(self.init_weights)
-
-    def init_weights(self, m):
-        if self.hparams.weight_init == "dcgan":
-            if isinstance(m, bb.Conv2d):
-                nn.init.normal_(m.weight.data, 0.0, 0.02)
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.normal_(m.weight.data, 1.0, 0.02)
-                nn.init.constant_(m.bias.data, 0)
-        elif self.hparams.weight_init == "he":
-            if isinstance(m, bb.Conv2d):
-                # Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification
-                # https://arxiv.org/abs/1502.01852
-
-                nn.init.kaiming_uniform_(m.weight, a=0.2, nonlinearity="leaky_relu")
-                if m.bias is not None:
-                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(m.weight)
-                    bound = 1 / math.sqrt(fan_in)
-                    nn.init.uniform_(m.bias, -bound, bound)
 
     def block_fn(self, in_channels, out_channels, bias=False):
         # return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias)

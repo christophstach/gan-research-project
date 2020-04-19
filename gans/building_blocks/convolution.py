@@ -3,10 +3,37 @@ from math import sqrt
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
+from torch.nn.utils import spectral_norm
 
 
-class Conv2d(nn.Conv2d):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eq_lr=True):
+class Conv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eq_lr=False, spectral_normalization=False):
+        super().__init__()
+
+        if spectral_normalization:
+            self.conv = spectral_norm(_Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode, eq_lr))
+        else:
+            self.conv = _Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode, eq_lr)
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+class ConvTranspose2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, bias=True, dilation=1, padding_mode="zeros", eq_lr=True, spectral_normalization=True):
+        super().__init__()
+
+        if spectral_normalization:
+            self.convTranspose = spectral_norm(_ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, output_padding, groups, bias, dilation, padding_mode, eq_lr))
+        else:
+            self.convTranspose = _ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, output_padding, groups, bias, dilation, padding_mode, eq_lr)
+
+    def forward(self, x):
+        return self.convTranspose(x)
+
+
+class _Conv2d(nn.Conv2d):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eq_lr=False):
         super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
 
         if eq_lr:
@@ -37,8 +64,8 @@ class Conv2d(nn.Conv2d):
         )
 
 
-class ConvTranspose2d(nn.ConvTranspose2d):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, bias=True, dilation=1, padding_mode="zeros", eq_lr=True, spectral_norm=True):
+class _ConvTranspose2d(nn.ConvTranspose2d):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_padding=0, groups=1, bias=True, dilation=1, padding_mode="zeros", eq_lr=True):
         super().__init__(in_channels, out_channels, kernel_size, stride, padding, output_padding, groups, bias, dilation, padding_mode)
 
         if eq_lr:
