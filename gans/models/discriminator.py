@@ -37,7 +37,7 @@ class LinCatCombiner(nn.Module):
         )
 
     def forward(self, x1, x2):
-        x1 = self.conv(x1)
+        x1 = F.leaky_relu(self.conv(x1), 0.2)
 
         return torch.cat([x1, x2], dim=1)
 
@@ -61,7 +61,7 @@ class CatLinCombiner(nn.Module):
     def forward(self, x1, x2):
         x = torch.cat([x1, x2], dim=1)
 
-        return self.conv(x)
+        return F.leaky_relu(self.conv(x), 0.2)
 
 
 class DownsampleResidualBlock(nn.Module):
