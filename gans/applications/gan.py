@@ -431,7 +431,12 @@ class GAN(pl.LightningModule):
             raise NotImplementedError("Custom dataset is not implemented yet")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, num_workers=self.hparams.dataloader_num_workers, batch_size=self.hparams.batch_size)
+        return DataLoader(
+            self.train_dataset,
+            num_workers=self.hparams.dataloader_num_workers,
+            batch_size=self.hparams.batch_size,
+            drop_last=True
+        )
 
     @staticmethod
     def add_model_specific_args(parent_parser):
