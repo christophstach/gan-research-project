@@ -62,7 +62,7 @@ class CatLinCombiner(nn.Module):
         return self.conv(x)
 
 
-class SimpleCritic(pl.LightningModule):
+class SimpleDiscriminator(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
 
@@ -80,17 +80,17 @@ class SimpleCritic(pl.LightningModule):
         else:
             additional_channels = 0
 
-        self.block1 = self.block_fn(self.hparams.image_channels, self.hparams.critic_filters)  # in: 64 x 64, out: 32 x 32
-        self.block2 = self.block_fn(self.hparams.critic_filters + additional_channels, self.hparams.critic_filters * 2)  # in: 32 x 32, out: 16 x 16
-        self.block3 = self.block_fn(self.hparams.critic_filters * 2 + additional_channels, self.hparams.critic_filters * 4)  # in: 16 x 16, out: 8 x 8
-        self.block4 = self.block_fn(self.hparams.critic_filters * 4 + additional_channels, self.hparams.critic_filters * 8)  # in: 8 x 8, out: 4 x 4
+        self.block1 = self.block_fn(self.hparams.image_channels, self.hparams.discriminator_filters)  # in: 64 x 64, out: 32 x 32
+        self.block2 = self.block_fn(self.hparams.discriminator_filters + additional_channels, self.hparams.discriminator_filters * 2)  # in: 32 x 32, out: 16 x 16
+        self.block3 = self.block_fn(self.hparams.discriminator_filters * 2 + additional_channels, self.hparams.discriminator_filters * 4)  # in: 16 x 16, out: 8 x 8
+        self.block4 = self.block_fn(self.hparams.discriminator_filters * 4 + additional_channels, self.hparams.discriminator_filters * 8)  # in: 8 x 8, out: 4 x 4
 
-        self.validator = nn.Conv2d(self.hparams.critic_filters * 8 + additional_channels, 1, 4, 1, 0, bias=False)
+        self.validator = nn.Conv2d(self.hparams.discriminator_filters * 8 + additional_channels, 1, 4, 1, 0, bias=False)
 
-        self.combine1 = self.combine_fn(self.hparams.critic_filters)
-        self.combine2 = self.combine_fn(self.hparams.critic_filters * 2)
-        self.combine3 = self.combine_fn(self.hparams.critic_filters * 4)
-        self.combine4 = self.combine_fn(self.hparams.critic_filters * 8)
+        self.combine1 = self.combine_fn(self.hparams.discriminator_filters)
+        self.combine2 = self.combine_fn(self.hparams.discriminator_filters * 2)
+        self.combine3 = self.combine_fn(self.hparams.discriminator_filters * 4)
+        self.combine4 = self.combine_fn(self.hparams.discriminator_filters * 8)
 
         self.apply(self.init_weights)
 

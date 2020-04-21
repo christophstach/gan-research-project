@@ -18,7 +18,7 @@ from ..helpers import inception_score
 
 
 class GAN(pl.LightningModule):
-    def __init__(self, hparams, generator, critic, scorer):
+    def __init__(self, hparams, generator, discriminator, scorer):
         super().__init__()
 
         self.hparams = hparams
@@ -72,7 +72,7 @@ class GAN(pl.LightningModule):
                 raise ValueError()
 
         self.generator = generator
-        self.critic = critic
+        self.discriminator = discriminator
         self.scorer = scorer
 
         self.real_images = None
@@ -93,7 +93,7 @@ class GAN(pl.LightningModule):
         output = self.generator(x, y)
         return output
 
-    def critic_loss(self, real_validity, fake_validity):
+    def discriminator_loss(self, real_validity, fake_validity):
         if self.hparams.loss_strategy == "wgan":
             real_loss = -real_validity
             fake_loss = fake_validity
@@ -160,7 +160,7 @@ class GAN(pl.LightningModule):
         return loss.unsqueeze(0)
 
     def clip_weights(self):
-        for weight in self.critic.parameters():
+        for weight in self.discriminator.parameters():
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
     # TODO: Need to check if gradient penalty works well with multi-scale gradient
@@ -179,9 +179,9 @@ class GAN(pl.LightningModule):
 
             if self.hparams.multi_scale_gradient:
                 scaled_interpolates = self.to_scaled_images(interpolates)
-                interpolates_validity = self.critic(scaled_interpolates, y)
+                interpolates_validity = self.discriminator(scaled_interpolates, y)
             else:
-                interpolates_validity = self.critic(interpolates, y)
+                interpolates_validity = self.discriminator(interpolates, y)
 
             gradients = torch.autograd.grad(
                 outputs=interpolates_validity,
@@ -213,8 +213,8 @@ class GAN(pl.LightningModule):
     def consistency_term(self, real_images, y, scaled_real_images=None, m=0):
         if self.hparams.consistency_term_coefficient != 0:
             # TODO: Need to check if correct
-            d_x1, d_x1_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
-            d_x2, d_x2_ = self.critic.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
+            d_x1, d_x1_ = self.discriminator.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
+            d_x2, d_x2_ = self.discriminator.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
 
             consistency_term = torch.relu(torch.dist(d_x1, d_x2) + 0.1 * torch.dist(d_x1_, d_x2_) - m)
 
@@ -223,16 +223,16 @@ class GAN(pl.LightningModule):
             return 0
 
     def training_step(self, batch, batch_idx, optimizer_idx):
-        self.critic.train(optimizer_idx == 0)
+        self.discriminator.train(optimizer_idx == 0)
         self.generator.train(optimizer_idx == 1)
 
-        if optimizer_idx == 0:  # Train critic
-            return self.training_step_critic(batch)
+        if optimizer_idx == 0:  # Train discriminator
+            return self.training_step_discriminator(batch)
 
         if optimizer_idx == 1:  # Train generator
             return self.training_step_generator(batch)
 
-    def training_step_critic(self, batch):
+    def training_step_discriminator(self, batch):
         self.real_images, self.y = batch
 
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
@@ -246,8 +246,8 @@ class GAN(pl.LightningModule):
             scaled_real_images = self.to_scaled_images(self.real_images)
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
-            real_validity = self.critic(scaled_real_images, self.y)
-            fake_validity = self.critic(fake_images, self.y)
+            real_validity = self.discriminator(scaled_real_images, self.y)
+            fake_validity = self.discriminator(fake_images, self.y)
 
             # TODO: Need to check if gradient penalty works well
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
@@ -255,20 +255,20 @@ class GAN(pl.LightningModule):
         else:
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
-            real_validity = self.critic(self.real_images, self.y)
-            fake_validity = self.critic(fake_images[-1], self.y)
+            real_validity = self.discriminator(self.real_images, self.y)
+            fake_validity = self.discriminator(fake_images[-1], self.y)
 
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
             consistency_term = self.consistency_term(self.real_images, self.y)
 
-        loss = self.critic_loss(real_validity, fake_validity)
+        loss = self.discriminator_loss(real_validity, fake_validity)
 
         if len(self.trainer.lr_schedulers) >= 1:
-            critic_lr = self.trainer.lr_schedulers[0]["scheduler"].get_lr()[0]
+            discriminator_lr = self.trainer.lr_schedulers[0]["scheduler"].get_lr()[0]
         else:
-            critic_lr = self.hparams.critic_learning_rate
+            discriminator_lr = self.hparams.discriminator_learning_rate
 
-        logs = {"critic_loss": loss, "gradient_penalty": gradient_penalty, "consistency_term": consistency_term, "critic_lr": critic_lr}
+        logs = {"discriminator_loss": loss, "gradient_penalty": gradient_penalty, "consistency_term": consistency_term, "discriminator_lr": discriminator_lr}
         return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
@@ -280,13 +280,13 @@ class GAN(pl.LightningModule):
             scaled_real_images = self.to_scaled_images(self.real_images)
             fake_images = self.forward(noise, self.y)
 
-            real_validity = self.critic(scaled_real_images, self.y)
-            fake_validity = self.critic(fake_images, self.y)
+            real_validity = self.discriminator(scaled_real_images, self.y)
+            fake_validity = self.discriminator(fake_images, self.y)
         else:
             fake_images = self.forward(noise, self.y)
 
-            real_validity = self.critic(self.real_images, self.y)
-            fake_validity = self.critic(fake_images[-1], self.y)
+            real_validity = self.discriminator(self.real_images, self.y)
+            fake_validity = self.discriminator(fake_images[-1], self.y)
 
         # if self.hparams.enable_experience_replay:
         #    rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
@@ -380,7 +380,7 @@ class GAN(pl.LightningModule):
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
-        # update critic opt every step
+        # update discriminator opt every step
         if optimizer_idx == 0:  optimizer.step()
         # update generator opt every {self.alternation_interval} steps
         if optimizer_idx == 1 and batch_idx % self.hparams.alternation_interval == 0: optimizer.step()
@@ -388,15 +388,15 @@ class GAN(pl.LightningModule):
         optimizer.zero_grad()
 
     def configure_optimizers(self):
-        critic_optimizer = optim.Adam(self.critic.parameters(), lr=self.hparams.critic_learning_rate, betas=(self.hparams.critic_beta1, self.hparams.critic_beta2))
+        discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
         generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
 
-        # critic_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
-        # generator_lr_scheduler = optim.lr_scheduler.StepLR(critic_optimizer, step_size=200, gamma=0.1)
+        # discriminator_lr_scheduler = optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=200, gamma=0.1)
+        # generator_lr_scheduler = optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=200, gamma=0.1)
 
-        # , [critic_lr_scheduler, generator_lr_scheduler]
+        # , [discriminator_lr_scheduler, generator_lr_scheduler]
 
-        return [critic_optimizer, generator_optimizer]
+        return [discriminator_optimizer, generator_optimizer]
 
     def prepare_data(self):
         train_resize = transforms.Resize((self.hparams.image_size, self.hparams.image_size))
@@ -445,8 +445,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         parser.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
         parser.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
-        parser.add_argument("-cb1", "--critic-beta1", type=float, default=0.0, help="Momentum term beta1 of the critic optimizer")
-        parser.add_argument("-cb2", "--critic-beta2", type=float, default=0.9, help="Momentum term beta2 of the critic optimizer")
+        parser.add_argument("-cb1", "--discriminator-beta1", type=float, default=0.0, help="Momentum term beta1 of the discriminator optimizer")
+        parser.add_argument("-cb2", "--discriminator-beta2", type=float, default=0.9, help="Momentum term beta2 of the discriminator optimizer")
         parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
         parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         parser.add_argument("-v", "--score-iterations", type=int, default=50, help="Number of score iterations each epoch")
@@ -459,7 +459,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        parser.add_argument("-clr", "--critic-learning-rate", type=float, default=4e-4, help="Learning rate of the critic optimizers")
+        parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=4e-4, help="Learning rate of the discriminator optimizers")
         parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
         parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge"], default="ra-hinge")
@@ -475,14 +475,14 @@ class GAN(pl.LightningModule):
         parser.add_argument("-z", "--noise-size", type=int, default=64, help="Length of the noise vector")
         parser.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
         parser.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
-        parser.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the critic is trained for each training step of the generator")
+        parser.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the discriminator is trained for each training step of the generator")
         parser.add_argument("-gpc", "--gradient-penalty-coefficient", type=float, default=None, help="Gradient penalty coefficient")
         parser.add_argument("-gpp", "--gradient-penalty-power", type=float, default=None, help="Gradient penalty coefficient")
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=0, help="Consistency term coefficient")
-        parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the critic gets clipped at this point")
+        parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
         parser.add_argument("-gf", "--generator-filters", type=int, default=128, help="Number of filters in the generator")
-        parser.add_argument("-cf", "--critic-filters", type=int, default=128, help="Number of filters in the critic")
+        parser.add_argument("-cf", "--discriminator-filters", type=int, default=128, help="Number of filters in the discriminator")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net"], required=True)

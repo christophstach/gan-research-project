@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 
 from gans.applications import GAN
-from gans.models import Generator, Critic
+from gans.models import Generator, Discriminator
 
 SEED = 1337
 torch.manual_seed(SEED)
@@ -18,10 +18,10 @@ np.random.seed(SEED)
 
 def main(hparams):
     generator = Generator(hparams)
-    critic = Critic(hparams)
+    discriminator = Discriminator(hparams)
 
     scorer = models.mobilenet_v2(pretrained=True)
-    model = GAN(hparams, generator, critic, scorer)
+    model = GAN(hparams, generator, discriminator, scorer)
 
     experiment_name = hparams.loss_strategy
     experiment_name += "+" + hparams.gradient_penalty_strategy
@@ -47,7 +47,7 @@ def main(hparams):
         )
 
         logger.watch(generator)
-        logger.watch(critic)
+        logger.watch(discriminator)
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
             save_dir=os.getcwd() + "/lightning_logs"
@@ -57,8 +57,8 @@ def main(hparams):
 
     if hparams.save_checkpoints:
         checkpoint_callback = ModelCheckpoint(
-            filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.loss_strategy + "+" + hparams.gradient_penalty_strategy + "+" + hparams.dataset + "-{critic_loss:.5f}-{ic_score_mean:.5f}",
-            monitor="critic_loss",
+            filepath=os.getcwd() + "/checkpoints/{epoch}-" + hparams.loss_strategy + "+" + hparams.gradient_penalty_strategy + "+" + hparams.dataset + "-{discriminator_loss:.5f}-{ic_score_mean:.5f}",
+            monitor="discriminator_loss",
             mode="max",
             save_top_k=1,
             period=1
@@ -78,7 +78,8 @@ def main(hparams):
         logger=logger,
         fast_dev_run=False,
         num_sanity_val_steps=0,
-        distributed_backend="dp"
+        distributed_backend="dp",
+        weights_summary=None
     )
 
     trainer.fit(model)

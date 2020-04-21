@@ -108,7 +108,7 @@ class DownsampleSimpleBlock(nn.Module):
         return x
 
 
-class Critic(nn.Module):
+class Discriminator(nn.Module):
     def __init__(self, hparams):
         super().__init__()
 
@@ -133,27 +133,27 @@ class Critic(nn.Module):
         self.blocks.append(
             self.block_fn(
                 self.hparams.image_channels,
-                self.hparams.critic_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
+                self.hparams.discriminator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
                 self.bias
             )
         )
 
-        # print(self.hparams.critic_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3))
+        # print(self.hparams.discriminator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3))
 
         for i in range(2, int(math.log2(self.hparams.image_size)) - 1):
             o = int(math.log2(self.hparams.image_size)) - i
 
             self.blocks.append(
                 self.block_fn(
-                    self.hparams.critic_filters // 2 ** (o - 1) + additional_channels,
-                    self.hparams.critic_filters // 2 ** (o - 2),
+                    self.hparams.discriminator_filters // 2 ** (o - 1) + additional_channels,
+                    self.hparams.discriminator_filters // 2 ** (o - 2),
                     self.bias
                 )
             )
 
             # print(
-            #    self.hparams.critic_filters // 2 ** (o - 1),
-            #    self.hparams.critic_filters // 2 ** (o - 2)
+            #    self.hparams.discriminator_filters // 2 ** (o - 1),
+            #    self.hparams.discriminator_filters // 2 ** (o - 2)
             # )
 
         for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
@@ -161,7 +161,7 @@ class Critic(nn.Module):
 
             self.from_rgb_combiners.append(
                 self.from_rgb_fn(
-                    self.hparams.critic_filters // 2 ** (o - 2),
+                    self.hparams.discriminator_filters // 2 ** (o - 2),
                     self.bias
                 )
             )
@@ -169,8 +169,8 @@ class Critic(nn.Module):
         self.validator = nn.Sequential(
             bb.MinibatchStdDev(),
             bb.Conv2d(
-                self.hparams.critic_filters + additional_channels + 1,
-                self.hparams.critic_filters + additional_channels,
+                self.hparams.discriminator_filters + additional_channels + 1,
+                self.hparams.discriminator_filters + additional_channels,
                 kernel_size=3,
                 stride=1,
                 padding=1,
@@ -178,8 +178,8 @@ class Critic(nn.Module):
             ),
             nn.LeakyReLU(0.2, inplace=True),
             bb.Conv2d(
-                self.hparams.critic_filters + additional_channels,
-                self.hparams.critic_filters + additional_channels,
+                self.hparams.discriminator_filters + additional_channels,
+                self.hparams.discriminator_filters + additional_channels,
                 kernel_size=4,
                 stride=1,
                 padding=0,
@@ -187,7 +187,7 @@ class Critic(nn.Module):
             ),
             nn.LeakyReLU(0.2, inplace=True),
             bb.Conv2d(
-                self.hparams.critic_filters + additional_channels,
+                self.hparams.discriminator_filters + additional_channels,
                 1,
                 kernel_size=1,
                 stride=1,
