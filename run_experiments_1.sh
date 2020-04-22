@@ -6,7 +6,7 @@ python gans/train_gan.py \
   --max-epochs 10000 \
   --dataset lsun \
   --loss-strategy ra-hinge \
-  --gradient-penalty-strategy none\
+  --gradient-penalty-strategy none \
   --image-size 128 \
   --spectral-normalization \
   --equalized-learning-rate \
