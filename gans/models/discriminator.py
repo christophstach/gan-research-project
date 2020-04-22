@@ -122,7 +122,6 @@ class Discriminator(nn.Module):
 
         self.hparams = hparams
         self.bias = True
-        self.hparams.spectral_normalization = True
 
         if self.hparams.multi_scale_gradient:
             if self.hparams.multi_scale_gradient_combiner == "simple":

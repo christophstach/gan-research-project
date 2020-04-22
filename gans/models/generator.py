@@ -75,7 +75,6 @@ class Generator(nn.Module):
 
         self.hparams = hparams
         self.bias = True
-        self.hparams.equalized_learning_rate = False
 
         self.blocks = nn.ModuleList()
         self.to_rgb_converts = nn.ModuleList()
