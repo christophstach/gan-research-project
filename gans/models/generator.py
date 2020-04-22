@@ -75,8 +75,7 @@ class Generator(nn.Module):
 
         self.hparams = hparams
         self.bias = True
-        self.eq_lr = False
-        self.spectral_normalization = False
+        self.hparams.equalized_learning_rate = False
 
         self.blocks = nn.ModuleList()
         self.to_rgb_converts = nn.ModuleList()
@@ -92,8 +91,8 @@ class Generator(nn.Module):
                     stride=1,
                     padding=0,
                     bias=self.bias,
-                    eq_lr=self.eq_lr,
-                    spectral_normalization=self.spectral_normalization
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
                 ),
                 nn.LeakyReLU(2.0, inplace=True),
                 # bb.PixelNorm()
@@ -106,8 +105,8 @@ class Generator(nn.Module):
                     self.hparams.generator_filters // 2 ** (i - 2),
                     self.hparams.generator_filters // 2 ** (i - 1),
                     self.bias,
-                    self.eq_lr,
-                    self.spectral_normalization
+                    self.hparams.equalized_learning_rate,
+                    self.hparams.spectral_normalization
                 )
             )
 
@@ -116,8 +115,8 @@ class Generator(nn.Module):
                 self.to_rgb_fn(
                     self.hparams.generator_filters // 2 ** (i - 1),
                     self.bias,
-                    self.eq_lr,
-                    self.spectral_normalization
+                    self.hparams.equalized_learning_rate,
+                    self.hparams.spectral_normalization
                 )
             )
 
@@ -135,8 +134,8 @@ class Generator(nn.Module):
                 stride=1,
                 padding=0,
                 bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                eq_lr=False,
+                spectral_normalization=False
             )
         )
 

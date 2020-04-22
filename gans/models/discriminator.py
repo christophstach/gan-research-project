@@ -122,8 +122,7 @@ class Discriminator(nn.Module):
 
         self.hparams = hparams
         self.bias = True
-        self.eq_lr = False
-        self.spectral_normalization = True
+        self.hparams.spectral_normalization = True
 
         if self.hparams.multi_scale_gradient:
             if self.hparams.multi_scale_gradient_combiner == "simple":
@@ -145,8 +144,8 @@ class Discriminator(nn.Module):
                 self.hparams.image_channels,
                 self.hparams.discriminator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
                 self.bias,
-                self.eq_lr,
-                self.spectral_normalization
+                self.hparams.equalized_learning_rate,
+                self.hparams.spectral_normalization
             )
         )
 
@@ -160,8 +159,8 @@ class Discriminator(nn.Module):
                     self.hparams.discriminator_filters // 2 ** (o - 1) + additional_channels,
                     self.hparams.discriminator_filters // 2 ** (o - 2),
                     self.bias,
-                    self.eq_lr,
-                    self.spectral_normalization
+                    self.hparams.equalized_learning_rate,
+                    self.hparams.spectral_normalization
                 )
             )
 
@@ -177,8 +176,8 @@ class Discriminator(nn.Module):
                 self.from_rgb_fn(
                     self.hparams.discriminator_filters // 2 ** (o - 2),
                     self.bias,
-                    self.eq_lr,
-                    self.spectral_normalization
+                    self.hparams.equalized_learning_rate,
+                    self.hparams.spectral_normalization
                 )
             )
 
@@ -191,8 +190,8 @@ class Discriminator(nn.Module):
                 stride=1,
                 padding=1,
                 bias=self.bias,
-                eq_lr=self.eq_lr,
-                spectral_normalization=self.spectral_normalization
+                eq_lr=self.hparams.equalized_learning_rate,
+                spectral_normalization=self.hparams.spectral_normalization
             ),
             nn.LeakyReLU(0.2, inplace=True),
             bb.Conv2d(
@@ -202,8 +201,8 @@ class Discriminator(nn.Module):
                 stride=1,
                 padding=0,
                 bias=self.bias,
-                eq_lr=self.eq_lr,
-                spectral_normalization=self.spectral_normalization
+                eq_lr=self.hparams.equalized_learning_rate,
+                spectral_normalization=self.hparams.spectral_normalization
             ),
             nn.LeakyReLU(0.2, inplace=True),
             bb.Conv2d(
@@ -213,7 +212,8 @@ class Discriminator(nn.Module):
                 stride=1,
                 padding=0,
                 bias=self.bias,
-                eq_lr=self.eq_lr
+                eq_lr=self.hparams.equalized_learning_rate,
+                spectral_normalization=self.hparams.spectral_normalization
             )
         )
 
@@ -225,9 +225,9 @@ class Discriminator(nn.Module):
         if self.hparams.multi_scale_gradient_combiner == "simple":
             return SimpleCombiner(self.hparams, in_channels)
         elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
-            return LinCatCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+            return LinCatCombiner(self.hparams, in_channels, bias=bias, eq_lr=False, spectral_normalization=False)
         elif self.hparams.multi_scale_gradient_combiner == "cat_lin":
-            return CatLinCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+            return CatLinCombiner(self.hparams, in_channels, bias=bias, eq_lr=False, spectral_normalization=False)
         else:
             raise ValueError()
 
