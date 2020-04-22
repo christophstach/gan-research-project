@@ -9,4 +9,5 @@ python gans/train_gan.py \
   --gradient-penalty-strategy none\
   --image-size 128 \
   --spectral-normalization \
-  --equalized-learning-rate
+  --equalized-learning-rate \
+  --multi-scale-gradient

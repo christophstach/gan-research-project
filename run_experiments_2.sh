@@ -8,4 +8,5 @@ python gans/train_gan.py \
   --loss-strategy ra-hinge \
   --gradient-penalty-strategy none\
   --image-size 128 \
-  --spectral-normalization
+  --spectral-normalization \
+  --multi-scale-gradient
