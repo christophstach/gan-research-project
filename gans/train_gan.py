@@ -24,9 +24,14 @@ def main(hparams):
     model = GAN(hparams, generator, discriminator, scorer)
 
     experiment_name = hparams.loss_strategy
-    experiment_name += "+" + hparams.gradient_penalty_strategy
+    if hparams.gradient_penalty_strategy != "none":
+        experiment_name += "+" + hparams.gradient_penalty_strategy
     if hparams.multi_scale_gradient:
         experiment_name += "+msg"
+    if hparams.spectral_normalization:
+        experiment_name += "+sn"
+    if hparams.equalized_learning_rate:
+        experiment_name += "+eq-lr"
 
     experiment_name += " (" + hparams.dataset + ")"
 
