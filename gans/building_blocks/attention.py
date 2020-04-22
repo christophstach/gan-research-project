@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ..building_blocks import Conv2d
+from .convolution import Conv2d
 
 
 class SelfAttention2d(nn.Module):
