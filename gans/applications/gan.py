@@ -451,7 +451,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
         parser.add_argument("-v", "--score-iterations", type=int, default=50, help="Number of score iterations each epoch")
         parser.add_argument("-msg", "--multi-scale-gradient", action="store_true", help="Enable Multi-Scale Gradient")
-        parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="lin_cat")
+        parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="cat_lin")
         parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="he")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")

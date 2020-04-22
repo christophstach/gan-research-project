@@ -19,10 +19,8 @@ class SimpleCombiner(nn.Module):
 
 
 class LinCatCombiner(nn.Module):
-    def __init__(self, hparams, in_channels, bias=False):
+    def __init__(self, hparams, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
-
-        # TODO: to fix
 
         self.hparams = hparams
         self.in_channels = in_channels
@@ -33,7 +31,9 @@ class LinCatCombiner(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            bias=bias
+            bias=bias,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
         )
 
     def forward(self, x1, x2):
@@ -43,7 +43,7 @@ class LinCatCombiner(nn.Module):
 
 
 class CatLinCombiner(nn.Module):
-    def __init__(self, hparams, in_channels, bias=False):
+    def __init__(self, hparams, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
         self.hparams = hparams
@@ -55,17 +55,21 @@ class CatLinCombiner(nn.Module):
             kernel_size=1,
             stride=1,
             padding=0,
-            bias=bias
+            bias=bias,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
         )
 
     def forward(self, x1, x2):
         x = torch.cat([x1, x2], dim=1)
+        x = self.conv(x)
+        x = F.leaky_relu(x, 0.2)
 
-        return F.leaky_relu(self.conv(x), 0.2)
+        return x
 
 
 class DownsampleResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
         self.conv1 = bb.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
@@ -77,7 +81,9 @@ class DownsampleResidualBlock(nn.Module):
             kernel_size=4,
             stride=2,
             padding=1,
-            bias=bias
+            bias=bias,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
         )
 
     def forward(self, x):
@@ -90,7 +96,7 @@ class DownsampleResidualBlock(nn.Module):
 
 
 class DownsampleSimpleBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
         self.downsample = bb.Conv2d(
@@ -99,7 +105,9 @@ class DownsampleSimpleBlock(nn.Module):
             kernel_size=4,
             stride=2,
             padding=1,
-            bias=bias
+            bias=bias,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
         )
 
     def forward(self, x):
@@ -114,6 +122,8 @@ class Discriminator(nn.Module):
 
         self.hparams = hparams
         self.bias = True
+        self.eq_lr = False
+        self.spectral_normalization = True
 
         if self.hparams.multi_scale_gradient:
             if self.hparams.multi_scale_gradient_combiner == "simple":
@@ -134,7 +144,9 @@ class Discriminator(nn.Module):
             self.block_fn(
                 self.hparams.image_channels,
                 self.hparams.discriminator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
-                self.bias
+                self.bias,
+                self.eq_lr,
+                self.spectral_normalization
             )
         )
 
@@ -147,7 +159,9 @@ class Discriminator(nn.Module):
                 self.block_fn(
                     self.hparams.discriminator_filters // 2 ** (o - 1) + additional_channels,
                     self.hparams.discriminator_filters // 2 ** (o - 2),
-                    self.bias
+                    self.bias,
+                    self.eq_lr,
+                    self.spectral_normalization
                 )
             )
 
@@ -162,7 +176,9 @@ class Discriminator(nn.Module):
             self.from_rgb_combiners.append(
                 self.from_rgb_fn(
                     self.hparams.discriminator_filters // 2 ** (o - 2),
-                    self.bias
+                    self.bias,
+                    self.eq_lr,
+                    self.spectral_normalization
                 )
             )
 
@@ -174,7 +190,9 @@ class Discriminator(nn.Module):
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                bias=self.bias
+                bias=self.bias,
+                eq_lr=self.eq_lr,
+                spectral_normalization=self.spectral_normalization
             ),
             nn.LeakyReLU(0.2, inplace=True),
             bb.Conv2d(
@@ -183,7 +201,9 @@ class Discriminator(nn.Module):
                 kernel_size=4,
                 stride=1,
                 padding=0,
-                bias=self.bias
+                bias=self.bias,
+                eq_lr=self.eq_lr,
+                spectral_normalization=self.spectral_normalization
             ),
             nn.LeakyReLU(0.2, inplace=True),
             bb.Conv2d(
@@ -192,21 +212,22 @@ class Discriminator(nn.Module):
                 kernel_size=1,
                 stride=1,
                 padding=0,
-                bias=self.bias
+                bias=self.bias,
+                eq_lr=self.eq_lr
             )
         )
 
-    def block_fn(self, in_channels, out_channels, bias=False):
-        # return DownsampleResidualBlock(in_channels, out_channels, bias=bias)
-        return DownsampleSimpleBlock(in_channels, out_channels, bias=bias)
+    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
+        # return DownsampleResidualBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        return DownsampleSimpleBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
-    def from_rgb_fn(self, in_channels, bias=False):
+    def from_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":
             return SimpleCombiner(self.hparams, in_channels)
         elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
-            return LinCatCombiner(self.hparams, in_channels, bias=bias)
+            return LinCatCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         elif self.hparams.multi_scale_gradient_combiner == "cat_lin":
-            return CatLinCombiner(self.hparams, in_channels, bias=bias)
+            return CatLinCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         else:
             raise ValueError()
 
