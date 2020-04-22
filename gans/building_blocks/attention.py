@@ -1,17 +1,17 @@
 import torch
 import torch.nn as nn
 
-import gans.building_blocks as bb
+from ..building_blocks import Conv2d
 
 
 class SelfAttention2d(nn.Module):
     def __init__(self, in_channels, k=8, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        self.wf = bb.Conv2d(in_channels, in_channels // k, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        self.wg = bb.Conv2d(in_channels, in_channels // k, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        self.wh = bb.Conv2d(in_channels, in_channels // k, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        self.wv = bb.Conv2d(in_channels // k, in_channels, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        self.wf = Conv2d(in_channels, in_channels // k, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        self.wg = Conv2d(in_channels, in_channels // k, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        self.wh = Conv2d(in_channels, in_channels // k, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        self.wv = Conv2d(in_channels // k, in_channels, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
         self.gamma = nn.Parameter(torch.zeros(1), requires_grad=True)
 
