@@ -38,9 +38,7 @@ class _Conv2d(nn.Conv2d):
 
         if eq_lr:
             fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
-            # self.weight_scale = sqrt(fan_in / 2.0)
-            self.weight_scale = sqrt(2.0 / fan_in)
-
+            self.weight_scale = sqrt(fan_in / 2.0)
         else:
             self.weight_scale = 1.0
 
@@ -49,7 +47,7 @@ class _Conv2d(nn.Conv2d):
             return F.conv2d(
                 F.pad(x, self._padding_repeated_twice, mode=self.padding_mode),
                 self.weight * self.weight_scale,
-                self.bias,
+                self.bias * self.weight_scale,
                 self.stride,
                 _pair(0),
                 self.dilation,
@@ -57,9 +55,8 @@ class _Conv2d(nn.Conv2d):
             )
         return F.conv2d(
             x,
-            # self.weight / self.weight_scale,
-            self.weight * self.weight_scale,
-            self.bias,
+            self.weight / self.weight_scale,
+            self.bias / self.weight_scale,
             self.stride,
             self.padding,
             self.dilation,
@@ -73,8 +70,7 @@ class _ConvTranspose2d(nn.ConvTranspose2d):
 
         if eq_lr:
             fan_in = in_channels
-            # self.weight_scale = sqrt(fan_in / 2.0)
-            self.weight_scale = sqrt(2.0 / fan_in)
+            self.weight_scale = sqrt(fan_in / 2.0)
         else:
             self.weight_scale = 1.0
 
@@ -86,9 +82,8 @@ class _ConvTranspose2d(nn.ConvTranspose2d):
 
         return F.conv_transpose2d(
             x,
-            # self.weight / self.weight_scale,
-            self.weight * self.weight_scale,
-            self.bias,
+            self.weight / self.weight_scale,
+            self.bias / self.weight_scale,
             self.stride,
             self.padding,
             output_padding,
