@@ -34,7 +34,6 @@ def main(hparams):
         experiment_name += "+eqlr"
 
     experiment_name += " (" + hparams.dataset + ")"
-    experiment_name = experiment_name.replace(",", "")
 
     if hparams.logger == "none":
         logger = False
