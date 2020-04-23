@@ -48,7 +48,7 @@ class _Conv2d(nn.Conv2d):
         if self.padding_mode != "zeros":
             return F.conv2d(
                 F.pad(x, self._padding_repeated_twice, mode=self.padding_mode),
-                self.weight / self.weight_scale,
+                self.weight * self.weight_scale,
                 self.bias,
                 self.stride,
                 _pair(0),
