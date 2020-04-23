@@ -5,7 +5,7 @@ python gans/train_gan.py \
   --logger wandb \
   --max-epochs 10000 \
   --dataset lsun \
-  --loss-strategy ra-hinge \
+  --loss-strategy ra-lsgan \
   --gradient-penalty-strategy none \
   --image-size 128 \
   --multi-scale-gradient

@@ -97,43 +97,65 @@ class GAN(pl.LightningModule):
         if self.hparams.loss_strategy == "wgan":
             real_loss = -real_validity
             fake_loss = fake_validity
+
+            loss = real_loss.mean() + fake_loss.mean()
         elif self.hparams.loss_strategy == "lsgan":
             real_loss = -(real_validity - 1) ** 2
             fake_loss = fake_validity ** 2
+
+            loss = real_loss.mean() + fake_loss.mean()
         elif self.hparams.loss_strategy == "hinge":
             real_loss = torch.relu(1.0 - real_validity)
             fake_loss = torch.relu(1.0 + fake_validity)
+
+            loss = real_loss.mean() + fake_loss.mean()
         elif self.hparams.loss_strategy == "r-hinge":
             relativistic_real_validity = real_validity - fake_validity
             relativistic_fake_validity = fake_validity - real_validity
 
             real_loss = torch.relu(1.0 - relativistic_real_validity)
             fake_loss = torch.relu(1.0 + relativistic_fake_validity)
+
+            loss = real_loss.mean() + fake_loss.mean()
         elif self.hparams.loss_strategy == "ra-hinge":
             relativistic_real_validity = real_validity - fake_validity.mean()
             relativistic_fake_validity = fake_validity - real_validity.mean()
 
             real_loss = torch.relu(1.0 - relativistic_real_validity)
             fake_loss = torch.relu(1.0 + relativistic_fake_validity)
+
+            loss = real_loss.mean() + fake_loss.mean()
+        elif self.hparams.loss_strategy == "ra-lsgan":
+            relativistic_real_validity = real_validity - fake_validity.mean()
+            relativistic_fake_validity = fake_validity - real_validity.mean()
+
+            real_loss = (relativistic_real_validity - 1) ** 2
+            fake_loss = (relativistic_fake_validity + 1) ** 2
+
+            loss = fake_loss.mean() + real_loss.mean()
         elif self.hparams.loss_strategy == "ns":
             real_loss = -torch.log(torch.sigmoid(real_validity))
             # noinspection PyTypeChecker
             fake_loss = -torch.log(1.0 - torch.sigmoid(fake_validity))
+
+            loss = real_loss.mean() + fake_loss.mean()
         else:
             raise ValueError()
 
-        loss = real_loss.mean() + fake_loss.mean()
         return loss.unsqueeze(0)
 
     def generator_loss(self, real_validity, fake_validity):
         if self.hparams.loss_strategy == "wgan":
             fake_loss = -fake_validity
+
             loss = fake_loss.mean()
         elif self.hparams.loss_strategy == "lsgan":
             fake_loss = -(fake_validity - 1) ** 2
+
             loss = fake_loss.mean()
         elif self.hparams.loss_strategy == "hinge":
             fake_loss = -fake_validity
+
             loss = fake_loss.mean()
         elif self.hparams.loss_strategy == "r-hinge":
             relativistic_real_validity = real_validity - fake_validity
@@ -151,8 +173,17 @@ class GAN(pl.LightningModule):
             fake_loss = torch.relu(1.0 + relativistic_real_validity)
 
             loss = fake_loss.mean() + real_loss.mean()
+        elif self.hparams.loss_strategy == "ra-lsgan":
+            relativistic_real_validity = real_validity - fake_validity.mean()
+            relativistic_fake_validity = fake_validity - real_validity.mean()
+
+            real_loss = (relativistic_real_validity + 1) ** 2
+            fake_loss = (relativistic_fake_validity - 1) ** 2
+
+            loss = fake_loss.mean() + real_loss.mean()
         elif self.hparams.loss_strategy == "ns":
             fake_loss = -torch.log(torch.sigmoid(fake_validity))
+
             loss = fake_loss.mean()
         else:
             raise ValueError()
@@ -465,7 +496,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=4e-4, help="Learning rate of the discriminator optimizers")
         parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
-        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge"], default="ra-hinge")
+        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan"], default="ra-hinge")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
