@@ -133,7 +133,7 @@ class Generator(nn.Module):
                 stride=1,
                 padding=0,
                 bias=bias,
-                eq_lr=False,
+                eq_lr=eq_lr,
                 spectral_normalization=False
             )
         )
