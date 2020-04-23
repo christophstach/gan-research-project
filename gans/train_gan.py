@@ -31,9 +31,10 @@ def main(hparams):
     if hparams.spectral_normalization:
         experiment_name += "+sn"
     if hparams.equalized_learning_rate:
-        experiment_name += "+eq-lr"
+        experiment_name += "+eqlr"
 
     experiment_name += " (" + hparams.dataset + ")"
+    experiment_name = experiment_name.replace(",", "")
 
     if hparams.logger == "none":
         logger = False
