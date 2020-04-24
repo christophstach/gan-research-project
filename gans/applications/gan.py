@@ -476,10 +476,10 @@ class GAN(pl.LightningModule):
         parser.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         parser.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
         parser.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
-        parser.add_argument("-cb1", "--discriminator-beta1", type=float, default=0.0, help="Momentum term beta1 of the discriminator optimizer")
-        parser.add_argument("-cb2", "--discriminator-beta2", type=float, default=0.9, help="Momentum term beta2 of the discriminator optimizer")
-        parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
-        parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.9, help="Momentum term beta2 of the generator optimizer")
+        parser.add_argument("-cb1", "--discriminator-beta1", type=float, default=0.5, help="Momentum term beta1 of the discriminator optimizer")
+        parser.add_argument("-cb2", "--discriminator-beta2", type=float, default=0.999, help="Momentum term beta2 of the discriminator optimizer")
+        parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.5, help="Momentum term beta1 of the generator optimizer")
+        parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.999, help="Momentum term beta2 of the generator optimizer")
         parser.add_argument("-v", "--score-iterations", type=int, default=50, help="Number of score iterations each epoch")
         parser.add_argument("-msg", "--multi-scale-gradient", action="store_true", help="Enable Multi-Scale Gradient")
         parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="lin_cat")
@@ -493,7 +493,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=4e-4, help="Learning rate of the discriminator optimizers")
+        parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-4, help="Learning rate of the discriminator optimizers")
         parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
         parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan"], default="ra-hinge")
