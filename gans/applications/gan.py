@@ -224,6 +224,7 @@ class GAN(pl.LightningModule):
             gradients = gradients.view(gradients.size(0), -1)
 
             if self.hparams.gradient_penalty_strategy == "0-gp":
+                # TODO https://openreview.net/forum?id=ByxPYjC5KQ
                 penalties = gradients.norm(dim=1) ** self.hparams.gradient_penalty_power
             elif self.hparams.gradient_penalty_strategy == "1-gp":
                 penalties = (gradients.norm(dim=1) - 1) ** self.hparams.gradient_penalty_power
