@@ -143,9 +143,9 @@ class Generator(nn.Module):
                     kernel_size=3,
                     stride=1,
                     padding=1,
-                    bias=bias,
-                    eq_lr=eq_lr,
-                    spectral_normalization=spectral_normalization
+                    bias=self.bias,
+                    eq_lr=self.equalized_learning_rate,
+                    spectral_normalization=self.spectral_normalization
                 ),
                 nn.LeakyReLU(2.0, inplace=True),
                 bb.PixelNorm()
