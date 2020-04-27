@@ -1,5 +1,5 @@
 torchvision
-torch
+torch==1.4
 pytorch-lightning
 comet_ml
 numpy
