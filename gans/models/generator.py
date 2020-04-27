@@ -31,6 +31,46 @@ class UpsampleSimpleBlock(nn.Module):
 
         return x
 
+class UpsampleProGANBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
+        super().__init__()
+
+        self.upsample = nn.Upsample(scale_factor=2)
+        self.conv1 = bb.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=bias,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
+        )
+        self.conv2 = bb.Conv2d(
+            out_channels,
+            out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=bias,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
+        )
+        self.pixelNorm = bb.PixelNorm()
+
+    def forward(self, x):
+        x = self.upsample(x)
+
+        x = self.conv1(x)
+        x = F.leaky_relu(x)
+        x = self.pixelNorm(x)
+
+        x = self.conv2(x)
+        x = F.leaky_relu(x)
+        x = self.pixelNorm(x)
+
+        return x
+
 
 class UpsampleResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
@@ -82,7 +122,8 @@ class Generator(nn.Module):
         self.blocks.append(
             nn.Sequential(
                 # input is Z, going into a convolution
-                # bb.PixelNorm(),
+                bb.PixelNorm(),
+                
                 bb.ConvTranspose2d(
                     self.hparams.noise_size,
                     self.hparams.generator_filters,
@@ -94,7 +135,20 @@ class Generator(nn.Module):
                     spectral_normalization=self.hparams.spectral_normalization
                 ),
                 nn.LeakyReLU(2.0, inplace=True),
-                # bb.PixelNorm()
+                bb.PixelNorm(),
+
+                bb.Conv2d(
+                    self.hparams.generator_filters,
+                    self.hparams.generator_filters,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    bias=bias,
+                    eq_lr=eq_lr,
+                    spectral_normalization=spectral_normalization
+                ),
+                nn.LeakyReLU(2.0, inplace=True),
+                bb.PixelNorm()
             )
         )
 
@@ -122,7 +176,8 @@ class Generator(nn.Module):
     def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         # return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         # return UpsampleResidualBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        return UpsampleSimpleBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        # return UpsampleSimpleBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
     def to_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         return nn.Sequential(
