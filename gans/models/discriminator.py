@@ -132,7 +132,7 @@ class DownsampleProGANBlock(nn.Module):
         )
         self.conv2 = bb.Conv2d(
             in_channels,
-            in_channels,
+            out_channels,
             kernel_size=3,
             stride=1,
             padding=1,
@@ -179,82 +179,86 @@ class Discriminator(nn.Module):
 
         self.blocks = nn.ModuleList()
         self.from_rgb_combiners = nn.ModuleList()
+        self.feature_map_sizes = [
+            2 ** (x + 1)
+            for x in range(1, int(math.log2(self.hparams.image_size)))
+        ]
 
         self.blocks.append(
             self.block_fn(
                 self.hparams.image_channels,
-                self.hparams.discriminator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3),
+                self.feature_map_sizes[0] * self.hparams.discriminator_filters,
                 self.bias,
                 self.hparams.equalized_learning_rate,
                 self.hparams.spectral_normalization
             )
         )
 
-        # print(self.hparams.discriminator_filters // 2 ** (int(math.log2(self.hparams.image_size)) - 3))
+        self.from_rgb_combiners.append(
+            self.from_rgb_fn(
+                2 * self.feature_map_sizes[0] * self.hparams.discriminator_filters,
+                self.bias,
+                self.hparams.equalized_learning_rate,
+                self.hparams.spectral_normalization
+            )
+        )
 
-        for i in range(2, int(math.log2(self.hparams.image_size)) - 1):
-            o = int(math.log2(self.hparams.image_size)) - i
-
+        for i in self.feature_map_sizes[1:-1]:
             self.blocks.append(
                 self.block_fn(
-                    self.hparams.discriminator_filters // 2 ** (o - 1) + additional_channels,
-                    self.hparams.discriminator_filters // 2 ** (o - 2),
+                    i // 2 * self.hparams.discriminator_filters + additional_channels,
+                    i * self.hparams.discriminator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
                     self.hparams.spectral_normalization
                 )
             )
-
-            # print(
-            #    self.hparams.discriminator_filters // 2 ** (o - 1),
-            #    self.hparams.discriminator_filters // 2 ** (o - 2)
-            # )
-
-        for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
-            o = int(math.log2(self.hparams.image_size)) - i
 
             self.from_rgb_combiners.append(
                 self.from_rgb_fn(
-                    self.hparams.discriminator_filters // 2 ** (o - 2),
+                    2 * i * self.hparams.discriminator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
                     self.hparams.spectral_normalization
                 )
             )
 
-        self.validator = nn.Sequential(
-            bb.MinibatchStdDev(),
-            bb.Conv2d(
-                self.hparams.discriminator_filters + additional_channels + 1,
-                self.hparams.discriminator_filters + additional_channels,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                bias=self.bias,
-                eq_lr=self.hparams.equalized_learning_rate,
-                spectral_normalization=self.hparams.spectral_normalization
-            ),
-            nn.LeakyReLU(0.2, inplace=True),
-            bb.Conv2d(
-                self.hparams.discriminator_filters + additional_channels,
-                self.hparams.discriminator_filters + additional_channels,
-                kernel_size=4,
-                stride=1,
-                padding=0,
-                bias=self.bias,
-                eq_lr=self.hparams.equalized_learning_rate,
-                spectral_normalization=self.hparams.spectral_normalization
-            ),
-            nn.LeakyReLU(0.2, inplace=True),
-            bb.Conv2d(
-                self.hparams.discriminator_filters + additional_channels,
-                1,
-                kernel_size=1,
-                stride=1,
-                padding=0,
-                bias=self.bias,
-                eq_lr=self.hparams.equalized_learning_rate,
-                spectral_normalization=self.hparams.spectral_normalization
+        # Validation part
+        self.blocks.append(
+            nn.Sequential(
+                bb.MinibatchStdDev(),
+                bb.Conv2d(
+                    self.feature_map_sizes[-1] // 2 * self.hparams.discriminator_filters + additional_channels + 1,
+                    self.feature_map_sizes[-1] * self.hparams.discriminator_filters + additional_channels,
+                    kernel_size=4,
+                    stride=1,
+                    padding=0,
+                    bias=self.bias,
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
+                ),
+                nn.LeakyReLU(0.2, inplace=True),
+                bb.Conv2d(
+                    self.feature_map_sizes[-1] + additional_channels,
+                    self.feature_map_sizes[-1] + additional_channels,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                    bias=self.bias,
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
+                ),
+                nn.LeakyReLU(0.2, inplace=True),
+                bb.Conv2d(
+                    self.feature_map_sizes[-1] + additional_channels,
+                    1,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                    bias=self.bias,
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
+                )
             )
         )
 
@@ -275,23 +279,24 @@ class Discriminator(nn.Module):
 
     # Dropout is just used for WGAN-CT
     def forward(self, x, y, dropout=0.0, intermediate_output=False):
-        x_hats = None
+        if isinstance(x, list):
+            # msg enabled
+            last_x_forward = None
+            x = list(reversed(x))
+            x_forward = self.blocks[0](x[0])
 
-        for i in range(1, int(math.log2(self.hparams.image_size)) - 1):
-            if x_hats is None:
-                if isinstance(x, list):
-                    x_hats = [self.blocks[i - 1](x[-1])]
-                else:
-                    x_hats = [self.blocks[i - 1](x)]
+            for data, block, from_rgb in zip(x[1:], self.blocks[1:], self.from_rgb_combiners):
+                last_x_forward = x_forward
+                x_forward = from_rgb(data, x_forward)
+                x_forward = torch.dropout(x_forward, p=dropout, train=True)
+                x_forward = block(x_forward)
+
+            if intermediate_output:
+                return x_forward, last_x_forward.mean()
             else:
-                x_hats.append(self.blocks[i - 1](x_hats[-1]))
-
-            if isinstance(x, list): x_hats[i - 1] = self.from_rgb_combiners[i - 1](x[len(x) - i - 1], x_hats[i - 1])
-            x_hats[i - 1] = torch.dropout(x_hats[i - 1], p=dropout, train=True)
-
-        validity = self.validator(x_hats[-1])
-
-        if intermediate_output:
-            return validity, x.mean()
+                return x_forward
         else:
-            return validity
+            for block in self.blocks:
+                x = block(x)
+
+            return x
