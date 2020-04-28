@@ -188,8 +188,8 @@ class Generator(nn.Module):
     def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         # return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         # return UpsampleResidualBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        return UpsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        # return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        # return UpsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
     def to_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         return nn.Sequential(
