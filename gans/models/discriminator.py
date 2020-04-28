@@ -265,8 +265,8 @@ class Discriminator(nn.Module):
 
     def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         # return DownsampleResidualBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        # return DownsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        return DownsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        # return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
     def from_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":
