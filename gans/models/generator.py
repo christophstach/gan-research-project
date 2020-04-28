@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import gans.building_blocks as bb
 
 
-class UpsampleSimpleBlock(nn.Module):
+class UpsampleDCGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
@@ -27,7 +27,6 @@ class UpsampleSimpleBlock(nn.Module):
         x = self.upsample(x)
         x = self.conv(x)
         x = F.leaky_relu(x)
-        # x = self.pixelNorm(x)
 
         return x
 
@@ -189,8 +188,8 @@ class Generator(nn.Module):
     def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         # return UpsampleSelfAttentionBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         # return UpsampleResidualBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        # return UpsampleSimpleBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        return UpsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        # return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
     def to_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         return nn.Sequential(

@@ -95,7 +95,7 @@ class DownsampleResidualBlock(nn.Module):
         return x
 
 
-class DownsampleSimpleBlock(nn.Module):
+class DownsampleDCGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
@@ -111,7 +111,8 @@ class DownsampleSimpleBlock(nn.Module):
         )
 
     def forward(self, x):
-        x = F.leaky_relu(self.downsample(x))
+        x = self.downsample(x)
+        x = F.leaky_relu(x)
 
         return x
 
@@ -239,8 +240,8 @@ class Discriminator(nn.Module):
                 ),
                 nn.LeakyReLU(0.2, inplace=True),
                 bb.Conv2d(
-                    self.filter_multipliers[-1] + additional_channels,
-                    self.filter_multipliers[-1] + additional_channels,
+                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
+                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
                     kernel_size=1,
                     stride=1,
                     padding=0,
@@ -250,7 +251,7 @@ class Discriminator(nn.Module):
                 ),
                 nn.LeakyReLU(0.2, inplace=True),
                 bb.Conv2d(
-                    self.filter_multipliers[-1] + additional_channels,
+                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
                     1,
                     kernel_size=1,
                     stride=1,
@@ -264,8 +265,8 @@ class Discriminator(nn.Module):
 
     def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         # return DownsampleResidualBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        # return DownsampleSimpleBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        return DownsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        # return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
     def from_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":
@@ -287,6 +288,7 @@ class Discriminator(nn.Module):
 
             for data, block, from_rgb in zip(x[1:], self.blocks[1:], self.from_rgb_combiners):
                 last_x_forward = x_forward
+
                 x_forward = from_rgb(data, x_forward)
                 x_forward = torch.dropout(x_forward, p=dropout, train=True)
                 x_forward = block(x_forward)
