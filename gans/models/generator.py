@@ -159,9 +159,7 @@ class Generator(nn.Module):
         self.to_rgb_converts.append(
             self.to_rgb_fn(
                 self.filter_multipliers[0] * self.hparams.generator_filters,
-                self.bias,
-                self.hparams.equalized_learning_rate,
-                self.hparams.spectral_normalization
+                self.bias
             )
         )
 
@@ -179,9 +177,7 @@ class Generator(nn.Module):
             self.to_rgb_converts.append(
                 self.to_rgb_fn(
                     i * self.hparams.generator_filters,
-                    self.bias,
-                    self.hparams.equalized_learning_rate,
-                    self.hparams.spectral_normalization
+                    self.bias
                 )
             )
 
@@ -191,7 +187,7 @@ class Generator(nn.Module):
         # return UpsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
-    def to_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def to_rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
             bb.Conv2d(
                 in_channels=in_channels,
@@ -200,7 +196,7 @@ class Generator(nn.Module):
                 stride=1,
                 padding=0,
                 bias=bias,
-                eq_lr=eq_lr,
+                eq_lr=False,
                 spectral_normalization=False
             )
         )

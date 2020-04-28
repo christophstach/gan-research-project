@@ -245,8 +245,8 @@ class GAN(pl.LightningModule):
     def consistency_term(self, real_images, y, scaled_real_images=None, m=0):
         if self.hparams.consistency_term_coefficient != 0:
             # TODO: Need to check if correct
-            d_x1, d_x1_ = self.discriminator.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
-            d_x2, d_x2_ = self.discriminator.forward(real_images, y, dropout=0.5, intermediate_output=True, scaled_inputs=scaled_real_images)
+            d_x1, d_x1_ = self.discriminator.forward(real_images, y, dropout=0.5, intermediate_output=True)
+            d_x2, d_x2_ = self.discriminator.forward(real_images, y, dropout=0.5, intermediate_output=True)
 
             consistency_term = torch.relu(torch.dist(d_x1, d_x2) + 0.1 * torch.dist(d_x1_, d_x2_) - m)
 
@@ -283,7 +283,7 @@ class GAN(pl.LightningModule):
 
             # TODO: Need to check if gradient penalty works well
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
-            consistency_term = self.consistency_term(self.real_images, self.y, scaled_real_images)
+            consistency_term = self.consistency_term(self.real_images, self.y)
         else:
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
