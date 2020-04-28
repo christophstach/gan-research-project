@@ -179,7 +179,7 @@ class Discriminator(nn.Module):
 
         self.blocks = nn.ModuleList()
         self.from_rgb_combiners = nn.ModuleList()
-        self.feature_map_sizes = [
+        self.filter_multipliers = [
             2 ** (x + 1)
             for x in range(1, int(math.log2(self.hparams.image_size)))
         ]
@@ -187,7 +187,7 @@ class Discriminator(nn.Module):
         self.blocks.append(
             self.block_fn(
                 self.hparams.image_channels,
-                self.feature_map_sizes[0] * self.hparams.discriminator_filters,
+                self.filter_multipliers[0] * self.hparams.discriminator_filters,
                 self.bias,
                 self.hparams.equalized_learning_rate,
                 self.hparams.spectral_normalization
@@ -196,14 +196,14 @@ class Discriminator(nn.Module):
 
         self.from_rgb_combiners.append(
             self.from_rgb_fn(
-                2 * self.feature_map_sizes[0] * self.hparams.discriminator_filters,
+                2 * self.filter_multipliers[0] * self.hparams.discriminator_filters,
                 self.bias,
                 self.hparams.equalized_learning_rate,
                 self.hparams.spectral_normalization
             )
         )
 
-        for i in self.feature_map_sizes[1:-1]:
+        for i in self.filter_multipliers[1:-1]:
             self.blocks.append(
                 self.block_fn(
                     i // 2 * self.hparams.discriminator_filters + additional_channels,
@@ -228,8 +228,8 @@ class Discriminator(nn.Module):
             nn.Sequential(
                 bb.MinibatchStdDev(),
                 bb.Conv2d(
-                    self.feature_map_sizes[-1] // 2 * self.hparams.discriminator_filters + additional_channels + 1,
-                    self.feature_map_sizes[-1] * self.hparams.discriminator_filters + additional_channels,
+                    self.filter_multipliers[-1] // 2 * self.hparams.discriminator_filters + additional_channels + 1,
+                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
                     kernel_size=4,
                     stride=1,
                     padding=0,
@@ -239,8 +239,8 @@ class Discriminator(nn.Module):
                 ),
                 nn.LeakyReLU(0.2, inplace=True),
                 bb.Conv2d(
-                    self.feature_map_sizes[-1] + additional_channels,
-                    self.feature_map_sizes[-1] + additional_channels,
+                    self.filter_multipliers[-1] + additional_channels,
+                    self.filter_multipliers[-1] + additional_channels,
                     kernel_size=1,
                     stride=1,
                     padding=0,
@@ -250,7 +250,7 @@ class Discriminator(nn.Module):
                 ),
                 nn.LeakyReLU(0.2, inplace=True),
                 bb.Conv2d(
-                    self.feature_map_sizes[-1] + additional_channels,
+                    self.filter_multipliers[-1] + additional_channels,
                     1,
                     kernel_size=1,
                     stride=1,

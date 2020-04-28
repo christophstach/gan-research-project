@@ -119,6 +119,10 @@ class Generator(nn.Module):
 
         self.blocks = nn.ModuleList()
         self.to_rgb_converts = nn.ModuleList()
+        self.filter_multipliers = [
+            2 ** (x + 1)
+            for x in reversed(range(1, int(math.log2(self.hparams.image_size))))
+        ]
 
         self.blocks.append(
             nn.Sequential(
@@ -127,7 +131,7 @@ class Generator(nn.Module):
 
                 bb.ConvTranspose2d(
                     self.hparams.noise_size,
-                    self.hparams.generator_filters,
+                    self.filter_multipliers[0] * self.hparams.generator_filters,
                     kernel_size=4,
                     stride=1,
                     padding=0,
@@ -139,8 +143,8 @@ class Generator(nn.Module):
                 bb.PixelNorm(),
 
                 bb.Conv2d(
-                    self.hparams.generator_filters,
-                    self.hparams.generator_filters,
+                    self.filter_multipliers[0] * self.hparams.generator_filters,
+                    self.filter_multipliers[0] * self.hparams.generator_filters,
                     kernel_size=3,
                     stride=1,
                     padding=1,
@@ -153,21 +157,29 @@ class Generator(nn.Module):
             )
         )
 
-        for i in range(2, int(math.log2(self.hparams.image_size))):
+        self.to_rgb_converts.append(
+            self.to_rgb_fn(
+                self.filter_multipliers[0] * self.hparams.generator_filters,
+                self.bias,
+                self.hparams.equalized_learning_rate,
+                self.hparams.spectral_normalization
+            )
+        )
+
+        for i in self.filter_multipliers[1:]:
             self.blocks.append(
                 self.block_fn(
-                    self.hparams.generator_filters // 2 ** (i - 2),
-                    self.hparams.generator_filters // 2 ** (i - 1),
+                    2 * i * self.hparams.generator_filters,
+                    i * self.hparams.generator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
                     self.hparams.spectral_normalization
                 )
             )
 
-        for i in range(1, int(math.log2(self.hparams.image_size))):
             self.to_rgb_converts.append(
                 self.to_rgb_fn(
-                    self.hparams.generator_filters // 2 ** (i - 1),
+                    i * self.hparams.generator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
                     self.hparams.spectral_normalization
@@ -200,6 +212,7 @@ class Generator(nn.Module):
 
         for block, to_rgb in zip(self.blocks, self.to_rgb_converts):
             x = block(x)
-            outputs.append(torch.tanh(to_rgb(x)))
+            output = torch.tanh(to_rgb(x))
+            outputs.append(output)
 
         return outputs
