@@ -31,6 +31,7 @@ class UpsampleSimpleBlock(nn.Module):
 
         return x
 
+
 class UpsampleProGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
@@ -123,7 +124,7 @@ class Generator(nn.Module):
             nn.Sequential(
                 # input is Z, going into a convolution
                 bb.PixelNorm(),
-                
+
                 bb.ConvTranspose2d(
                     self.hparams.noise_size,
                     self.hparams.generator_filters,
