@@ -298,7 +298,14 @@ class Discriminator(nn.Module):
             else:
                 return x_forward
         else:
-            for block in self.blocks:
-                x = block(x)
+            last_x_forward = None
+            x_forward = x
 
-            return x
+            for block in self.blocks:
+                last_x_forward = x
+                x_forward = block(x_forward)
+
+            if intermediate_output:
+                return x_forward, last_x_forward.mean()
+            else:
+                return x_forward

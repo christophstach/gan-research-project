@@ -242,7 +242,7 @@ class GAN(pl.LightningModule):
         else:
             return 0
 
-    def consistency_term(self, real_images, y, scaled_real_images=None, m=0):
+    def consistency_term(self, real_images, y, m=0):
         if self.hparams.consistency_term_coefficient != 0:
             # TODO: Need to check if correct
             d_x1, d_x1_ = self.discriminator.forward(real_images, y, dropout=0.5, intermediate_output=True)
@@ -269,11 +269,6 @@ class GAN(pl.LightningModule):
 
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
-        # if self.experience is not None and self.experience.size(0) == self.real_images.size(0):
-        #    fake_images = self.experience.detach()
-        #    self.experience = None
-        # else:
-
         if self.hparams.multi_scale_gradient:
             scaled_real_images = self.to_scaled_images(self.real_images)
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
@@ -283,7 +278,7 @@ class GAN(pl.LightningModule):
 
             # TODO: Need to check if gradient penalty works well
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
-            consistency_term = self.consistency_term(self.real_images, self.y)
+            consistency_term = self.consistency_term(scaled_real_images, self.y)
         else:
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
@@ -319,14 +314,6 @@ class GAN(pl.LightningModule):
 
             real_validity = self.discriminator(self.real_images, self.y)
             fake_validity = self.discriminator(fake_images[-1], self.y)
-
-        # if self.hparams.enable_experience_replay:
-        #    rand_image = fake_images[random.randint(0, fake_images.size(0) - 1)].unsqueeze(0)
-
-        #    if self.experience is None:
-        #        self.experience = rand_image
-        #    else:
-        #        self.experience = torch.cat([self.experience, rand_image], dim=0)
 
         loss = self.generator_loss(real_validity, fake_validity)
 
@@ -513,7 +500,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the discriminator is trained for each training step of the generator")
         parser.add_argument("-gpc", "--gradient-penalty-coefficient", type=float, default=None, help="Gradient penalty coefficient")
         parser.add_argument("-gpp", "--gradient-penalty-power", type=float, default=None, help="Gradient penalty coefficient")
-        parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=0, help="Consistency term coefficient")
+        parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=None, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
         parser.add_argument("-gf", "--generator-filters", type=int, default=4, help="Filter multiplier in the generator")
