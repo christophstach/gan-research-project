@@ -272,9 +272,9 @@ class Discriminator(nn.Module):
         if self.hparams.multi_scale_gradient_combiner == "simple":
             return SimpleCombiner(self.hparams, in_channels)
         elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
-            return LinCatCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=False)
+            return LinCatCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         elif self.hparams.multi_scale_gradient_combiner == "cat_lin":
-            return CatLinCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=False)
+            return CatLinCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         else:
             raise ValueError()
 
