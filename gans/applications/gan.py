@@ -83,6 +83,16 @@ class GAN(pl.LightningModule):
         self.val_dataset = None
         self.test_dataset = None
 
+        self.discriminator.register_forward_pre_hook(self.discriminator_forward_pre_hook)
+
+    def discriminator_forward_pre_hook(self, _, inputs):
+        x, y = inputs
+
+        # Add instance noise: https://www.inference.vc/instance-noise-a-trick-for-stabilising-gan-training/
+        x = x + torch.randn_like(x)
+
+        return x, y
+
     def on_train_start(self):
         if isinstance(self.logger, CometLogger):
             self.logger.experiment.set_model_graph(str(self))
