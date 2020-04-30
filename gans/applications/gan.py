@@ -67,7 +67,7 @@ class GAN(pl.LightningModule):
             elif self.hparams.gradient_penalty_strategy == "ct":
                 self.hparams.consistency_term_coefficient = 2
             elif self.hparams.gradient_penalty_strategy == "none":
-                self.hparams.gradient_penalty_strategy = 0
+                self.hparams.consistency_term_coefficient = 0
             else:
                 raise ValueError()
 
@@ -502,7 +502,7 @@ class GAN(pl.LightningModule):
             "div",
             "ct",
             "none"
-        ], default="1-gp")
+        ], default="none")
 
         parser.add_argument("-z", "--noise-size", type=int, default=128, help="Length of the noise vector")
         parser.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
