@@ -141,11 +141,7 @@ class DownsampleProGANBlock(nn.Module):
             eq_lr=eq_lr,
             spectral_normalization=spectral_normalization
         )
-        self.downsample = nn.AvgPool2d(
-            kernel_size=2,
-            stride=2,
-            padding=0
-        )
+        self.downsample = nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=False)
 
     def forward(self, x):
         x = self.conv1(x)

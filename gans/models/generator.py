@@ -35,7 +35,7 @@ class UpsampleProGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        self.upsample = nn.Upsample(scale_factor=2)
+        self.upsample = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
         self.conv1 = bb.Conv2d(
             in_channels,
             out_channels,
