@@ -89,7 +89,11 @@ class GAN(pl.LightningModule):
         x, y = inputs
 
         # Add instance noise: https://www.inference.vc/instance-noise-a-trick-for-stabilising-gan-training/
-        x = x + torch.randn_like(x)
+        if isinstance(x, list):
+            # msg enabled
+            x = [item + torch.randn_like(item) for item in x]
+        else:
+            x = x + torch.randn_like(x)
 
         return x, y
 
