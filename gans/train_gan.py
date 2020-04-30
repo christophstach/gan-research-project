@@ -24,7 +24,7 @@ def main(hparams):
     model = GAN(hparams, generator, discriminator, scorer)
 
     experiment_name = hparams.loss_strategy
-    if hparams.gradient_penalty_strategy != "no-gp":
+    if hparams.gradient_penalty_strategy != "none":
         experiment_name += "+" + hparams.gradient_penalty_strategy
     if hparams.multi_scale_gradient:
         experiment_name += "+msg"
