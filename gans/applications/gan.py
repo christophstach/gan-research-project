@@ -12,7 +12,7 @@ import torchvision.transforms as transforms
 import wandb
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN
+from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN, CelebA
 
 from ..helpers import inception_score
 
@@ -461,6 +461,8 @@ class GAN(pl.LightningModule):
         elif self.hparams.dataset == "lsun":
             self.train_dataset = LSUN(self.hparams.dataset_path + "/lsun", classes=[cls + "_train" for cls in self.hparams.dataset_classes], transform=train_transform)
             # self.test_dataset = LSUN(self.hparams.dataset_path, classes=[cls + "_test" for cls in self.hparams.dataset_classes], transform=test_transform)
+        elif self.hparams.dataset == "celeba_hq":
+            self.train_dataset = CelebA(self.hparams.dataset_path, split="train", download=False, transform=train_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
 
@@ -523,7 +525,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-cf", "--discriminator-filters", type=int, default=4, help="Filter multiplier in the discriminator")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
-        parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net"], required=True)
+        parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net", "celeba_hq"], required=True)
         parser.add_argument("--dataset-path", type=str, default=os.getcwd() + "/.datasets")
         parser.add_argument("--dataset-classes", type=int, nargs="+", default=["church_outdoor"])
 

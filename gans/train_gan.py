@@ -28,6 +28,8 @@ def main(hparams):
         experiment_name += "+" + hparams.gradient_penalty_strategy
     if hparams.multi_scale_gradient:
         experiment_name += "+msg"
+    if hparams.instance_noise:
+        experiment_name += "+in"
     if hparams.spectral_normalization:
         experiment_name += "+sn"
     if hparams.equalized_learning_rate:
