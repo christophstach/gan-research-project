@@ -155,8 +155,7 @@ class DownsampleProGANBlock(nn.Module):
                 x.size(2) // 2,
                 x.size(3) // 2
             ),
-            mode="bilinear",
-            align_corners=False
+            mode="nearest"
         )
 
         return x
