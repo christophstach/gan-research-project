@@ -11,7 +11,7 @@ class UpsampleDCGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        self.upsample = nn.Upsample(scale_factor=2)
+        self.upsample = nn.Upsample(scale_factor=2.0)
         self.conv = bb.Conv2d(
             in_channels,
             out_channels,
@@ -35,7 +35,7 @@ class UpsampleProGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        self.upsample = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
+        self.upsample = nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=False)
         self.conv1 = bb.Conv2d(
             in_channels,
             out_channels,
@@ -76,7 +76,7 @@ class UpsampleResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        self.upsample = nn.Upsample(scale_factor=2)
+        self.upsample = nn.Upsample(scale_factor=2.0)
         self.conv_skip = bb.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         self.conv1 = bb.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         self.conv2 = bb.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
@@ -97,7 +97,7 @@ class UpsampleSelfAttentionBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        self.upsample = nn.Upsample(scale_factor=2)
+        self.upsample = nn.Upsample(scale_factor=2.0)
         self.conv = bb.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         self.att = bb.SelfAttention2d(out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
