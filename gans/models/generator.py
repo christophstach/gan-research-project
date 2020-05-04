@@ -83,6 +83,7 @@ class UpsampleProGANBlock(nn.Module):
         #    mode="nearest"
         # )
 
+        x = self.pixelNorm(x)
         x = self.upsample(x)
 
         identity = x
