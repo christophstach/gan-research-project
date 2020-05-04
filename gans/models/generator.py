@@ -85,6 +85,8 @@ class UpsampleProGANBlock(nn.Module):
 
         x = self.upsample(x)
 
+        identity = x
+
         x = self.conv1(x)
         x = F.leaky_relu(x)
         x = self.pixelNorm(x)
@@ -92,6 +94,8 @@ class UpsampleProGANBlock(nn.Module):
         x = self.conv2(x)
         x = F.leaky_relu(x)
         x = self.pixelNorm(x)
+
+        x = x + identity
 
         return x
 

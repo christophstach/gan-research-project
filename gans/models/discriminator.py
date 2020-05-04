@@ -159,11 +159,15 @@ class DownsampleProGANBlock(nn.Module):
         )
 
     def forward(self, x):
+        identity = x
+
         x = self.conv1(x)
         x = F.leaky_relu(x, 0.2)
 
         x = self.conv2(x)
         x = F.leaky_relu(x, 0.2)
+
+        x = x + identity
 
         # x = F.interpolate(
         #    x,
