@@ -121,8 +121,6 @@ class DownsampleProGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-
-
         self.conv1 = bb.Conv2d(
             in_channels,
             in_channels,
@@ -144,18 +142,15 @@ class DownsampleProGANBlock(nn.Module):
             spectral_normalization=spectral_normalization
         )
 
-        self.downsample = nn.Sequential(
-            bb.Conv2d(
-                in_channels,
-                out_channels,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
-            ),
-            nn.LeakyReLU(0.2, inplace=True)
+        self.downsample = bb.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            bias=bias,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
         )
 
     def forward(self, x):
@@ -179,6 +174,7 @@ class DownsampleProGANBlock(nn.Module):
         # )
 
         x = self.downsample(x)
+        x = F.leaky_relu(x)
 
         return x
 

@@ -46,7 +46,6 @@ class UpsampleProGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
-            nn.LeakyReLU(0.2, inplace=True),
             nn.PixelShuffle(2)
         )
 
@@ -85,6 +84,7 @@ class UpsampleProGANBlock(nn.Module):
 
         x = self.pixelNorm(x)
         x = self.upsample(x)
+        x = F.leaky_relu(x)
 
         identity = x
 
