@@ -1,5 +1,5 @@
 python gans/train_gan.py \
-  --gpus 0 1 \
+  --gpus 0 \
   --dataloader-num-workers 10 \
   --batch-size 128 \
   --logger wandb \
