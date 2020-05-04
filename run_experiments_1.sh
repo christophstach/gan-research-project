@@ -1,6 +1,6 @@
 python gans/train_gan.py \
   --gpus 0 \
-  --dataset celeba_hq \
+  --dataset lsun \
   --dataloader-num-workers 10 \
   --batch-size 128 \
   --logger wandb \

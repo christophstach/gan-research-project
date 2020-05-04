@@ -1,12 +1,16 @@
 from math import sqrt
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 from torch.nn.utils import spectral_norm
 
+
 class SubPixelConv2d(nn.Module):
-    def __init__(in_channels, out_channels, kernel_size=3, padding=1, upscale_factor=2, bias=True, padding_mode="zeros", eq_lr=False, spectral_normalization=True)
+    def __init__(self, in_channels, out_channels, kernel_size=3, padding=1, upscale_factor=2, bias=True, padding_mode="zeros", eq_lr=False, spectral_normalization=True):
+        super().__init__()
+
         self.upscale_factor = upscale_factor
         self.conv = Conv2d(
             in_channels=in_channels,
@@ -22,8 +26,10 @@ class SubPixelConv2d(nn.Module):
 
         self.pixelShuffle = nn.PixelShuffle(self.upscale_factor)
 
+        self.apply(self.init_weight)
+
     def init_weight(self, m):
-        if isinstance(m, nn.Conv2d):
+        if isinstance(m, _Conv2d):
             # ICNR: https://arxiv.org/ftp/arxiv/papers/1707/1707.02937.pdf
             new_shape = [int(m.weight.shape[0] / (self.upscale_factor ** 2))] + list(m.weight.shape[1:])
             sub_kernel = torch.zeros(new_shape)
@@ -31,21 +37,23 @@ class SubPixelConv2d(nn.Module):
             sub_kernel = sub_kernel.transpose(0, 1)
 
             sub_kernel = sub_kernel.contiguous().view(sub_kernel.shape[0], sub_kernel.shape[1], -1)
-            kernel = sub_kernel.repeat(1, 1, self.yupscale_factor ** 2)
+            kernel = sub_kernel.repeat(1, 1, self.upscale_factor ** 2)
 
-            transposed_shape = [m.weight.shape[1]] + [m.weight.shape[0]] + list(tensor.shape[2:])
+            transposed_shape = [m.weight.shape[1]] + [m.weight.shape[0]] + list(m.weight.shape[2:])
             kernel = kernel.contiguous().view(transposed_shape)
 
             kernel = kernel.transpose(0, 1)
 
+            print(kernel)
+
             m.weight.data.copy_(kernel)
 
-    
     def forward(self, x):
         x = self.conv(x)
         x = self.pixelShuffle(x)
 
         return x
+
 
 class Conv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eq_lr=False, spectral_normalization=False):
@@ -71,9 +79,6 @@ class ConvTranspose2d(nn.Module):
 
     def forward(self, x):
         return self.convTranspose(x)
-
-
-        
 
 
 class _Conv2d(nn.Conv2d):
