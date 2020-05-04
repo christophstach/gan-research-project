@@ -5,6 +5,47 @@ import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 from torch.nn.utils import spectral_norm
 
+class SubPixelConv2d(nn.Module):
+    def __init__(in_channels, out_channels, kernel_size=3, padding=1, upscale_factor=2, bias=True, padding_mode="zeros", eq_lr=False, spectral_normalization=True)
+        self.conv = Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels * 2 ** upscale_factor,
+            kernel_size=kernel_size,
+            stride=1,
+            padding=padding,
+            bias=bias,
+            padding_mode=padding_mode,
+            eq_lr=eq_lr,
+            spectral_normalization=spectral_normalization
+        )
+
+        self.pixelShuffle = nn.PixelShuffle(upscale_factor)
+
+    def init_weight(self, m):
+        if isinstance(m, nn.Conv2d):
+            new_shape = [int(m.weight.shape[0] / (upscale_factor ** 2))] + list(m.weight.shape[1:])
+            sub_kernel = torch.zeros(new_shape)
+            torch.nn.init.kaiming_uniform_(sub_kernel, a=0.2, nonlinearity="leaky_relu")
+
+
+            sub_kernel = sub_kernel.transpose(0, 1)
+
+            sub_kernel = sub_kernel.contiguous().view(sub_kernel.shape[0], sub_kernel.shape[1], -1)
+            kernel = sub_kernel.repeat(1, 1, upscale_factor ** 2)
+
+            transposed_shape = [m.weight.shape[1]] + [m.weight.shape[0]] + list(tensor.shape[2:])
+            kernel = kernel.contiguous().view(transposed_shape)
+
+            kernel = kernel.transpose(0, 1)
+
+            m.weight.data.copy_(kernel)
+
+    
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.pixelShuffle(x)
+
+        return x
 
 class Conv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode="zeros", eq_lr=False, spectral_normalization=False):
@@ -30,6 +71,9 @@ class ConvTranspose2d(nn.Module):
 
     def forward(self, x):
         return self.convTranspose(x)
+
+
+        
 
 
 class _Conv2d(nn.Conv2d):
