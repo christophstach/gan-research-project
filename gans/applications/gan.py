@@ -88,12 +88,13 @@ class GAN(pl.LightningModule):
     def discriminator_forward_pre_hook(self, _, inputs):
         x, y = inputs
 
-        # Add instance noise: https://www.inference.vc/instance-noise-a-trick-for-stabilising-gan-training/
-        if isinstance(x, list):
-            # msg enabled
-            x = [item + torch.randn_like(item) for item in x]
-        else:
-            x = x + torch.randn_like(x)
+        if self.hparams.instance_noise:
+            # Add instance noise: https://www.inference.vc/instance-noise-a-trick-for-stabilising-gan-training/
+            if isinstance(x, list):
+                # msg enabled
+                x = [item + torch.randn_like(item) for item in x]
+            else:
+                x = x + torch.randn_like(x)
 
         return x, y
 
@@ -493,6 +494,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         parser.add_argument("-is", "--image-size", type=int, default=256, help="Generated image size")
         parser.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
+        parser.add_argument("-in", "--instance-noise", action="store_true", help="Add instance noise")
 
         # TTUR: https://arxiv.org/abs/1706.08500
         parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-4, help="Learning rate of the discriminator optimizers")
