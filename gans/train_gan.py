@@ -20,8 +20,8 @@ def main(hparams):
     generator = Generator(hparams)
     discriminator = Discriminator(hparams)
 
-    scorer = models.mobilenet_v2(pretrained=True)
-    model = GAN(hparams, generator, discriminator, scorer)
+    # scorer = models.mobilenet_v2(pretrained=True)
+    model = GAN(hparams, generator, discriminator)
 
     experiment_name = hparams.loss_strategy
     if hparams.gradient_penalty_strategy != "none":

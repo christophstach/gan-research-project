@@ -18,7 +18,7 @@ from ..helpers import inception_score
 
 
 class GAN(pl.LightningModule):
-    def __init__(self, hparams, generator, discriminator, scorer):
+    def __init__(self, hparams, generator, discriminator):
         super().__init__()
 
         self.hparams = hparams
@@ -73,7 +73,7 @@ class GAN(pl.LightningModule):
 
         self.generator = generator
         self.discriminator = discriminator
-        self.scorer = scorer
+        # self.scorer = scorer
 
         self.real_images = None
         self.y = None
@@ -483,7 +483,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-cb2", "--discriminator-beta2", type=float, default=0.999, help="Momentum term beta2 of the discriminator optimizer")
         parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.5, help="Momentum term beta1 of the generator optimizer")
         parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.999, help="Momentum term beta2 of the generator optimizer")
-        parser.add_argument("-v", "--score-iterations", type=int, default=50, help="Number of score iterations each epoch")
+        parser.add_argument("-v", "--score-iterations", type=int, default=0, help="Number of score iterations each epoch")
         parser.add_argument("-msg", "--multi-scale-gradient", action="store_true", help="Enable Multi-Scale Gradient")
         parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="lin_cat")
 
