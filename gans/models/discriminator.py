@@ -141,7 +141,7 @@ class DownsampleProGANBlock(nn.Module):
             eq_lr=eq_lr,
             spectral_normalization=spectral_normalization
         )
-        self.downsample = nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=False)
+        # self.downsample = nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=False)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -150,7 +150,9 @@ class DownsampleProGANBlock(nn.Module):
         x = self.conv2(x)
         x = F.leaky_relu(x, 0.2)
 
-        x = self.downsample(x)
+        # x = self.downsample(x)
+        # x = F.interpolate(x, scale_factor=0.5)
+        x = F.avg_pool2d(x, kernel_size=2, stride=2)
 
         return x
 

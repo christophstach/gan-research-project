@@ -59,7 +59,8 @@ class UpsampleProGANBlock(nn.Module):
         self.pixelNorm = bb.PixelNorm()
 
     def forward(self, x):
-        x = self.upsample(x)
+        # x = self.upsample(x)
+        x = F.interpolate(x, scale_factor=2, mode="nearest")
 
         x = self.conv1(x)
         x = F.leaky_relu(x)
