@@ -43,9 +43,6 @@ class SubPixelConv2d(nn.Module):
             kernel = kernel.contiguous().view(transposed_shape)
 
             kernel = kernel.transpose(0, 1)
-
-            print(kernel)
-
             m.weight.data.copy_(kernel)
 
     def forward(self, x):
