@@ -8,4 +8,5 @@ python gans/train_gan.py \
   --dataset lsun \
   --loss-strategy ra-lsgan \
   --image-size 256 \
-  --multi-scale-gradient
+  --multi-scale-gradient \
+  --instance-noise
