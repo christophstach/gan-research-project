@@ -142,12 +142,12 @@ class DownsampleProGANBlock(nn.Module):
             spectral_normalization=spectral_normalization
         )
 
-        self.downsample = bb.Conv2d(
+        self.align_channels = bb.Conv2d(
             in_channels,
             out_channels,
-            kernel_size=3,
-            stride=2,
-            padding=1,
+            kernel_size=1,
+            stride=1,
+            padding=0,
             bias=bias,
             eq_lr=eq_lr,
             spectral_normalization=spectral_normalization
@@ -164,16 +164,17 @@ class DownsampleProGANBlock(nn.Module):
 
         x = x + identity
 
-        # x = F.interpolate(
-        #    x,
-        #    size=(
-        #        x.size(2) // 2,
-        #        x.size(3) // 2
-        #    ),
-        #    mode="nearest"
-        # )
+        x = F.interpolate(
+            x,
+            size=(
+                x.size(2) // 2,
+                x.size(3) // 2
+            ),
+            mode="bilinear",
+            align_corners=True
+        )
 
-        x = self.downsample(x)
+        x = self.align_channels(x)
         x = F.leaky_relu(x)
 
         return x

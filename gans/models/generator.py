@@ -35,17 +35,16 @@ class UpsampleProGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        self.upsample = bb.SubPixelConv2d(
+        self.align_channels = bb.Conv2d(
             in_channels,
             out_channels,
-            kernel_size=3,
-            padding=1,
-            upscale_factor=2,
+            kernel_size=1,
+            stride=1,
+            padding=0,
             bias=bias,
             eq_lr=eq_lr,
             spectral_normalization=spectral_normalization
         )
-
         self.conv1 = bb.Conv2d(
             out_channels,
             out_channels,
@@ -68,20 +67,20 @@ class UpsampleProGANBlock(nn.Module):
         )
         self.pixelNorm = bb.PixelNorm()
 
-
     def forward(self, x):
-        # x = F.interpolate(
-        #    x,
-        #    size=(
-        #        x.size(2) * 2,
-        #        x.size(3) * 2
-        #    ),
-        #    mode="nearest"
-        # )
+        x = F.interpolate(
+            x,
+            size=(
+                x.size(2) * 2,
+                x.size(3) * 2
+            ),
+            mode="bilinear",
+            align_corners=True
+        )
 
-        x = self.pixelNorm(x)
-        x = self.upsample(x)
+        x = self.align_channels(x)
         x = F.leaky_relu(x)
+        x = self.pixelNorm(x)
 
         identity = x
 
