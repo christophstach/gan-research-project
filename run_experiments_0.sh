@@ -1,5 +1,5 @@
 python gans/train_gan.py \
-  --gpus 2 \
+  --gpus 0 \
   --dataset lsun \
   --dataloader-num-workers 10 \
   --batch-size 128 \
