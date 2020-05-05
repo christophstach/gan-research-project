@@ -2,7 +2,7 @@ python gans/train_gan.py \
   --gpus 2 \
   --dataset lsun \
   --dataloader-num-workers 10 \
-  --batch-size 128 \
+  --batch-size 64 \
   --logger wandb \
   --max-epochs 10000 \
   --dataset lsun \
