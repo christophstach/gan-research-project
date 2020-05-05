@@ -521,8 +521,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=None, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
-        parser.add_argument("-gf", "--generator-filters", type=int, default=4, help="Filter multiplier in the generator")
-        parser.add_argument("-cf", "--discriminator-filters", type=int, default=4, help="Filter multiplier in the discriminator")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=3, help="Filter multiplier in the generator")
+        parser.add_argument("-cf", "--discriminator-filters", type=int, default=3, help="Filter multiplier in the discriminator")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net", "celeba_hq"], required=True)
