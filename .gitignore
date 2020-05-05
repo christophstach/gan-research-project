@@ -130,3 +130,5 @@ lightning_logs
 
 notebooks/patrick
 wandb/*
+.datasets
+_cache_*
