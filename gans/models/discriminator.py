@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import gans.building_blocks as bb
+from gans.archictures.PROGAN import DownsampleProGANBlock, LastProGANBlock
+from gans.init import snn_weight_init, he_weight_init
 
 
 class SimpleCombiner(nn.Module):
@@ -64,100 +66,6 @@ class CatLinCombiner(nn.Module):
         x = torch.cat([x1, x2], dim=1)
         x = self.conv(x)
         x = F.leaky_relu(x, 0.2)
-
-        return x
-
-
-class DownsampleResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
-        super().__init__()
-
-        self.conv1 = bb.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-        self.conv2 = bb.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1, bias=bias)
-
-        self.downsample = bb.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=4,
-            stride=2,
-            padding=1,
-            bias=bias,
-            eq_lr=eq_lr,
-            spectral_normalization=spectral_normalization
-        )
-
-    def forward(self, x):
-        identity = x
-        x = F.leaky_relu(self.conv1(x), 0.2)
-        x = F.leaky_relu(self.conv2(x), 0.2)
-        x = self.downsample(x + identity)
-
-        return x
-
-
-class DownsampleDCGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
-        super().__init__()
-
-        self.downsample = bb.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=4,
-            stride=2,
-            padding=1,
-            bias=bias,
-            eq_lr=eq_lr,
-            spectral_normalization=spectral_normalization
-        )
-
-    def forward(self, x):
-        x = self.downsample(x)
-        x = F.leaky_relu(x)
-
-        return x
-
-
-class DownsampleProGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
-        super().__init__()
-
-        self.conv1 = bb.Conv2d(
-            in_channels,
-            in_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=bias,
-            eq_lr=eq_lr,
-            spectral_normalization=spectral_normalization
-        )
-        self.conv2 = bb.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=bias,
-            eq_lr=eq_lr,
-            spectral_normalization=spectral_normalization
-        )
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.leaky_relu(x, 0.2)
-
-        x = self.conv2(x)
-        x = F.leaky_relu(x, 0.2)
-
-        x = F.interpolate(
-            x,
-            size=(
-                x.size(2) // 2,
-                x.size(3) // 2
-            ),
-            mode="bilinear",
-            align_corners=True
-        )
 
         return x
 
@@ -229,46 +137,21 @@ class Discriminator(nn.Module):
 
         # Validation part
         self.blocks.append(
-            nn.Sequential(
-                bb.MinibatchStdDev(),
-                bb.Conv2d(
-                    self.filter_multipliers[-1] // 2 * self.hparams.discriminator_filters + additional_channels + 1,
-                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
-                    kernel_size=4,
-                    stride=1,
-                    padding=0,
-                    bias=self.bias,
-                    eq_lr=self.hparams.equalized_learning_rate,
-                    spectral_normalization=self.hparams.spectral_normalization
-                ),
-                nn.LeakyReLU(0.2, inplace=True),
-                bb.Conv2d(
-                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
-                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                    bias=self.bias,
-                    eq_lr=self.hparams.equalized_learning_rate,
-                    spectral_normalization=self.hparams.spectral_normalization
-                ),
-                nn.LeakyReLU(0.2, inplace=True),
-                bb.Conv2d(
-                    self.filter_multipliers[-1] * self.hparams.discriminator_filters + additional_channels,
-                    1,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                    bias=self.bias,
-                    eq_lr=self.hparams.equalized_learning_rate,
-                    spectral_normalization=self.hparams.spectral_normalization
-                )
+            LastProGANBlock(
+                filters=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
+                additional_channels=additional_channels,
+                bias=self.bias,
+                eq_lr=self.hparams.equalized_learning_rate,
+                spectral_normalization=self.hparams.spectral_normalization
             )
         )
 
+        if self.hparams.weight_init == "he":
+            self.apply(he_weight_init)
+        elif self.hparams.weight_init == "snn":
+            self.apply(snn_weight_init)
+
     def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
-        # return DownsampleResidualBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        # return DownsampleDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
     def from_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):

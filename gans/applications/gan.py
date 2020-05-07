@@ -148,6 +148,18 @@ class GAN(pl.LightningModule):
             fake_loss = (relativistic_fake_validity + 1) ** 2
 
             loss = fake_loss.mean() + real_loss.mean()
+        elif self.hparams.loss_strategy == "ra-sgan":
+            relativistic_real_validity = real_validity - fake_validity.mean()
+            relativistic_fake_validity = fake_validity - real_validity.mean()
+
+            real_label = torch.ones_like(real_validity)
+            fake_label = torch.zeros_like(fake_validity)
+
+            loss = (
+                           F.binary_cross_entropy_with_logits(relativistic_real_validity, real_label)
+                           + F.binary_cross_entropy_with_logits(relativistic_fake_validity, fake_label)
+                   ) / 2.0
+
         elif self.hparams.loss_strategy == "ns":
             real_loss = -torch.log(torch.sigmoid(real_validity))
             # noinspection PyTypeChecker
@@ -196,6 +208,17 @@ class GAN(pl.LightningModule):
             fake_loss = (relativistic_fake_validity - 1) ** 2
 
             loss = fake_loss.mean() + real_loss.mean()
+        elif self.hparams.loss_strategy == "ra-sgan":
+            relativistic_real_validity = real_validity - fake_validity.mean()
+            relativistic_fake_validity = fake_validity - real_validity.mean()
+
+            real_label = torch.ones_like(real_validity)
+            fake_label = torch.zeros_like(fake_validity)
+
+            loss = (
+                           F.binary_cross_entropy_with_logits(relativistic_real_validity, fake_label)
+                           + F.binary_cross_entropy_with_logits(relativistic_fake_validity, real_label)
+                   ) / 2.0
         elif self.hparams.loss_strategy == "ns":
             fake_loss = -torch.log(torch.sigmoid(fake_validity))
 
@@ -491,7 +514,7 @@ class GAN(pl.LightningModule):
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
-        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "dcgan", "default"], default="he")
+        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "snn", "default"], default="he")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         parser.add_argument("-is", "--image-size", type=int, default=256, help="Generated image size")
@@ -502,7 +525,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-4, help="Learning rate of the discriminator optimizers")
         parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
-        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan"], default="ra-lsgan")
+        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan", "ra-sgan"], default="ra-lsgan")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
