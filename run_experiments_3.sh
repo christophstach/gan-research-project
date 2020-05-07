@@ -1,12 +1,12 @@
 python gans/train_gan.py \
-  --gpus 3 \
-  --dataset lsun \
-  --dataloader-num-workers 10 \
-  --batch-size 64 \
-  --logger wandb \
+  --gpus 0 \
   --max-epochs 10000 \
   --dataset lsun \
-  --loss-strategy ra-lsgan \
-  --image-size 256 \
-  --multi-scale-gradient \
-  --instance-noise
+  --dataloader-num-workers 10 \
+  --batch-size 128 \
+  --image-size 128 \
+  --logger wandb \
+  --loss-strategy ra-sgan \
+  --architecture hdcgan \
+  --weight-init snn \
+  --multi-scale-gradient

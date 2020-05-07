@@ -38,8 +38,14 @@ class LinCatCombiner(nn.Module):
             spectral_normalization=spectral_normalization
         )
 
+        if self.hparams.architecture == "progan":
+            self.activation = nn.LeakyReLU(0.2, inplace=True)
+        elif self.hparams.architecture == "hdcgan":
+            self.activation = nn.SELU(inplace=True)
+
     def forward(self, x1, x2):
-        x1 = F.leaky_relu(self.conv(x1), 0.2)
+        x1 = self.conv(x1)
+        x1 = self.activation(x1)
 
         return torch.cat([x1, x2], dim=1)
 
@@ -62,10 +68,15 @@ class CatLinCombiner(nn.Module):
             spectral_normalization=spectral_normalization
         )
 
+        if self.hparams.architecture == "progan":
+            self.activation = nn.LeakyReLU(0.2, inplace=True)
+        elif self.hparams.architecture == "hdcgan":
+            self.activation = nn.SELU(inplace=True)
+
     def forward(self, x1, x2):
         x = torch.cat([x1, x2], dim=1)
         x = self.conv(x)
-        x = F.leaky_relu(x, 0.2)
+        x = self.activation(x)
 
         return x
 
