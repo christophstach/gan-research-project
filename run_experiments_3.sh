@@ -1,5 +1,5 @@
 python gans/train_gan.py \
-  --gpus 0 \
+  --gpus 1 \
   --max-epochs 10000 \
   --dataset lsun \
   --dataloader-num-workers 10 \
