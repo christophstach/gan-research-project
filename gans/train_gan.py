@@ -23,7 +23,7 @@ def main(hparams):
     # scorer = models.mobilenet_v2(pretrained=True)
     model = GAN(hparams, generator, discriminator)
 
-    experiment_name = hparams.loss_strategy
+    experiment_name = hparams.loss_strategy + "+" + hparams.architecture
     if hparams.gradient_penalty_strategy != "none":
         experiment_name += "+" + hparams.gradient_penalty_strategy
     if hparams.multi_scale_gradient:
