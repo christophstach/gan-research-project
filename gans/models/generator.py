@@ -5,6 +5,7 @@ import torch.nn as nn
 
 import gans.building_blocks as bb
 from gans.archictures.PROGAN import FirstProGANBlock, UpsampleProGANBlock
+from gans.archictures.HDCGAN import FirstHDCGANBlock, UpsampleHDCGANBlock
 from gans.init import snn_weight_init, he_weight_init
 
 
@@ -22,15 +23,26 @@ class Generator(nn.Module):
             for x in reversed(range(1, int(math.log2(self.hparams.image_size))))
         ]
 
-        self.blocks.append(
-            FirstProGANBlock(
-                noise_size=self.hparams.noise_size,
-                filters=self.filter_multipliers[0] * self.hparams.generator_filters,
-                bias=self.bias,
-                eq_lr=self.hparams.equalized_learning_rate,
-                spectral_normalization=self.hparams.spectral_normalization
+        if self.hparams.architecture == "progan":
+            self.blocks.append(
+                FirstProGANBlock(
+                    noise_size=self.hparams.noise_size,
+                    filters=self.filter_multipliers[0] * self.hparams.generator_filters,
+                    bias=self.bias,
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
+                )
             )
-        )
+        elif self.hparams.architecture == "hdcgan":
+            self.blocks.append(
+                FirstHDCGANBlock(
+                    noise_size=self.hparams.noise_size,
+                    filters=self.filter_multipliers[0] * self.hparams.generator_filters,
+                    bias=self.bias,
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
+                )
+            )
 
         self.to_rgb_converts.append(
             self.to_rgb_fn(
@@ -39,14 +51,15 @@ class Generator(nn.Module):
             )
         )
 
-        for i in self.filter_multipliers[1:]:
+        for pos, i in enumerate(self.filter_multipliers[1:]):
             self.blocks.append(
                 self.block_fn(
                     2 * i * self.hparams.generator_filters,
                     i * self.hparams.generator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
-                    self.hparams.spectral_normalization
+                    self.hparams.spectral_normalization,
+                    position=pos
                 )
             )
 
@@ -62,8 +75,11 @@ class Generator(nn.Module):
         elif self.hparams.weight_init == "snn":
             self.apply(snn_weight_init)
 
-    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
-        return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
+        if self.hparams.architecture == "progan":
+            return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization, position=position)
+        elif self.hparams.architecture == "hdcgan":
+            return UpsampleHDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization, position=position)
 
     def to_rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(

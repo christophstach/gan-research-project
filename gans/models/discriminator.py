@@ -2,9 +2,9 @@ import math
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 import gans.building_blocks as bb
+from gans.archictures.HDCGAN import DownsampleHDCGANBlock, LastHDCGANBlock
 from gans.archictures.PROGAN import DownsampleProGANBlock, LastProGANBlock
 from gans.init import snn_weight_init, he_weight_init
 
@@ -119,17 +119,27 @@ class Discriminator(nn.Module):
 
         self.from_rgb_combiners.append(
             self.from_rgb_fn(
-                2 * self.filter_multipliers[0] * self.hparams.discriminator_filters,
+                self.filter_multipliers[0] * self.hparams.discriminator_filters,
                 self.bias,
                 self.hparams.equalized_learning_rate,
                 self.hparams.spectral_normalization
             )
         )
 
-        for i in self.filter_multipliers[1:-1]:
+        for pos, i in enumerate(self.filter_multipliers[1:-1]):
             self.blocks.append(
                 self.block_fn(
                     i // 2 * self.hparams.discriminator_filters + additional_channels,
+                    i * self.hparams.discriminator_filters,
+                    self.bias,
+                    self.hparams.equalized_learning_rate,
+                    self.hparams.spectral_normalization,
+                    position=pos
+                )
+            )
+
+            self.from_rgb_combiners.append(
+                self.from_rgb_fn(
                     i * self.hparams.discriminator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
@@ -137,33 +147,38 @@ class Discriminator(nn.Module):
                 )
             )
 
-            self.from_rgb_combiners.append(
-                self.from_rgb_fn(
-                    2 * i * self.hparams.discriminator_filters,
-                    self.bias,
-                    self.hparams.equalized_learning_rate,
-                    self.hparams.spectral_normalization
+        # Validation part
+        if self.hparams.architecture == "progan":
+            self.blocks.append(
+                LastProGANBlock(
+                    filters=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
+                    additional_channels=additional_channels,
+                    bias=self.bias,
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
                 )
             )
-
-        # Validation part
-        self.blocks.append(
-            LastProGANBlock(
-                filters=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
-                additional_channels=additional_channels,
-                bias=self.bias,
-                eq_lr=self.hparams.equalized_learning_rate,
-                spectral_normalization=self.hparams.spectral_normalization
+        elif self.hparams.architecture == "hdcgan":
+            self.blocks.append(
+                LastHDCGANBlock(
+                    filters=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
+                    additional_channels=additional_channels,
+                    bias=self.bias,
+                    eq_lr=self.hparams.equalized_learning_rate,
+                    spectral_normalization=self.hparams.spectral_normalization
+                )
             )
-        )
 
         if self.hparams.weight_init == "he":
             self.apply(he_weight_init)
         elif self.hparams.weight_init == "snn":
             self.apply(snn_weight_init)
 
-    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
-        return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
+        if self.hparams.architecture == "progan":
+            return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization, position=position)
+        elif self.hparams.architecture == "hdcgan":
+            return DownsampleHDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization, position=position)
 
     def from_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":

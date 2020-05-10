@@ -21,8 +21,8 @@ class FirstHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
+            nn.BatchNorm2d(filters),
             nn.SELU(inplace=True),
-
             bb.Conv2d(
                 filters,
                 filters,
@@ -33,6 +33,7 @@ class FirstHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
+            nn.BatchNorm2d(filters),
             nn.SELU(inplace=True)
         )
 
@@ -43,8 +44,9 @@ class FirstHDCGANBlock(nn.Module):
 
 
 class UpsampleHDCGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
         super().__init__()
+
 
         self.conv1 = nn.Sequential(
             bb.Conv2d(
@@ -57,6 +59,7 @@ class UpsampleHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
+            nn.BatchNorm2d(out_channels),
             nn.SELU(inplace=True),
         )
         self.conv2 = nn.Sequential(
@@ -70,6 +73,7 @@ class UpsampleHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
+            nn.BatchNorm2d(out_channels),
             nn.SELU(inplace=True),
         )
 
@@ -106,6 +110,7 @@ class LastHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
+            nn.BatchNorm2d(filters + additional_channels),
             nn.SELU(inplace=True),
             bb.Conv2d(
                 filters + additional_channels,
@@ -117,6 +122,7 @@ class LastHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
+            nn.BatchNorm2d(filters + additional_channels),
             nn.SELU(inplace=True),
             bb.Conv2d(
                 filters + additional_channels,
@@ -136,22 +142,39 @@ class LastHDCGANBlock(nn.Module):
 
 
 class DownsampleHDCGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
         super().__init__()
 
-        self.conv1 = nn.Sequential(
-            bb.Conv2d(
-                in_channels,
-                in_channels,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
-            ),
-            nn.SELU(inplace=True)
-        )
+        if position == 0:
+            self.conv1 = nn.Sequential(
+                bb.Conv2d(
+                    in_channels,
+                    in_channels,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    bias=bias,
+                    eq_lr=eq_lr,
+                    spectral_normalization=spectral_normalization
+                ),
+                nn.SELU(inplace=True)
+            )
+        else:
+            self.conv1 = nn.Sequential(
+                bb.Conv2d(
+                    in_channels,
+                    in_channels,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    bias=bias,
+                    eq_lr=eq_lr,
+                    spectral_normalization=spectral_normalization
+                ),
+                nn.BatchNorm2d(in_channels),
+                nn.SELU(inplace=True)
+            )
+
         self.conv2 = nn.Sequential(
             bb.Conv2d(
                 in_channels,
@@ -163,6 +186,7 @@ class DownsampleHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
+            nn.BatchNorm2d(in_channels),
             nn.SELU(inplace=True)
         )
 

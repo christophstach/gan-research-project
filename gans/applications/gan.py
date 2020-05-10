@@ -510,8 +510,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.999, help="Momentum term beta2 of the generator optimizer")
         parser.add_argument("-v", "--score-iterations", type=int, default=0, help="Number of score iterations each epoch")
         parser.add_argument("-msg", "--multi-scale-gradient", action="store_true", help="Enable Multi-Scale Gradient")
-        parser.add_argument("-a", "--architecture", type=str, choices=["progan", "hdcgan"], default="progan")
-        parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="simple")
+        parser.add_argument("-a", "--architecture", type=str, choices=["progan", "hdcgan"], default="hdcgan")
+        parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="cat_lin")
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
@@ -545,8 +545,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=None, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
-        parser.add_argument("-gf", "--generator-filters", type=int, default=2, help="Filter multiplier in the generator")
-        parser.add_argument("-cf", "--discriminator-filters", type=int, default=2, help="Filter multiplier in the discriminator")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=4, help="Filter multiplier in the generator")
+        parser.add_argument("-cf", "--discriminator-filters", type=int, default=4, help="Filter multiplier in the discriminator")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net", "celeba_hq"], required=True)

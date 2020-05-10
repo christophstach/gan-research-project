@@ -46,7 +46,7 @@ class FirstProGANBlock(nn.Module):
 
 
 class UpsampleProGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
         super().__init__()
 
         self.conv1 = nn.Sequential(
@@ -143,7 +143,7 @@ class LastProGANBlock(nn.Module):
 
 
 class DownsampleProGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
         super().__init__()
 
         self.conv1 = nn.Sequential(
