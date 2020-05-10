@@ -186,7 +186,7 @@ class DownsampleHDCGANBlock(nn.Module):
                 eq_lr=eq_lr,
                 spectral_normalization=spectral_normalization
             ),
-            nn.BatchNorm2d(in_channels),
+            nn.BatchNorm2d(out_channels),
             nn.SELU(inplace=True)
         )
 
