@@ -524,7 +524,7 @@ class GAN(pl.LightningModule):
 
         # TTUR: https://arxiv.org/abs/1706.08500
         parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-4, help="Learning rate of the discriminator optimizers")
-        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
+        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=3e-5, help="Learning rate of the generator optimizers")
 
         parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan", "ra-sgan"], default="ra-sgan")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
