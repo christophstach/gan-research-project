@@ -1,12 +1,13 @@
 python gans/train_gan.py \
   --gpus 1 \
   --max-epochs 10000 \
-  --dataset lsun \
+  --dataset celeba_hq \
   --dataloader-num-workers 10 \
-  --batch-size 128 \
-  --image-size 128 \
+  --batch-size 64 \
+  --image-size 512 \
   --logger wandb \
   --loss-strategy ra-sgan \
   --architecture hdcgan \
   --weight-init snn \
+  --spectral-normalization \
   --multi-scale-gradient
