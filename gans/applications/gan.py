@@ -467,7 +467,10 @@ class GAN(pl.LightningModule):
         # prepare images for the usage with torchvision models: https://pytorch.org/docs/stable/torchvision/models.html
         # test_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
-        train_transform = transforms.Compose([train_resize, transforms.ToTensor(), train_normalize])
+        if self.hparams.dataset != "celeba_hq":
+            train_transform = transforms.Compose([train_resize, transforms.ToTensor(), train_normalize])
+        else:
+            train_transform = transforms.Compose([transforms.ToTensor(), train_normalize])
         # test_transform = transforms.Compose([test_resize, transforms.ToTensor(), test_normalize])
 
         if self.hparams.dataset == "mnist":

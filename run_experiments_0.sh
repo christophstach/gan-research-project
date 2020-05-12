@@ -9,6 +9,6 @@ python gans/train_gan.py \
   --loss-strategy ra-sgan \
   --architecture hdcgan \
   --weight-init snn \
-  --multi-scale-gradient \
   --spectral-normalization \
+  --multi-scale-gradient \
   --instance-noise
