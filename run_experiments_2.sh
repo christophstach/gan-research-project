@@ -3,8 +3,8 @@ python gans/train_gan.py \
   --max-epochs 10000 \
   --dataset celeba_hq \
   --dataloader-num-workers 10 \
-  --batch-size 24 \
-  --image-size 512 \
+  --batch-size 32 \
+  --image-size 256 \
   --logger wandb \
   --loss-strategy ra-sgan \
   --architecture hdcgan \
