@@ -12,8 +12,9 @@ import torchvision.transforms as transforms
 import wandb
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN, CelebA
+from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN
 
+from gans.datasets import CelebAHQ
 from ..helpers import inception_score
 
 
@@ -485,7 +486,7 @@ class GAN(pl.LightningModule):
             self.train_dataset = LSUN(self.hparams.dataset_path + "/lsun", classes=[cls + "_train" for cls in self.hparams.dataset_classes], transform=train_transform)
             # self.test_dataset = LSUN(self.hparams.dataset_path, classes=[cls + "_test" for cls in self.hparams.dataset_classes], transform=test_transform)
         elif self.hparams.dataset == "celeba_hq":
-            self.train_dataset = CelebA(self.hparams.dataset_path, split="train", download=False, transform=train_transform)
+            self.train_dataset = CelebAHQ(self.hparams.dataset_path, image_size=self.hparams.image_size, transform=train_transform)
         else:
             raise NotImplementedError("Custom dataset is not implemented yet")
 
@@ -518,7 +519,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "snn", "default"], default="he")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
-        parser.add_argument("-is", "--image-size", type=int, default=256, help="Generated image size")
+        parser.add_argument("-is", "--image-size", type=int, default=128, help="Generated image size")
         parser.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
         parser.add_argument("-in", "--instance-noise", action="store_true", help="Add instance noise")
 
