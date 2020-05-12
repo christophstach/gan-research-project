@@ -7,7 +7,8 @@ python gans/train_gan.py \
   --image-size 128 \
   --logger wandb \
   --loss-strategy ra-sgan \
-  --architecture progan \
-  --weight-init he \
+  --architecture hdcgan \
+  --weight-init snn \
   --multi-scale-gradient \
+  --spectral-normalization \
   --instance-noise
