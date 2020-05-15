@@ -18,10 +18,20 @@ class Generator(nn.Module):
 
         self.blocks = nn.ModuleList()
         self.to_rgb_converts = nn.ModuleList()
-        self.filter_multipliers = [
-            2 ** (x + 1)
-            for x in reversed(range(1, int(math.log2(self.hparams.image_size))))
-        ]
+
+        self.hparams.exponential_filter_multipliers:
+            self.filter_multipliers = [
+                2 ** (x + 1)
+                for x in reversed(range(1, int(math.log2(self.hparams.image_size))))
+            ]
+        else:
+            self.filter_multipliers = [
+                2
+                for x in reversed(range(1, int(math.log2(self.hparams.image_size))))
+            ]
+
+            self.filter_multipliers[-1] = 1
+
 
         if self.hparams.architecture == "progan":
             self.blocks.append(

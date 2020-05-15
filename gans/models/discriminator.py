@@ -102,10 +102,21 @@ class Discriminator(nn.Module):
 
         self.blocks = nn.ModuleList()
         self.from_rgb_combiners = nn.ModuleList()
-        self.filter_multipliers = [
-            2 ** (x + 1)
-            for x in range(1, int(math.log2(self.hparams.image_size)))
-        ]
+
+        self.hparams.exponential_filter_multipliers:
+            self.filter_multipliers = [
+                2 ** (x + 1)
+                for x in range(1, int(math.log2(self.hparams.image_size)))
+            ]
+        else:
+            self.filter_multipliers = [
+                2
+                for x in range(1, int(math.log2(self.hparams.image_size)))
+            ]
+
+            self.filter_multipliers[0] = 1
+
+        
 
         self.blocks.append(
             self.block_fn(

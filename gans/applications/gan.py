@@ -516,6 +516,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-msg", "--multi-scale-gradient", action="store_true", help="Enable Multi-Scale Gradient")
         parser.add_argument("-a", "--architecture", type=str, choices=["progan", "hdcgan"], default="hdcgan")
         parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="cat_lin")
+        parser.add_argument("-efm", "--exponential-filter-multipliers", action="store_true", "Smaller feature maps have exponential more filters")
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
@@ -528,7 +529,7 @@ class GAN(pl.LightningModule):
 
         # TTUR: https://arxiv.org/abs/1706.08500
         parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-4, help="Learning rate of the discriminator optimizers")
-        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=3e-5, help="Learning rate of the generator optimizers")
+        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
         parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan", "ra-sgan"], default="ra-sgan")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
@@ -549,8 +550,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=None, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
-        parser.add_argument("-gf", "--generator-filters", type=int, default=4, help="Filter multiplier in the generator")
-        parser.add_argument("-cf", "--discriminator-filters", type=int, default=4, help="Filter multiplier in the discriminator")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=128, help="Filter multiplier in the generator")
+        parser.add_argument("-cf", "--discriminator-filters", type=int, default=128, help="Filter multiplier in the discriminator")
         parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net", "celeba_hq"], required=True)
