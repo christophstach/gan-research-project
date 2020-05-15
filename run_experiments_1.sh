@@ -6,7 +6,7 @@ python gans/train_gan.py \
   --batch-size 128 \
   --image-size 128 \
   --logger wandb \
-  --loss-strategy ra-sgan \
+  --loss-strategy ra-lsgan \
   --architecture hdcgan \
   --weight-init snn \
   --spectral-normalization \
