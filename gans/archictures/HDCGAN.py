@@ -91,14 +91,14 @@ class UpsampleHDCGANBlock(nn.Module):
 
 
 class LastHDCGANBlock(nn.Module):
-    def __init__(self, filters, additional_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def __init__(self, in_channels, out_channels, additional_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
         self.block = nn.Sequential(
             bb.MinibatchStdDev(),
             bb.Conv2d(
-                filters // 2 + additional_channels + 1,
-                filters + additional_channels,
+                in_channels + additional_channels + 1,
+                out_channels + additional_channels,
                 kernel_size=4,
                 stride=1,
                 padding=0,
@@ -108,8 +108,8 @@ class LastHDCGANBlock(nn.Module):
             ),
             nn.SELU(inplace=True),
             bb.Conv2d(
-                filters + additional_channels,
-                filters + additional_channels,
+                out_channels + additional_channels,
+                out_channels + additional_channels,
                 kernel_size=1,
                 stride=1,
                 padding=0,
@@ -119,7 +119,7 @@ class LastHDCGANBlock(nn.Module):
             ),
             nn.SELU(inplace=True),
             bb.Conv2d(
-                filters + additional_channels,
+                out_channels + additional_channels,
                 1,
                 kernel_size=1,
                 stride=1,

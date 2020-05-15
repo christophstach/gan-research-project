@@ -160,7 +160,8 @@ class Discriminator(nn.Module):
         if self.hparams.architecture == "progan":
             self.blocks.append(
                 LastProGANBlock(
-                    filters=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
+                    in_channels=self.filter_multipliers[-2] * self.hparams.discriminator_filters,
+                    out_channels=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
                     additional_channels=additional_channels,
                     bias=self.bias,
                     eq_lr=self.hparams.equalized_learning_rate,
@@ -170,7 +171,8 @@ class Discriminator(nn.Module):
         elif self.hparams.architecture == "hdcgan":
             self.blocks.append(
                 LastHDCGANBlock(
-                    filters=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
+                    in_channels=self.filter_multipliers[-2] * self.hparams.discriminator_filters,
+                    out_channels=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
                     additional_channels=additional_channels,
                     bias=self.bias,
                     eq_lr=self.hparams.equalized_learning_rate,
