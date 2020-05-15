@@ -110,7 +110,7 @@ class Discriminator(nn.Module):
             ]
         else:
             self.filter_multipliers = [
-                2
+                1
                 for x in range(1, int(math.log2(self.hparams.image_size)))
             ]
 
