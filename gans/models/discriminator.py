@@ -103,7 +103,7 @@ class Discriminator(nn.Module):
         self.blocks = nn.ModuleList()
         self.from_rgb_combiners = nn.ModuleList()
 
-        self.hparams.exponential_filter_multipliers:
+        if self.hparams.exponential_filter_multipliers:
             self.filter_multipliers = [
                 2 ** (x + 1)
                 for x in range(1, int(math.log2(self.hparams.image_size)))
