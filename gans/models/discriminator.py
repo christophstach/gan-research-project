@@ -140,7 +140,7 @@ class Discriminator(nn.Module):
         for pos, i in enumerate(self.filter_multipliers[1:-1]):
             self.blocks.append(
                 self.block_fn(
-                    i // 2 * self.hparams.discriminator_filters + additional_channels,
+                    self.filter_multipliers[pos - 1] * self.hparams.discriminator_filters + additional_channels,
                     i * self.hparams.discriminator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
