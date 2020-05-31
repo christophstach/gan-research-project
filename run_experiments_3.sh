@@ -5,9 +5,11 @@ python gans/train_gan.py \
   --dataloader-num-workers 10 \
   --batch-size 32 \
   --image-size 256 \
+  --noise-size 256 \
   --logger wandb \
-  --loss-strategy ra-sgan \
+  --loss-strategy ra-lsgan \
   --architecture hdcgan \
   --weight-init snn \
+  --multi-scale-gradient \
   --spectral-normalization \
-  --multi-scale-gradient
+  --instance-noise

@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+from torch.nn.utils import spectral_norm
 
 from gans.archictures.HDCGAN import DownsampleHDCGANBlock, LastHDCGANBlock
 from gans.archictures.PROGAN import DownsampleProGANBlock, LastProGANBlock
@@ -20,7 +21,7 @@ class SimpleCombiner(nn.Module):
 
 
 class LinCatCombiner(nn.Module):
-    def __init__(self, hparams, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def __init__(self, hparams, in_channels, bias=False):
         super().__init__()
 
         self.hparams = hparams
@@ -48,7 +49,7 @@ class LinCatCombiner(nn.Module):
 
 
 class CatLinCombiner(nn.Module):
-    def __init__(self, hparams, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def __init__(self, hparams, in_channels, bias=False):
         super().__init__()
 
         self.hparams = hparams
@@ -115,18 +116,14 @@ class Discriminator(nn.Module):
             self.block_fn(
                 self.hparams.image_channels,
                 self.filter_multipliers[0] * self.hparams.discriminator_filters,
-                self.bias,
-                self.hparams.equalized_learning_rate,
-                self.hparams.spectral_normalization
+                self.bias
             )
         )
 
         self.from_rgb_combiners.append(
             self.from_rgb_fn(
                 self.filter_multipliers[0] * self.hparams.discriminator_filters,
-                self.bias,
-                self.hparams.equalized_learning_rate,
-                self.hparams.spectral_normalization
+                self.bias
             )
         )
 
@@ -135,18 +132,14 @@ class Discriminator(nn.Module):
                 self.block_fn(
                     self.filter_multipliers[pos] * self.hparams.discriminator_filters + additional_channels,
                     self.filter_multipliers[pos + 1] * self.hparams.discriminator_filters,
-                    self.bias,
-                    self.hparams.equalized_learning_rate,
-                    self.hparams.spectral_normalization
+                    self.bias
                 )
             )
 
             self.from_rgb_combiners.append(
                 self.from_rgb_fn(
                     self.filter_multipliers[pos + 1] * self.hparams.discriminator_filters,
-                    self.bias,
-                    self.hparams.equalized_learning_rate,
-                    self.hparams.spectral_normalization
+                    self.bias
                 )
             )
 
@@ -157,9 +150,7 @@ class Discriminator(nn.Module):
                     in_channels=self.filter_multipliers[-2] * self.hparams.discriminator_filters,
                     out_channels=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
                     additional_channels=additional_channels,
-                    bias=self.bias,
-                    eq_lr=self.hparams.equalized_learning_rate,
-                    spectral_normalization=self.hparams.spectral_normalization
+                    bias=self.bias
                 )
             )
         elif self.hparams.architecture == "hdcgan":
@@ -168,9 +159,7 @@ class Discriminator(nn.Module):
                     in_channels=self.filter_multipliers[-2] * self.hparams.discriminator_filters,
                     out_channels=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
                     additional_channels=additional_channels,
-                    bias=self.bias,
-                    eq_lr=self.hparams.equalized_learning_rate,
-                    spectral_normalization=self.hparams.spectral_normalization
+                    bias=self.bias
                 )
             )
 
@@ -179,19 +168,24 @@ class Discriminator(nn.Module):
         elif self.hparams.weight_init == "snn":
             self.apply(snn_weight_init)
 
-    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
-        if self.hparams.architecture == "progan":
-            return DownsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
-        elif self.hparams.architecture == "hdcgan":
-            return DownsampleHDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+        if self.hparams.spectral_normalization:
+            for block in self.blocks:
+                block.conv1 = spectral_norm(block.conv1)
+                block.conv2 = spectral_norm(block.conv2)
 
-    def from_rgb_fn(self, in_channels, bias=False, eq_lr=False, spectral_normalization=False):
+    def block_fn(self, in_channels, out_channels, bias=False):
+        if self.hparams.architecture == "progan":
+            return DownsampleProGANBlock(in_channels, out_channels, bias=bias)
+        elif self.hparams.architecture == "hdcgan":
+            return DownsampleHDCGANBlock(in_channels, out_channels, bias=bias)
+
+    def from_rgb_fn(self, in_channels, bias=False):
         if self.hparams.multi_scale_gradient_combiner == "simple":
             return SimpleCombiner(self.hparams, in_channels)
         elif self.hparams.multi_scale_gradient_combiner == "lin_cat":
-            return LinCatCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+            return LinCatCombiner(self.hparams, in_channels, bias=bias)
         elif self.hparams.multi_scale_gradient_combiner == "cat_lin":
-            return CatLinCombiner(self.hparams, in_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
+            return CatLinCombiner(self.hparams, in_channels, bias=bias)
         else:
             raise ValueError()
 

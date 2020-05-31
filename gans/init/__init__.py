@@ -50,3 +50,4 @@ def he_weight_init(m):
 
         if m.bias is not None:
             torch.nn.init.uniform_(m.bias, -bound, bound)
+
