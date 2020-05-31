@@ -452,7 +452,7 @@ class GAN(pl.LightningModule):
         generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
 
         discriminator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=10)
-        generator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=10)
+        generator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(generator_optimizer, T_max=10)
 
         return [discriminator_optimizer, generator_optimizer], [discriminator_lr_scheduler, generator_lr_scheduler]
 
