@@ -3,9 +3,8 @@ import math
 import torch
 import torch.nn as nn
 
-import gans.building_blocks as bb
-from gans.archictures.PROGAN import FirstProGANBlock, UpsampleProGANBlock
 from gans.archictures.HDCGAN import FirstHDCGANBlock, UpsampleHDCGANBlock
+from gans.archictures.PROGAN import FirstProGANBlock, UpsampleProGANBlock
 from gans.init import snn_weight_init, he_weight_init
 
 
@@ -31,7 +30,6 @@ class Generator(nn.Module):
             ]
 
             self.filter_multipliers[-1] = 1
-
 
         if self.hparams.architecture == "progan":
             self.blocks.append(
@@ -61,21 +59,20 @@ class Generator(nn.Module):
             )
         )
 
-        for pos, i in enumerate(self.filter_multipliers[1:]):
+        for pos, _ in enumerate(self.filter_multipliers[1:]):
             self.blocks.append(
                 self.block_fn(
-                    self.filter_multipliers[pos - 1] * self.hparams.generator_filters,
-                    i * self.hparams.generator_filters,
+                    self.filter_multipliers[pos] * self.hparams.generator_filters,
+                    self.filter_multipliers[pos + 1] * self.hparams.generator_filters,
                     self.bias,
                     self.hparams.equalized_learning_rate,
-                    self.hparams.spectral_normalization,
-                    position=pos
+                    self.hparams.spectral_normalization
                 )
             )
 
             self.to_rgb_converts.append(
                 self.to_rgb_fn(
-                    i * self.hparams.generator_filters,
+                    self.filter_multipliers[pos + 1] * self.hparams.generator_filters,
                     self.bias
                 )
             )
@@ -85,23 +82,21 @@ class Generator(nn.Module):
         elif self.hparams.weight_init == "snn":
             self.apply(snn_weight_init)
 
-    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
+    def block_fn(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         if self.hparams.architecture == "progan":
-            return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization, position=position)
+            return UpsampleProGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
         elif self.hparams.architecture == "hdcgan":
-            return UpsampleHDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization, position=position)
+            return UpsampleHDCGANBlock(in_channels, out_channels, bias=bias, eq_lr=eq_lr, spectral_normalization=spectral_normalization)
 
     def to_rgb_fn(self, in_channels, bias=False):
         return nn.Sequential(
-            bb.Conv2d(
+            nn.Conv2d(
                 in_channels=in_channels,
                 out_channels=self.hparams.image_channels,
                 kernel_size=1,
                 stride=1,
                 padding=0,
-                bias=bias,
-                eq_lr=False,
-                spectral_normalization=False
+                bias=bias
             )
         )
 

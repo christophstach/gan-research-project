@@ -309,7 +309,9 @@ class GAN(pl.LightningModule):
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
         if self.hparams.multi_scale_gradient:
+
             scaled_real_images = self.to_scaled_images(self.real_images)
+
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
             real_validity = self.discriminator(scaled_real_images, self.y)
@@ -330,7 +332,7 @@ class GAN(pl.LightningModule):
         loss = self.discriminator_loss(real_validity, fake_validity)
 
         if len(self.trainer.lr_schedulers) >= 1:
-            discriminator_lr = self.trainer.lr_schedulers[0]["scheduler"].get_lr()[0]
+            discriminator_lr = self.trainer.lr_schedulers[0]["scheduler"].get_last_lr()[0]
         else:
             discriminator_lr = self.hparams.discriminator_learning_rate
 
@@ -357,7 +359,7 @@ class GAN(pl.LightningModule):
         loss = self.generator_loss(real_validity, fake_validity)
 
         if len(self.trainer.lr_schedulers) >= 2:
-            generator_lr = self.trainer.lr_schedulers[1]["scheduler"].get_lr()[0]
+            generator_lr = self.trainer.lr_schedulers[1]["scheduler"].get_last_lr()[0]
         else:
             generator_lr = self.hparams.generator_learning_rate
 
@@ -449,29 +451,15 @@ class GAN(pl.LightningModule):
         discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
         generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
 
-        # discriminator_lr_scheduler = optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=200, gamma=0.1)
-        # generator_lr_scheduler = optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=200, gamma=0.1)
+        discriminator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=100)
+        generator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=100)
 
-        # , [discriminator_lr_scheduler, generator_lr_scheduler]
-
-        return [discriminator_optimizer, generator_optimizer]
+        return [discriminator_optimizer, generator_optimizer], [discriminator_lr_scheduler, generator_lr_scheduler]
 
     def prepare_data(self):
         train_resize = transforms.Resize((self.hparams.image_size, self.hparams.image_size))
-        # test_resize = transforms.Resize(224, 224)
-
-        if self.hparams.image_channels == 3:
-            train_normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-        else:
-            train_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
-        # prepare images for the usage with torchvision models: https://pytorch.org/docs/stable/torchvision/models.html
-        # test_normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
-        if self.hparams.dataset != "celeba_hq":
-            train_transform = transforms.Compose([train_resize, transforms.ToTensor(), train_normalize])
-        else:
-            train_transform = transforms.Compose([transforms.ToTensor(), train_normalize])
-        # test_transform = transforms.Compose([test_resize, transforms.ToTensor(), test_normalize])
+        train_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
+        train_transform = transforms.Compose([train_resize, transforms.ToTensor(), train_normalize])
 
         if self.hparams.dataset == "mnist":
             self.train_dataset = MNIST(self.hparams.dataset_path, train=True, download=True, transform=train_transform)
@@ -520,7 +508,7 @@ class GAN(pl.LightningModule):
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
-        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "snn", "default"], default="he")
+        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "snn", "default"], default="snn")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         parser.add_argument("-is", "--image-size", type=int, default=128, help="Generated image size")
@@ -531,7 +519,7 @@ class GAN(pl.LightningModule):
         parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-4, help="Learning rate of the discriminator optimizers")
         parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
-        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan", "ra-sgan"], default="ra-sgan")
+        parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan", "ra-sgan"], default="ra-lsgan")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
             "1-gp",  # Original 2-sided WGAN-GP
             "0-gp",  # Improving Generalization and Stability of Generative Adversarial Networks: https://openreview.net/forum?id=ByxPYjC5KQ
@@ -550,9 +538,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=None, help="Consistency term coefficient")
         parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
-        parser.add_argument("-gf", "--generator-filters", type=int, default=128, help="Filter multiplier in the generator")
-        parser.add_argument("-cf", "--discriminator-filters", type=int, default=128, help="Filter multiplier in the discriminator")
-        parser.add_argument("-eer", "--enable-experience-replay", action="store_true", help="Find paper for this")
+        parser.add_argument("-gf", "--generator-filters", type=int, default=4, help="Filter multiplier in the generator")
+        parser.add_argument("-cf", "--discriminator-filters", type=int, default=4, help="Filter multiplier in the discriminator")
 
         parser.add_argument("--dataset", type=str, choices=["custom", "cifar10", "mnist", "fashion_mnist", "lsun", "image_net", "celeba_hq"], required=True)
         parser.add_argument("--dataset-path", type=str, default=os.getcwd() + "/.datasets")

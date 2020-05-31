@@ -11,26 +11,22 @@ class FirstHDCGANBlock(nn.Module):
         self.block = nn.Sequential(
             # input is Z, going into a convolution
 
-            bb.ConvTranspose2d(
+            nn.ConvTranspose2d(
                 noise_size,
                 filters,
                 kernel_size=4,
                 stride=1,
                 padding=0,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             ),
             nn.SELU(inplace=True),
-            bb.Conv2d(
+            nn.Conv2d(
                 filters,
                 filters,
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             ),
             nn.SELU(inplace=True)
         )
@@ -42,33 +38,28 @@ class FirstHDCGANBlock(nn.Module):
 
 
 class UpsampleHDCGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-
         self.conv1 = nn.Sequential(
-            bb.Conv2d(
+            nn.Conv2d(
                 in_channels,
                 out_channels,
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             ),
             nn.SELU(inplace=True),
         )
         self.conv2 = nn.Sequential(
-            bb.Conv2d(
+            nn.Conv2d(
                 out_channels,
                 out_channels,
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             ),
             nn.SELU(inplace=True),
         )
@@ -96,37 +87,31 @@ class LastHDCGANBlock(nn.Module):
 
         self.block = nn.Sequential(
             bb.MinibatchStdDev(),
-            bb.Conv2d(
+            nn.Conv2d(
                 in_channels + additional_channels + 1,
-                out_channels + additional_channels,
+                in_channels + additional_channels,
                 kernel_size=4,
                 stride=1,
                 padding=0,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             ),
             nn.SELU(inplace=True),
-            bb.Conv2d(
-                out_channels + additional_channels,
+            nn.Conv2d(
+                in_channels + additional_channels,
                 out_channels + additional_channels,
                 kernel_size=1,
                 stride=1,
                 padding=0,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             ),
             nn.SELU(inplace=True),
-            bb.Conv2d(
+            nn.Conv2d(
                 out_channels + additional_channels,
                 1,
                 kernel_size=1,
                 stride=1,
                 padding=0,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             )
         )
 
@@ -136,48 +121,29 @@ class LastHDCGANBlock(nn.Module):
 
 
 class DownsampleHDCGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False, position=None):
+    def __init__(self, in_channels, out_channels, bias=False, eq_lr=False, spectral_normalization=False):
         super().__init__()
 
-        if position == 0:
-            self.conv1 = nn.Sequential(
-                bb.Conv2d(
-                    in_channels,
-                    in_channels,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,
-                    bias=bias,
-                    eq_lr=eq_lr,
-                    spectral_normalization=spectral_normalization
-                ),
-                nn.SELU(inplace=True)
-            )
-        else:
-            self.conv1 = nn.Sequential(
-                bb.Conv2d(
-                    in_channels,
-                    in_channels,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,
-                    bias=bias,
-                    eq_lr=eq_lr,
-                    spectral_normalization=spectral_normalization
-                ),
-                nn.SELU(inplace=True)
-            )
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels,
+                in_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                bias=bias
+            ),
+            nn.SELU(inplace=True)
+        )
 
         self.conv2 = nn.Sequential(
-            bb.Conv2d(
+            nn.Conv2d(
                 in_channels,
                 out_channels,
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                bias=bias,
-                eq_lr=eq_lr,
-                spectral_normalization=spectral_normalization
+                bias=bias
             ),
             nn.SELU(inplace=True)
         )
