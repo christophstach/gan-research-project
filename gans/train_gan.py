@@ -52,8 +52,8 @@ def main(hparams):
             project="gan-research-project",
             name=experiment_name
         )
-        
-        wandb.watch((generator, discriminator))
+
+        logger.watch((generator, discriminator))
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
             save_dir=os.getcwd() + "/lightning_logs"
