@@ -53,7 +53,7 @@ def main(hparams):
             name=experiment_name
         )
 
-        logger.watch((generator, discriminator))
+
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
             save_dir=os.getcwd() + "/lightning_logs"
@@ -87,6 +87,8 @@ def main(hparams):
         distributed_backend="dp",
         weights_summary=None
     )
+
+    wandb.watch((generator, discriminator))
 
     trainer.fit(model)
 
