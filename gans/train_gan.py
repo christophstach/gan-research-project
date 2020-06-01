@@ -53,7 +53,7 @@ def main(hparams):
             name=experiment_name
         )
 
-
+        logger.watch(model)
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
             save_dir=os.getcwd() + "/lightning_logs"
