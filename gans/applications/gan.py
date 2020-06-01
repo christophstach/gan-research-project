@@ -377,8 +377,6 @@ class GAN(pl.LightningModule):
 
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
-        print(self.trainer.lr_schedulers[0]["scheduler"].get_last_lr()[0])
-        print(self.trainer.lr_schedulers[1]["scheduler"].get_last_lr()[0])
         if self.logger:
             if self.hparams.score_iterations > 0:
                 outputs = []
@@ -453,8 +451,8 @@ class GAN(pl.LightningModule):
         discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
         generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
 
-        discriminator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=16)
-        generator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(generator_optimizer, T_max=16)
+        discriminator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=15)
+        generator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(generator_optimizer, T_max=15)
 
         return [discriminator_optimizer, generator_optimizer], [discriminator_lr_scheduler, generator_lr_scheduler]
 
