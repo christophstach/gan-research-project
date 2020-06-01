@@ -88,8 +88,6 @@ def main(hparams):
         weights_summary=None
     )
 
-    wandb.watch((generator, discriminator))
-
     trainer.fit(model)
 
 
