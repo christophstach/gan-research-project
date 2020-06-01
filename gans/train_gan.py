@@ -1,9 +1,9 @@
 import os
 from argparse import ArgumentParser
 
+import wandb
 import numpy as np
 import torch
-import torchvision.models as models
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
@@ -52,9 +52,8 @@ def main(hparams):
             project="gan-research-project",
             name=experiment_name
         )
-
-        logger.watch(generator)
-        logger.watch(discriminator)
+        
+        wandb.watch((generator, discriminator))
     elif hparams.logger == "tensorboard":
         logger = TensorBoardLogger(
             save_dir=os.getcwd() + "/lightning_logs"

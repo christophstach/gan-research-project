@@ -3,6 +3,7 @@ python gans/train_gan.py \
   --max-epochs 10000 \
   --dataset celeba_hq \
   --dataloader-num-workers 10 \
+  --exponential-filter-multipliers \
   --batch-size 32 \
   --image-size 256 \
   --noise-size 256 \
