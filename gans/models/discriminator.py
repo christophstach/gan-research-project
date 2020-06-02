@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 from torch.nn.utils import spectral_norm
 
-from gans.archictures.HDCGAN import DownsampleHDCGANBlock, LastHDCGANBlock
-from gans.archictures.PROGAN import DownsampleProGANBlock, LastProGANBlock
+from gans.architectures.HDCGAN import DownsampleHDCGANBlock, LastHDCGANBlock
+from gans.architectures.PROGAN import DownsampleProGANBlock, LastProGANBlock
 from gans.init import snn_weight_init, he_weight_init
 
 

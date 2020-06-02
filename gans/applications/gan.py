@@ -6,7 +6,6 @@ from collections import OrderedDict
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import wandb
@@ -15,6 +14,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN
 
 from gans.datasets import CelebAHQ
+from gans.optim import OAdam
 from ..helpers import inception_score
 
 
@@ -448,13 +448,18 @@ class GAN(pl.LightningModule):
         optimizer.zero_grad()
 
     def configure_optimizers(self):
-        discriminator_optimizer = optim.AdamW(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
-        generator_optimizer = optim.AdamW(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
+        discriminator_optimizer = OAdam(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
+        generator_optimizer = OAdam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
 
-        discriminator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=15)
-        generator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(generator_optimizer, T_max=15)
+        return [discriminator_optimizer, generator_optimizer]
 
-        return [discriminator_optimizer, generator_optimizer], [discriminator_lr_scheduler, generator_lr_scheduler]
+        # discriminator_optimizer = optim.AdamW(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
+        # generator_optimizer = optim.AdamW(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
+
+        # discriminator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(discriminator_optimizer, T_max=15)
+        # generator_lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(generator_optimizer, T_max=15)
+
+        # return [discriminator_optimizer, generator_optimizer], [discriminator_lr_scheduler, generator_lr_scheduler]
 
     def prepare_data(self):
         train_resize = transforms.Resize((self.hparams.image_size, self.hparams.image_size))

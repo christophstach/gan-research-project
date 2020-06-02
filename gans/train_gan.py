@@ -1,7 +1,6 @@
 import os
 from argparse import ArgumentParser
 
-import wandb
 import numpy as np
 import torch
 from pytorch_lightning import Trainer
