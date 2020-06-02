@@ -537,7 +537,7 @@ class GAN(pl.LightningModule):
         ], default="none")
 
         parser.add_argument("-z", "--noise-size", type=int, default=128, help="Length of the noise vector")
-        parser.add_argument("-y", "--y-size", type=int, default=10, help="Length of the y/label vector")
+        parser.add_argument("-y", "--y-size", type=int, default=1, help="Length of the y/label vector")
         parser.add_argument("-yes", "--y-embedding-size", type=int, default=10, help="Length of the y/label embedding vector")
         parser.add_argument("-k", "--alternation-interval", type=int, default=1, help="Amount of steps the discriminator is trained for each training step of the generator")
         parser.add_argument("-gpc", "--gradient-penalty-coefficient", type=float, default=None, help="Gradient penalty coefficient")
