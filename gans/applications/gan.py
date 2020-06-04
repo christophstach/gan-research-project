@@ -423,10 +423,10 @@ class GAN(pl.LightningModule):
 
                 for resolution in resolutions:
                     resolution.detach_()
-                    
+
                     self.logger.experiment.log({
                         "generated_images": [
-                            wandb.Image(fake_image, caption=str(fake_image.size(0)) + "x" + str(fake_image.size(1))) 
+                            wandb.Image(fake_image, caption=str(fake_image.size(1)) + "x" + str(fake_image.size(2))) 
                             for fake_image in resolution
                         ]
                     })
