@@ -424,10 +424,11 @@ class GAN(pl.LightningModule):
                 for resolution in resolutions:
                     resolution.detach_()
 
+                    grid = torchvision.utils.make_grid(resolution, nrow=grid_size, padding=0)
+
                     self.logger.experiment.log({
                         "generated_images": [
-                            wandb.Image(fake_image, caption=str(fake_image.size(1)) + "x" + str(fake_image.size(2))) 
-                            for fake_image in resolution
+                            wandb.Image(grid, caption=str(fake_image.size(1)) + "x" + str(fake_image.size(2)))
                         ]
                     })
             elif isinstance(self.logger, CometLogger):
