@@ -421,14 +421,17 @@ class GAN(pl.LightningModule):
 
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
 
-                for resolution in resolutions:
-                    resolution.detach_()
+                grids = [
+                    wandb.Image(
+                        torchvision.utils.make_grid(resolution.detach(), nrow=grid_size, padding=1),
+                        caption=str(resolution.size(2)) + "x" + str(resolution.size(3))
+                    )
+                    for resolution in resolutions
+                ]
 
-                    grid = torchvision.utils.make_grid(resolution, nrow=grid_size, padding=1)
-
-                    self.logger.experiment.log({
-                        "generated_images": wandb.Image(grid, caption=str(resolution.size(2)) + "x" + str(resolution.size(3)))
-                    })
+                self.logger.experiment.log({
+                    "generated_images": grids
+                })
             elif isinstance(self.logger, CometLogger):
                 grid_size = self.hparams.y_size if self.hparams.y_size > 1 else 5
 
