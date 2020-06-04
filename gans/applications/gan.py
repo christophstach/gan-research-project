@@ -417,11 +417,13 @@ class GAN(pl.LightningModule):
 
                 noise = torch.rand(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device)
-                resolutions = self.forward(noise, y).detach()
+                resolutions = self.forward(noise, y)
 
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
 
                 for resolution in resolutions:
+                    resolution.detach_()
+                    
                     self.logger.experiment.log({
                         "generated_images": [
                             wandb.Image(fake_image, caption=str(fake_image.size(0)) + "x" + str(fake_image.size(1))) 
