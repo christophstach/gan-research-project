@@ -417,12 +417,17 @@ class GAN(pl.LightningModule):
 
                 noise = torch.rand(grid_size ** 2, self.hparams.noise_size, device=self.real_images.device)
                 y = torch.tensor(range(grid_size), device=self.real_images.device)
-                fake_images = self.forward(noise, y)[-1].detach()
+                resolutions = self.forward(noise, y).detach()
 
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
-                self.logger.experiment.log({
-                    "generated_images": [wandb.Image(images) for fake_image in fake_images]
-                })
+
+                for resolution in resolutions:
+                    self.logger.experiment.log({
+                        "generated_images": [
+                            wandb.Image(fake_image, caption=str(fake_image.size(0)) + "x" + str(fake_image.size(1))) 
+                            for fake_image in resolution
+                        ]
+                    })
             elif isinstance(self.logger, CometLogger):
                 grid_size = self.hparams.y_size if self.hparams.y_size > 1 else 5
 
