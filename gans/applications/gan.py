@@ -424,7 +424,7 @@ class GAN(pl.LightningModule):
                 for resolution in resolutions:
                     resolution.detach_()
 
-                    grid = torchvision.utils.make_grid(resolution, nrow=grid_size, padding=0)
+                    grid = torchvision.utils.make_grid(resolution, nrow=grid_size, padding=1)
 
                     self.logger.experiment.log({
                         "generated_images": [
