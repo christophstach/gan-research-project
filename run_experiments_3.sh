@@ -8,9 +8,9 @@ python gans/train_gan.py \
   --discriminator-filters 4 \
   --batch-size 32 \
   --image-size 256 \
-  --noise-size 256 \
+  --noise-size 128 \
   --logger wandb \
-  --loss-strategy ra-lsgan \
+  --loss-strategy ra-hinge \
   --architecture hdcgan \
   --weight-init snn \
   --multi-scale-gradient \
