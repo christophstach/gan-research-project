@@ -424,14 +424,15 @@ class GAN(pl.LightningModule):
                 grids = [
                     wandb.Image(
                         torchvision.utils.make_grid(resolution.detach(), nrow=grid_size, padding=1),
-                        caption=str(resolution.size(2)) + "x" + str(resolution.size(3))
+                        caption=str(resolution.size(2)) + "x" + str(resolution.size(3)),
                     )
                     for resolution in resolutions
                 ]
 
-                self.logger.experiment.log({
-                    "generated_images": grids
-                })
+                for grid in grids:
+                    self.logger.experiment.log({
+                        "generated_images": grid
+                    }, step=self.global_step)
             elif isinstance(self.logger, CometLogger):
                 grid_size = self.hparams.y_size if self.hparams.y_size > 1 else 5
 
