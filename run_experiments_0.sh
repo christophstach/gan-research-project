@@ -7,7 +7,7 @@ python gans/train_gan.py \
   --generator-filters 4 \
   --discriminator-filters 4 \
   --batch-size 32 \
-  --image-size 128 \
+  --image-size 256 \
   --noise-size 128 \
   --logger wandb \
   --loss-strategy ra-hinge \
