@@ -18,6 +18,7 @@ class Generator(nn.Module):
 
         self.blocks = nn.ModuleList()
         self.to_rgb_converts = nn.ModuleList()
+        self.z_skip_connections = nn.ModuleList()
 
         if self.hparams.exponential_filter_multipliers:
             self.filter_multipliers = [
@@ -56,6 +57,10 @@ class Generator(nn.Module):
             )
         )
 
+        self.z_skip_connections.append(
+            None
+        )
+
         for pos, _ in enumerate(self.filter_multipliers[1:]):
             self.blocks.append(
                 self.block_fn(
@@ -71,7 +76,11 @@ class Generator(nn.Module):
                     self.bias
                 )
             )
-
+          
+            self.z_skip_connections.append(
+                nn.Linear(self.hparams.noise_size, ((2 ** (pos + 3)) ** 2) * self.hparams.generator_filters * self.filter_multipliers[pos + 1])
+            )
+       
         if self.hparams.weight_init == "he":
             self.apply(he_weight_init)
         elif self.hparams.weight_init == "snn":
@@ -102,11 +111,14 @@ class Generator(nn.Module):
 
     def forward(self, x, y):
         outputs = []
+        z = x
         x = x.view(x.size(0), -1, 1, 1)
 
-        for block, to_rgb in zip(self.blocks, self.to_rgb_converts):
+        for i, (block, to_rgb, z_skip) in enumerate(zip(self.blocks, self.to_rgb_converts, self.z_skip_connections)):
             x = block(x)
+            
+            if i > 0: x = x + z_skip(z).view(*x.size())
+
             output = torch.tanh(to_rgb(x))
             outputs.append(output)
-
         return outputs

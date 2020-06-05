@@ -1,0 +1,26 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Train GAN",
+            "type": "python",
+            "request": "launch",
+            "program": "gans/train_gan.py",
+            "args": [
+                "--logger", "none",
+                "--dataset", "cifar10",
+                "--image-size", "32",
+                "--noise-size", "128",
+                "--generator-filters", "2",
+                "--discriminator-filters", "1",
+                "--dataloader-num-workers", "1",
+                "--exponential-filter-multipliers"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}
