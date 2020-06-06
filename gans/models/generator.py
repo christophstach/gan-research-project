@@ -79,8 +79,9 @@ class Generator(nn.Module):
           
             self.z_skip_connections.append(
                 self.z_skip_connection_fn(
-                    out_channels=self.hparams.generator_filters * self.filter_multipliers[pos + 1],
-                    scale_factor=2 ** (pos + 1)
+                    self.hparams.generator_filters * self.filter_multipliers[pos + 1],
+                    2 ** (pos + 1),
+                    self.bias
                 )
             )
        
@@ -112,7 +113,7 @@ class Generator(nn.Module):
             )
         )
 
-    def z_skip_connection_fn(self, out_channels, scale_factor, bias=False)
+    def z_skip_connection_fn(self, out_channels, scale_factor, bias=False):
         if self.hparams.architecture == "progan":
                 return nn.Sequential(
                     nn.ConvTranspose2d(
@@ -121,7 +122,7 @@ class Generator(nn.Module):
                         kernel_size=4,
                         stride=1,
                         padding=0,
-                        bias=self.bias
+                        bias=bias
                     ),
                     nn.UpsamplingNearest2d(scale_factor),
                     nn.LeakyReLU(0.2, inplace=True)
@@ -134,7 +135,7 @@ class Generator(nn.Module):
                         kernel_size=4,
                         stride=1,
                         padding=0,
-                        bias=self.bias
+                        bias=bias
                     ),
                     nn.UpsamplingNearest2d(scale_factor),
                     nn.SELU(inplace=True)
