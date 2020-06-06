@@ -82,7 +82,7 @@ class Generator(nn.Module):
                     nn.ConvTranspose2d(
                         self.hparams.noise_size,
                         self.hparams.generator_filters * self.filter_multipliers[pos + 1],
-                        kernel_size=2 ** (pos + 1),
+                        kernel_size=4,
                         stride=1,
                         padding=0,
                         bias=self.bias
