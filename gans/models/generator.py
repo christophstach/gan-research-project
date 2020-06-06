@@ -78,16 +78,13 @@ class Generator(nn.Module):
             )
           
             self.z_skip_connections.append(
-                nn.Sequential(
-                    nn.ConvTranspose2d(
-                        self.hparams.noise_size,
-                        self.hparams.generator_filters * self.filter_multipliers[pos + 1],
-                        kernel_size=4,
-                        stride=1,
-                        padding=0,
-                        bias=False
-                    ),
-                    nn.UpsamplingNearest2d(scale_factor=2 ** (pos + 1))
+                nn.ConvTranspose2d(
+                    self.hparams.noise_size,
+                    self.hparams.generator_filters * self.filter_multipliers[pos + 1],
+                    kernel_size=2 ** (pos + 3),
+                    stride=1,
+                    padding=0,
+                    bias=False
                 )
             )
        
