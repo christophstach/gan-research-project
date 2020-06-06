@@ -78,7 +78,17 @@ class Generator(nn.Module):
             )
           
             self.z_skip_connections.append(
-                nn.Linear(self.hparams.noise_size, ((2 ** (pos + 3)) ** 2) * self.hparams.generator_filters * self.filter_multipliers[pos + 1])
+                nn.Sequential(
+                    nn.ConvTranspose2d(
+                        self.hparams.noise_size,
+                        self.hparams.generator_filters * self.filter_multipliers[pos + 1],
+                        kernel_size=4,
+                        stride=1,
+                        padding=0,
+                        bias=False
+                    ),
+                    nn.UpsamplingNearest2d(scale_factor=2 ** (pos + 1))
+                )
             )
        
         if self.hparams.weight_init == "he":
@@ -111,14 +121,15 @@ class Generator(nn.Module):
 
     def forward(self, x, y):
         outputs = []
-        z = x
         x = x.view(x.size(0), -1, 1, 1)
+        z = x
 
         for i, (block, to_rgb, z_skip) in enumerate(zip(self.blocks, self.to_rgb_converts, self.z_skip_connections)):
             x = block(x)
-            
-            if i > 0: x = x + z_skip(z).view(*x.size())
+
+            if i > 0: x = x + z_skip(z)
 
             output = torch.tanh(to_rgb(x))
             outputs.append(output)
+
         return outputs
