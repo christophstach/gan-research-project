@@ -115,31 +115,31 @@ class Generator(nn.Module):
 
     def z_skip_connection_fn(self, out_channels, scale_factor, bias=False):
         if self.hparams.architecture == "progan":
-                return nn.Sequential(
-                    nn.ConvTranspose2d(
-                        self.hparams.noise_size,
-                        out_channels,
-                        kernel_size=4,
-                        stride=1,
-                        padding=0,
-                        bias=bias
-                    ),
-                    nn.UpsamplingNearest2d(scale_factor),
-                    nn.LeakyReLU(0.2, inplace=True)
-                )
+            return nn.Sequential(
+                nn.ConvTranspose2d(
+                    self.hparams.noise_size,
+                    out_channels,
+                    kernel_size=4,
+                    stride=1,
+                    padding=0,
+                    bias=bias
+                ),
+                nn.UpsamplingNearest2d(scale_factor=scale_factor),
+                nn.LeakyReLU(0.2, inplace=True)
+            )
         elif self.hparams.architecture == "hdcgan":
-                return nn.Sequential(
-                    nn.ConvTranspose2d(
-                        self.hparams.noise_size,
-                        out_channels,
-                        kernel_size=4,
-                        stride=1,
-                        padding=0,
-                        bias=bias
-                    ),
-                    nn.UpsamplingNearest2d(scale_factor),
-                    nn.SELU(inplace=True)
-                )
+            return nn.Sequential(
+                nn.ConvTranspose2d(
+                    self.hparams.noise_size,
+                    out_channels,
+                    kernel_size=4,
+                    stride=1,
+                    padding=0,
+                    bias=bias
+                ),
+                nn.UpsamplingNearest2d(scale_factor=scale_factor),
+                nn.SELU(inplace=True)
+            )
 
     def forward(self, x, y):
         outputs = []
@@ -148,7 +148,7 @@ class Generator(nn.Module):
 
         for i, (block, to_rgb, z_skip) in enumerate(zip(self.blocks, self.to_rgb_converts, self.z_skip_connections)):
             x = block(x)
-
+            
             if i > 0: x = x + z_skip(z)
 
             output = torch.tanh(to_rgb(x))
