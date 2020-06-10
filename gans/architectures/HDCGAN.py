@@ -65,17 +65,10 @@ class UpsampleHDCGANBlock(nn.Module):
         )
 
         self.norm = bb.PixelNorm()
+        self.upsample = nn.UpsamplingNearest2d(scale_factor=2)
 
     def forward(self, x):
-        x = F.interpolate(
-            x,
-            size=(
-                x.size(2) * 2,
-                x.size(3) * 2
-            ),
-            mode="bilinear",
-            align_corners=False
-        )
+        x = self.upsample(x)
 
         x = self.conv1(x)
         F.selu(x, inplace=True)

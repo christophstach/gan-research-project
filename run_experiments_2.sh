@@ -14,5 +14,4 @@ python gans/train_gan.py \
   --architecture hdcgan \
   --weight-init snn \
   --multi-scale-gradient \
-  --spectral-normalization \
   --instance-noise
