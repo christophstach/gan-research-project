@@ -73,7 +73,8 @@ class UpsampleHDCGANBlock(nn.Module):
                 x.size(2) * 2,
                 x.size(3) * 2
             ),
-            mode="nearest"
+            mode="bilinear",
+            align_corners=False
         )
 
         x = self.conv1(x)
@@ -153,19 +154,22 @@ class DownsampleHDCGANBlock(nn.Module):
             bias=bias
         )
 
+        self.avgPool = nn.AvgPool2d(2, 2)
+
     def forward(self, x):
         x = self.conv1(x)
         F.selu(x, inplace=True)
         x = self.conv2(x)
         F.selu(x, inplace=True)
 
-        x = F.interpolate(
-            x,
-            size=(
-                x.size(2) // 2,
-                x.size(3) // 2
-            ),
-            mode="nearest"
-        )
+        #x = F.interpolate(
+        #    x,
+        #    size=(
+        #        x.size(2) // 2,
+        #        x.size(3) // 2
+        #    ),
+        #    mode="nearest"
+        #)
+        x = self.avgPool(x)
 
         return x
