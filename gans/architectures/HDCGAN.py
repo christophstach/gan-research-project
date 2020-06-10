@@ -70,8 +70,8 @@ class UpsampleHDCGANBlock(nn.Module):
         x = F.interpolate(
             x,
             size=(
-                x.size(2) // 2,
-                x.size(3) // 2
+                x.size(2) * 2,
+                x.size(3) * 2
             ),
             mode="bilinear",
             align_corners=False
