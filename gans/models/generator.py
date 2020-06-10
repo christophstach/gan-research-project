@@ -135,13 +135,13 @@ class Generator(nn.Module):
     def forward(self, x, y):
         outputs = []
         x = x.view(x.size(0), -1, 1, 1)
-        z = x.view(x.size(0), -1, 8, 8)
+        # z = x.view(x.size(0), -1, 8, 8)
 
         for block, to_rgb, z_skip in zip(self.blocks, self.to_rgb_converts, self.z_skip_connections):
             x = block(x)
             
-            if x.size(2) >= 8 and x.size(3) >= 8:
-                x = z_skip(x, z)
+            # if x.size(2) >= 8 and x.size(3) >= 8:
+            #    x = z_skip(x, z)
 
             output = torch.tanh(to_rgb(x))
             outputs.append(output)
