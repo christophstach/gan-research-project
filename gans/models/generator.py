@@ -16,13 +16,13 @@ class ZSkipConnector(nn.Module):
         self.conv = nn.Conv2d(in_channels, out_channels, 1, 1, 0, bias=bias)
 
     def forward(self, x, z):
-        height_multiplier = x.size(2) // z.size(2)
-        width_multiplier = x.size(3) // z.size(3)
+        # height_multiplier = x.size(2) // z.size(2)
+        # width_multiplier = x.size(3) // z.size(3)
 
-        z_repeated = z.repeat(1, 1, height_multiplier, width_multiplier)
-        z_repeated = self.conv(z_repeated)
+        # z_repeated = z.repeat(1, 1, height_multiplier, width_multiplier)
+        # z_repeated = self.conv(z_repeated)
 
-        return x + z_repeated
+        return x
 
 
 class Generator(nn.Module):

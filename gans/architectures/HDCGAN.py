@@ -26,18 +26,18 @@ class FirstHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        # self.norm = bb.PixelNorm()
+        self.norm = bb.PixelNorm()
 
     def forward(self, x):
-        # x = self.norm(x)
+        x = self.norm(x)
 
         x = self.conv1(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
         x = self.conv2(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
         return x
 
@@ -64,7 +64,7 @@ class UpsampleHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        # self.norm = bb.PixelNorm()
+        self.norm = bb.PixelNorm()
 
     def forward(self, x):
         x = F.interpolate(
@@ -78,11 +78,11 @@ class UpsampleHDCGANBlock(nn.Module):
 
         x = self.conv1(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
         x = self.conv2(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
         return x
 
