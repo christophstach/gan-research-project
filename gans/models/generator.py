@@ -16,11 +16,11 @@ class ZSkipConnector(nn.Module):
         self.conv = nn.Conv2d(in_channels, out_channels, 1, 1, 0, bias=bias)
 
     def forward(self, x, z):
-        # height_multiplier = x.size(2) // z.size(2)
-        # width_multiplier = x.size(3) // z.size(3)
+        height_multiplier = x.size(2) // z.size(2)
+        width_multiplier = x.size(3) // z.size(3)
 
-        # z_repeated = z.repeat(1, 1, height_multiplier, width_multiplier)
-        # z_repeated = self.conv(z_repeated)
+        z_repeated = z.repeat(1, 1, height_multiplier, width_multiplier)
+        z_repeated = self.conv(z_repeated)
 
         return x
 
@@ -42,15 +42,13 @@ class Generator(nn.Module):
                 for x in reversed(range(1, int(math.log2(self.hparams.image_size))))
             ]
 
-            self.filters[-1] = self.filters[-3]
-            self.filters[-2] = self.filters[-3]
+            # self.filters[-1] = self.filters[-3]
+            # self.filters[-2] = self.filters[-3]
         else:
             self.filters = [
                 self.hparams.generator_filters
                 for x in range(1, int(math.log2(self.hparams.image_size)))
             ]
-
-            self.filters[-1] = self.hparams.generator_filters
 
         if self.hparams.architecture == "progan":
             self.blocks.append(
