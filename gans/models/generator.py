@@ -50,6 +50,8 @@ class Generator(nn.Module):
                 for x in range(1, int(math.log2(self.hparams.image_size)))
             ]
 
+        print(self.filters)
+
         if self.hparams.architecture == "progan":
             self.blocks.append(
                 FirstProGANBlock(
@@ -138,7 +140,7 @@ class Generator(nn.Module):
         x = x.view(x.size(0), -1, 1, 1)
         # z = x.view(x.size(0), -1, 8, 8)
 
-        for i, (block, to_rgb, z_skip) in enumerate(zip(self.blocks, self.to_rgb_converts, self.z_skip_connections)):
+        for block, to_rgb, z_skip in zip(self.blocks, self.to_rgb_converts, self.z_skip_connections):
             x = block(x)
 
             # if i > 0: x = z_skip(x, z)

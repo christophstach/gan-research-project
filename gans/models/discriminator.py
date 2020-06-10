@@ -113,6 +113,8 @@ class Discriminator(nn.Module):
                 for x in range(1, int(math.log2(self.hparams.image_size)))
             ]
 
+        print(self.filters)
+
         self.blocks.append(
             self.block_fn(
                 self.hparams.image_channels,
