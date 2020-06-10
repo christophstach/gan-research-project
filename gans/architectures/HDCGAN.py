@@ -29,15 +29,15 @@ class FirstHDCGANBlock(nn.Module):
         self.norm = bb.PixelNorm()
 
     def forward(self, x):
-        # x = self.norm(x)
+        x = self.norm(x)
 
         x = self.conv1(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
-        # x = self.conv2(x)
+        x = self.conv2(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
         return x
 
@@ -78,11 +78,11 @@ class UpsampleHDCGANBlock(nn.Module):
 
         x = self.conv1(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
         x = self.conv2(x)
         F.selu(x, inplace=True)
-        # x = self.norm(x)
+        x = self.norm(x)
 
         return x
 
