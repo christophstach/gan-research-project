@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 
@@ -13,4 +14,9 @@ class PixelNorm(nn.Module):
         y = y.sqrt()
 
         y = x / y
+
+        del x
+
+        torch.cuda.empty_cache()
+
         return y
