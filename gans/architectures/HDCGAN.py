@@ -155,14 +155,6 @@ class DownsampleHDCGANBlock(nn.Module):
         x = self.conv2(x)
         F.selu(x, inplace=True)
 
-        #x = F.interpolate(
-        #    x,
-        #    size=(
-        #        x.size(2) // 2,
-        #        x.size(3) // 2
-        #    ),
-        #    mode="nearest"
-        #)
         x = self.avgPool(x)
 
         return x
