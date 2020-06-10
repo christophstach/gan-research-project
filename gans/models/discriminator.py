@@ -105,8 +105,8 @@ class Discriminator(nn.Module):
                 for x in range(1, int(math.log2(self.hparams.image_size)))
             ]
 
-            # self.filters[-1] = self.filters[-3]
-            # self.filters[-2] = self.filters[-3]
+            self.filters[-1] = self.filters[-2]
+            self.filters[0] = self.filters[1]
         else:
             self.filters = [
                 self.hparams.discriminator_filters
