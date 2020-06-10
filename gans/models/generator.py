@@ -36,23 +36,24 @@ class Generator(nn.Module):
         self.z_skip_connections = nn.ModuleList()
 
         if self.hparams.exponential_filter_multipliers:
-            self.filter_multipliers = [
-                2 ** (x + 1)
+            self.filters = [
+                2 ** (x + 1) * self.hparams.generator_filters
                 for x in reversed(range(1, int(math.log2(self.hparams.image_size))))
             ]
+
+            self.filters[0] = self.filters[1]
+            self.filters[-1] = self.filters[-2]
         else:
-            self.filter_multipliers = [
-                1
+            self.filters = [
+                self.hparams.generator_filters
                 for x in range(1, int(math.log2(self.hparams.image_size)))
             ]
-
-            self.filter_multipliers[-1] = 1
 
         if self.hparams.architecture == "progan":
             self.blocks.append(
                 FirstProGANBlock(
                     noise_size=self.hparams.noise_size,
-                    filters=self.filter_multipliers[0] * self.hparams.generator_filters,
+                    filters=self.filters[0],
                     bias=self.bias
                 )
             )
@@ -60,14 +61,14 @@ class Generator(nn.Module):
             self.blocks.append(
                 FirstHDCGANBlock(
                     noise_size=self.hparams.noise_size,
-                    filters=self.filter_multipliers[0] * self.hparams.generator_filters,
+                    filters=self.filters[0],
                     bias=self.bias
                 )
             )
 
         self.to_rgb_converts.append(
             self.to_rgb_fn(
-                self.filter_multipliers[0] * self.hparams.generator_filters,
+                self.filters[0],
                 self.bias
             )
         )
@@ -76,18 +77,18 @@ class Generator(nn.Module):
             None
         )
 
-        for pos, _ in enumerate(self.filter_multipliers[1:]):
+        for pos, _ in enumerate(self.filters[1:]):
             self.blocks.append(
                 self.block_fn(
-                    self.filter_multipliers[pos] * self.hparams.generator_filters,
-                    self.filter_multipliers[pos + 1] * self.hparams.generator_filters,
+                    self.filters[pos],
+                    self.filters[pos + 1],
                     self.bias
                 )
             )
 
             self.to_rgb_converts.append(
                 self.to_rgb_fn(
-                    self.filter_multipliers[pos + 1] * self.hparams.generator_filters,
+                    self.filters[pos + 1],
                     self.bias
                 )
             )
@@ -95,7 +96,7 @@ class Generator(nn.Module):
             self.z_skip_connections.append(
                 self.z_skip_connection_fn(
                     self.hparams.noise_size // 64,
-                    self.filter_multipliers[pos + 1] * self.hparams.generator_filters,
+                    self.filters[pos + 1],
                     self.bias
                 )
             )

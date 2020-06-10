@@ -100,45 +100,46 @@ class Discriminator(nn.Module):
         self.from_rgb_combiners = nn.ModuleList()
 
         if self.hparams.exponential_filter_multipliers:
-            self.filter_multipliers = [
-                2 ** (x + 1)
-                for x in range(1, int(math.log2(self.hparams.image_size)))
-            ]
-        else:
-            self.filter_multipliers = [
-                1
+            self.filters = [
+                2 ** (x + 1) * self.hparams.discriminator_filters
                 for x in range(1, int(math.log2(self.hparams.image_size)))
             ]
 
-            self.filter_multipliers[0] = 1
+            self.filters[0] = self.filters[1]
+            self.filters[-1] = self.filters[-2]
+        else:
+            self.filters = [
+                self.hparams.discriminator_filters
+                for x in range(1, int(math.log2(self.hparams.image_size)))
+            ]
 
         self.blocks.append(
             self.block_fn(
                 self.hparams.image_channels,
-                self.filter_multipliers[0] * self.hparams.discriminator_filters,
+                self.filters[0],
                 self.bias
             )
         )
 
         self.from_rgb_combiners.append(
             self.from_rgb_fn(
-                self.filter_multipliers[0] * self.hparams.discriminator_filters,
+                self.filters[0],
                 self.bias
             )
         )
 
-        for pos, _ in enumerate(self.filter_multipliers[1:-1]):
+        for pos, _ in enumerate(self.filters[1:-1]):
             self.blocks.append(
                 self.block_fn(
-                    self.filter_multipliers[pos] * self.hparams.discriminator_filters + additional_channels,
-                    self.filter_multipliers[pos + 1] * self.hparams.discriminator_filters,
+                    self.filters[pos] + additional_channels,
+                    self.filters[pos + 1],
                     self.bias
                 )
             )
 
             self.from_rgb_combiners.append(
                 self.from_rgb_fn(
-                    self.filter_multipliers[pos + 1] * self.hparams.discriminator_filters,
+                    self.filters[pos + 1],
                     self.bias
                 )
             )
@@ -147,8 +148,8 @@ class Discriminator(nn.Module):
         if self.hparams.architecture == "progan":
             self.blocks.append(
                 LastProGANBlock(
-                    in_channels=self.filter_multipliers[-2] * self.hparams.discriminator_filters,
-                    out_channels=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
+                    in_channels=self.filters[-2],
+                    out_channels=self.filters[-1],
                     additional_channels=additional_channels,
                     bias=self.bias
                 )
@@ -156,8 +157,8 @@ class Discriminator(nn.Module):
         elif self.hparams.architecture == "hdcgan":
             self.blocks.append(
                 LastHDCGANBlock(
-                    in_channels=self.filter_multipliers[-2] * self.hparams.discriminator_filters,
-                    out_channels=self.filter_multipliers[-1] * self.hparams.discriminator_filters,
+                    in_channels=self.filters[-2],
+                    out_channels=self.filters[-1],
                     additional_channels=additional_channels,
                     bias=self.bias
                 )
