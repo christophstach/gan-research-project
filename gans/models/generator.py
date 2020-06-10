@@ -8,6 +8,21 @@ from gans.architectures.HDCGAN import FirstHDCGANBlock, UpsampleHDCGANBlock
 from gans.architectures.PROGAN import FirstProGANBlock, UpsampleProGANBlock
 from gans.init import snn_weight_init, he_weight_init
 
+class ZSkipConnector(nn.Module):
+    def __init__(self, in_channels, out_channels, bias=False):
+        super().__init__()
+
+        self.conv = nn.Conv2d(in_channels, out_channels, 1, 1, 0, bias=bias)
+
+    def forward(self, x, z):
+        height_multiplier = x.size(2) // z.size(2)
+        width_multiplier = x.size(3) // z.size(3)
+
+        z_repeated = z.repeat(1, 1, height_multiplier, width_multiplier)
+        z_repeated = self.conv(z_repeated)
+
+        return x + z_repeated
+
 
 class Generator(nn.Module):
     def __init__(self, hparams):
@@ -79,8 +94,8 @@ class Generator(nn.Module):
           
             self.z_skip_connections.append(
                 self.z_skip_connection_fn(
-                    self.hparams.generator_filters * self.filter_multipliers[pos + 1],
-                    2 ** (pos + 1),
+                    self.hparams.noise_size // 64,
+                    self.filter_multipliers[pos + 1] * self.hparams.generator_filters,
                     self.bias
                 )
             )
@@ -113,43 +128,19 @@ class Generator(nn.Module):
             )
         )
 
-    def z_skip_connection_fn(self, out_channels, scale_factor, bias=False):
-        if self.hparams.architecture == "progan":
-            return nn.Sequential(
-                nn.ConvTranspose2d(
-                    self.hparams.noise_size,
-                    out_channels,
-                    kernel_size=4,
-                    stride=1,
-                    padding=0,
-                    bias=bias
-                ),
-                nn.UpsamplingNearest2d(scale_factor=scale_factor),
-                nn.LeakyReLU(0.2, inplace=True)
-            )
-        elif self.hparams.architecture == "hdcgan":
-            return nn.Sequential(
-                nn.ConvTranspose2d(
-                    self.hparams.noise_size,
-                    out_channels,
-                    kernel_size=4,
-                    stride=1,
-                    padding=0,
-                    bias=bias
-                ),
-                nn.UpsamplingNearest2d(scale_factor=scale_factor),
-                nn.SELU(inplace=True)
-            )
+    def z_skip_connection_fn(self, in_channels, out_channels, bias=False):
+        return ZSkipConnector(in_channels, out_channels, bias)
 
     def forward(self, x, y):
         outputs = []
         x = x.view(x.size(0), -1, 1, 1)
-        z = x
+        z = x.view(x.size(0), -1, 8, 8)
 
-        for i, (block, to_rgb, z_skip) in enumerate(zip(self.blocks, self.to_rgb_converts, self.z_skip_connections)):
+        for block, to_rgb, z_skip in zip(self.blocks, self.to_rgb_converts, self.z_skip_connections):
             x = block(x)
             
-            if i > 0: x = x + z_skip(z)
+            if x.size(2) >= 8 and x.size(3) >= 8:
+                x = z_skip(x, z)
 
             output = torch.tanh(to_rgb(x))
             outputs.append(output)
