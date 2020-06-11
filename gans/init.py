@@ -36,7 +36,7 @@ def he_weight_init(m):
     gain = torch.nn.init.calculate_gain("leaky_relu", param=0.2)
 
     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
-        nn.init.kaiming_normal_(m.weight, mode='fan_in', gain=gain)
+        nn.init.kaiming_normal_(m.weight, mode="fan_in", nonlinearity="leaky_relu", a=0.2)
 
 def orthogonal_weight_init(m):
     _shared_weight_init(m)
