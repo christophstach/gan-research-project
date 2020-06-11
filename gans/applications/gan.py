@@ -540,7 +540,7 @@ class GAN(pl.LightningModule):
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
-        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "selu", "orthogonal", "default"], default="he")
+        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "selu", "orthogonal", "default"], default="default")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         parser.add_argument("-is", "--image-size", type=int, default=128, help="Generated image size")
