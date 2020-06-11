@@ -16,6 +16,7 @@ from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN
 from gans.datasets import CelebAHQ
 from gans.optim import OAdam
 from ..helpers import inception_score
+from gans.regularization import orthogonal_regularization
 
 
 class GAN(pl.LightningModule):
@@ -330,14 +331,24 @@ class GAN(pl.LightningModule):
             consistency_term = self.consistency_term(self.real_images, self.y)
 
         loss = self.discriminator_loss(real_validity, fake_validity)
+        if self.hparams.weight_init == "orthogonal":
+            orthogonal_loss = orthogonal_regularization(self.discriminator)
+        else:
+            orthogonal_loss = 0
 
         if len(self.trainer.lr_schedulers) >= 1:
             discriminator_lr = self.trainer.lr_schedulers[0]["scheduler"].get_last_lr()[0]
         else:
             discriminator_lr = self.hparams.discriminator_learning_rate
 
-        logs = {"discriminator_loss": loss, "gradient_penalty": gradient_penalty, "consistency_term": consistency_term, "discriminator_lr": discriminator_lr}
-        return OrderedDict({"loss": loss + gradient_penalty, "log": logs, "progress_bar": logs})
+        logs = {
+            "discriminator_loss": loss,
+            "orthogonal_loss": orthogonal_loss, 
+            "gradient_penalty": gradient_penalty,
+            "consistency_term": consistency_term, 
+            "discriminator_lr": discriminator_lr
+        }
+        return OrderedDict({"loss": loss + gradient_penalty + orthogonal_loss, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
         self.real_images, self.y = batch
@@ -357,14 +368,22 @@ class GAN(pl.LightningModule):
             fake_validity = self.discriminator(fake_images[-1], self.y)
 
         loss = self.generator_loss(real_validity, fake_validity)
+        if self.hparams.weight_init == "orthogonal":
+            orthogonal_loss = orthogonal_regularization(self.generator)
+        else:
+            orthogonal_loss = 0
 
         if len(self.trainer.lr_schedulers) >= 2:
             generator_lr = self.trainer.lr_schedulers[1]["scheduler"].get_last_lr()[0]
         else:
             generator_lr = self.hparams.generator_learning_rate
 
-        logs = {"generator_loss": loss, "generator_lr": generator_lr}
-        return OrderedDict({"loss": loss, "log": logs, "progress_bar": logs})
+        logs = {
+            "generator_loss": loss, 
+            "orthogonal_loss": orthogonal_loss,
+            "generator_lr": generator_lr
+        }
+        return OrderedDict({"loss": loss + orthogonal_loss, "log": logs, "progress_bar": logs})
 
     def to_scaled_images(self, source_images):
         return [
@@ -521,7 +540,7 @@ class GAN(pl.LightningModule):
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
-        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "snn", "default"], default="snn")
+        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "selu", "orthogonal", "default"], default="orthogonal")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         parser.add_argument("-is", "--image-size", type=int, default=128, help="Generated image size")

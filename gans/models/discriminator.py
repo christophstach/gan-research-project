@@ -6,7 +6,7 @@ from torch.nn.utils import spectral_norm
 
 from gans.architectures.HDCGAN import DownsampleHDCGANBlock, LastHDCGANBlock
 from gans.architectures.PROGAN import DownsampleProGANBlock, LastProGANBlock
-from gans.init import snn_weight_init, he_weight_init
+from gans.init import selu_weight_init, he_weight_init, orthogonal_weight_init
 
 
 class SimpleCombiner(nn.Module):
@@ -36,10 +36,10 @@ class LinCatCombiner(nn.Module):
             bias=bias
         )
 
-        if self.hparams.architecture == "progan":
-            self.activation = nn.LeakyReLU(0.2, inplace=True)
-        elif self.hparams.architecture == "hdcgan":
+        if self.hparams.weight_init == "selu":
             self.activation = nn.SELU(inplace=True)
+        else:
+            self.activation = nn.LeakyReLU(0.2, inplace=True)
 
     def forward(self, x1, x2):
         x1 = self.conv(x1)
@@ -64,10 +64,10 @@ class CatLinCombiner(nn.Module):
             bias=bias
         )
 
-        if self.hparams.architecture == "progan":
-            self.activation = nn.LeakyReLU(0.2, inplace=True)
-        elif self.hparams.architecture == "hdcgan":
+        if self.hparams.weight_init == "selu":
             self.activation = nn.SELU(inplace=True)
+        else:
+            self.activation = nn.LeakyReLU(0.2, inplace=True)
 
     def forward(self, x1, x2):
         x = torch.cat([x1, x2], dim=1)
@@ -166,8 +166,10 @@ class Discriminator(nn.Module):
 
         if self.hparams.weight_init == "he":
             self.apply(he_weight_init)
-        elif self.hparams.weight_init == "snn":
-            self.apply(snn_weight_init)
+        elif self.hparams.weight_init == "selu":
+            self.apply(selu_weight_init)
+        elif self.hparams.weight_init == "orthogonal":
+            self.apply(orthogonal_weight_init)
 
         if self.hparams.spectral_normalization:
             for block in self.blocks:

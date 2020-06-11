@@ -6,7 +6,7 @@ from torch.nn.utils import spectral_norm
 
 from gans.architectures.HDCGAN import FirstHDCGANBlock, UpsampleHDCGANBlock
 from gans.architectures.PROGAN import FirstProGANBlock, UpsampleProGANBlock
-from gans.init import snn_weight_init, he_weight_init
+from gans.init import selu_weight_init, he_weight_init, orthogonal_weight_init
 
 class ZSkipConnector(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
@@ -103,8 +103,10 @@ class Generator(nn.Module):
        
         if self.hparams.weight_init == "he":
             self.apply(he_weight_init)
-        elif self.hparams.weight_init == "snn":
-            self.apply(snn_weight_init)
+        elif self.hparams.weight_init == "selu":
+            self.apply(selu_weight_init)
+        elif self.hparams.weight_init:
+            self.apply(orthogonal_weight_init)
 
         if self.hparams.spectral_normalization:
             for block in self.blocks:
