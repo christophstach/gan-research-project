@@ -33,11 +33,11 @@ class FirstHDCGANBlock(nn.Module):
 
         x = self.conv1(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
-        x = self.norm(x)
+        # x = self.norm(x)
 
         x = self.conv2(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
-        x = self.norm(x)
+        # x = self.norm(x)
 
         return x
 
