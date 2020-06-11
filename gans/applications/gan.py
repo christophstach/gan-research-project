@@ -343,7 +343,7 @@ class GAN(pl.LightningModule):
 
         logs = {
             "d_loss": loss,
-            "d_orthogonal_loss": orthogonal_loss, 
+            "d_o_loss": orthogonal_loss, 
             "gp": gradient_penalty,
             "ct": consistency_term, 
             "d_lr": discriminator_lr
@@ -380,7 +380,7 @@ class GAN(pl.LightningModule):
 
         logs = {
             "g_loss": loss, 
-            "g_orthogonal_loss": orthogonal_loss,
+            "g_o_loss": orthogonal_loss,
             "g_lr": generator_lr
         }
         return OrderedDict({"loss": loss + orthogonal_loss, "log": logs, "progress_bar": logs})
