@@ -342,11 +342,11 @@ class GAN(pl.LightningModule):
             discriminator_lr = self.hparams.discriminator_learning_rate
 
         logs = {
-            "discriminator_loss": loss,
-            "orthogonal_loss": orthogonal_loss, 
-            "gradient_penalty": gradient_penalty,
-            "consistency_term": consistency_term, 
-            "discriminator_lr": discriminator_lr
+            "d_loss": loss,
+            "d_orthogonal_loss": orthogonal_loss, 
+            "gp": gradient_penalty,
+            "ct": consistency_term, 
+            "d_lr": discriminator_lr
         }
         return OrderedDict({"loss": loss + gradient_penalty + orthogonal_loss, "log": logs, "progress_bar": logs})
 
@@ -379,9 +379,9 @@ class GAN(pl.LightningModule):
             generator_lr = self.hparams.generator_learning_rate
 
         logs = {
-            "generator_loss": loss, 
-            "orthogonal_loss": orthogonal_loss,
-            "generator_lr": generator_lr
+            "g_loss": loss, 
+            "g_orthogonal_loss": orthogonal_loss,
+            "g_lr": generator_lr
         }
         return OrderedDict({"loss": loss + orthogonal_loss, "log": logs, "progress_bar": logs})
 
