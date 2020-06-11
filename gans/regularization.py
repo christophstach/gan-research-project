@@ -1,9 +1,9 @@
 import torch
 
-def orthogonal_regularization(model):
+def orthogonal_regularization(model, device):
     with torch.enable_grad():
         reg = 1e-6
-        orth_loss = torch.zeros(1)
+        orth_loss = torch.zeros(1, device=device)
         
         for name, param in model.named_parameters():
             if 'bias' not in name:

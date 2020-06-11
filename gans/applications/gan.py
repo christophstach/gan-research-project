@@ -332,7 +332,7 @@ class GAN(pl.LightningModule):
 
         loss = self.discriminator_loss(real_validity, fake_validity)
         if self.hparams.weight_init == "orthogonal":
-            orthogonal_loss = orthogonal_regularization(self.discriminator)
+            orthogonal_loss = orthogonal_regularization(self.discriminator, self.real_images.device)
         else:
             orthogonal_loss = 0
 
@@ -369,7 +369,7 @@ class GAN(pl.LightningModule):
 
         loss = self.generator_loss(real_validity, fake_validity)
         if self.hparams.weight_init == "orthogonal":
-            orthogonal_loss = orthogonal_regularization(self.generator)
+            orthogonal_loss = orthogonal_regularization(self.generator, self.real_images.device)
         else:
             orthogonal_loss = 0
 
