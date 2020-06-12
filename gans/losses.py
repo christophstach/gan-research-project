@@ -1,5 +1,4 @@
-from collections import deque
-
+import torch
 
 # Historical Averaging
 # https://arxiv.org/pdf/1606.03498.pdf
