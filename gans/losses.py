@@ -4,7 +4,7 @@ from collections import deque
 # Historical Averaging
 # https://arxiv.org/pdf/1606.03498.pdf
 class HistoricalAverageLoss:
-    def __init__(self, model):
+    def __init__(self, model, lambd=1.0):
         super().__init__()
         self.model = model
         self.timesteps = 0
