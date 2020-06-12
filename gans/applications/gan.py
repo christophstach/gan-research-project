@@ -14,9 +14,10 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageNet, LSUN
 
 from gans.datasets import CelebAHQ
+from gans.losses import HistoricalAverageLoss
 from gans.optim import OAdam
-from ..helpers import inception_score
 from gans.regularization import orthogonal_regularization
+from ..helpers import inception_score
 
 
 class GAN(pl.LightningModule):
@@ -84,6 +85,9 @@ class GAN(pl.LightningModule):
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
+
+        self.discriminator_historical_average_loss = HistoricalAverageLoss(self.discriminator)
+        self.generator_historical_average_loss = HistoricalAverageLoss(self.generator)
 
         self.discriminator.register_forward_pre_hook(self.discriminator_forward_pre_hook)
 
@@ -341,14 +345,17 @@ class GAN(pl.LightningModule):
         else:
             discriminator_lr = self.hparams.discriminator_learning_rate
 
+        ha_loss = self.discriminator_historical_average_loss.tick()
+
         logs = {
             "d_loss": loss,
-            "d_o_loss": orthogonal_loss, 
+            "d_o_loss": orthogonal_loss,
+            "d_ha_loss": ha_loss,
             "gp": gradient_penalty,
-            "ct": consistency_term, 
+            "ct": consistency_term,
             "d_lr": discriminator_lr
         }
-        return OrderedDict({"loss": loss + gradient_penalty + orthogonal_loss, "log": logs, "progress_bar": logs})
+        return OrderedDict({"loss": loss + gradient_penalty + orthogonal_loss + ha_loss, "log": logs, "progress_bar": logs})
 
     def training_step_generator(self, batch):
         self.real_images, self.y = batch
@@ -378,12 +385,15 @@ class GAN(pl.LightningModule):
         else:
             generator_lr = self.hparams.generator_learning_rate
 
+        ha_loss = self.generator_historical_average_loss.tick()
+
         logs = {
-            "g_loss": loss, 
+            "g_loss": loss,
             "g_o_loss": orthogonal_loss,
+            "g_ha_loss": ha_loss,
             "g_lr": generator_lr
         }
-        return OrderedDict({"loss": loss + orthogonal_loss, "log": logs, "progress_bar": logs})
+        return OrderedDict({"loss": loss + orthogonal_loss + ha_loss, "log": logs, "progress_bar": logs})
 
     def to_scaled_images(self, source_images):
         return [
