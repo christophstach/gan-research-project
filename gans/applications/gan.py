@@ -345,7 +345,10 @@ class GAN(pl.LightningModule):
         else:
             discriminator_lr = self.hparams.discriminator_learning_rate
 
-        ha_loss = self.discriminator_historical_average_loss.tick()
+        if self.hparams.discriminator_historical_average:
+            ha_loss = self.discriminator_historical_average_loss.tick()
+        else:
+            ha_loss = 0
 
         logs = {
             "d_loss": loss,
@@ -385,7 +388,10 @@ class GAN(pl.LightningModule):
         else:
             generator_lr = self.hparams.generator_learning_rate
 
-        ha_loss = self.generator_historical_average_loss.tick()
+        if self.hparams.generator_historical_average:
+            ha_loss = self.generator_historical_average_loss.tick()
+        else:
+            ha_loss = 0
 
         logs = {
             "g_loss": loss,
@@ -547,6 +553,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-a", "--architecture", type=str, choices=["progan", "hdcgan"], default="hdcgan")
         parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="cat_lin")
         parser.add_argument("-efm", "--exponential-filter-multipliers", action="store_true", help="Smaller feature maps have exponential more filters")
+        parser.add_argument("-msg", "--discriminator-historical-average", action="store_true", help="Enable historical weight averaging regularization of the discriminator")
+        parser.add_argument("-msg", "--generator-historical-average", action="store_true", help="Enable historical weight averaging regularization of the generator")
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")

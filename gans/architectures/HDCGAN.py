@@ -32,11 +32,11 @@ class FirstHDCGANBlock(nn.Module):
         # x = self.norm(x)    
 
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         # x = self.norm(x)
 
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         # x = self.norm(x)
 
         return x
@@ -78,11 +78,11 @@ class UpsampleHDCGANBlock(nn.Module):
         )
 
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         # x = self.norm(x)
 
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         # x = self.norm(x)
 
         return x
@@ -124,9 +124,9 @@ class LastHDCGANBlock(nn.Module):
     def forward(self, x):
         x = self.miniBatchStdDev(x)
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         x = self.validator(x)
 
         return x
@@ -158,9 +158,9 @@ class DownsampleHDCGANBlock(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True) # F.selu(x, inplace=True)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
 
         x = self.avgPool(x)
 
