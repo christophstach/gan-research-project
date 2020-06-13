@@ -553,8 +553,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-a", "--architecture", type=str, choices=["progan", "hdcgan"], default="hdcgan")
         parser.add_argument("-msgc", "--multi-scale-gradient-combiner", type=str, choices=["simple", "lin_cat", "cat_lin"], default="cat_lin")
         parser.add_argument("-efm", "--exponential-filter-multipliers", action="store_true", help="Smaller feature maps have exponential more filters")
-        parser.add_argument("-msg", "--discriminator-historical-average", action="store_true", help="Enable historical weight averaging regularization of the discriminator")
-        parser.add_argument("-msg", "--generator-historical-average", action="store_true", help="Enable historical weight averaging regularization of the generator")
+        parser.add_argument("-dha", "--discriminator-historical-average", action="store_true", help="Enable historical weight averaging regularization of the discriminator")
+        parser.add_argument("-eha", "--generator-historical-average", action="store_true", help="Enable historical weight averaging regularization of the generator")
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
