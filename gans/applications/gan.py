@@ -586,7 +586,6 @@ class GAN(pl.LightningModule):
         parser.add_argument("-gpc", "--gradient-penalty-coefficient", type=float, default=None, help="Gradient penalty coefficient")
         parser.add_argument("-gpp", "--gradient-penalty-power", type=float, default=None, help="Gradient penalty coefficient")
         parser.add_argument("-ctw", "--consistency-term-coefficient", type=float, default=None, help="Consistency term coefficient")
-        parser.add_argument("-wc", "--weight-clipping", type=float, default=0.01, help="Weights of the discriminator gets clipped at this point")
 
         parser.add_argument("-gf", "--generator-filters", type=int, default=1, help="Filter multiplier in the generator")
         parser.add_argument("-cf", "--discriminator-filters", type=int, default=1, help="Filter multiplier in the discriminator")
