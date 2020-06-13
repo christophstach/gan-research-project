@@ -1,27 +1,34 @@
-from collections import deque
-
+import torch
 
 # Historical Averaging
 # https://arxiv.org/pdf/1606.03498.pdf
 class HistoricalAverageLoss:
-    def __init__(self, model, moving_average_length=32):
+    def __init__(self, model, lambd=1.0):
         super().__init__()
         self.model = model
-        self.moving_average_length = moving_average_length
-        self.params = deque(maxlen=self.moving_average_length)
-        self.timestep = 0
+        self.timesteps = 0
+        self.sum_parameters = []
+        self.lambd = lambd
 
     def tick(self):
-        current_params = sum([param.sum() for param in self.model.parameters()])
-        summed_params = sum(self.params)
+        if self.timesteps == 0:
+            for p in self.model.parameters():
+                param = p.data.clone()
+                self.sum_parameters.append(param)
 
-        if self.timestep > 0:
-            mean_params = summed_params / self.timestep
-            loss = (current_params - mean_params) ** 2
+            self.timesteps += 1
+
+            return 0.0
         else:
-            loss = 0
+            loss = 0.0
+            for i, p in enumerate(self.model.parameters()):
+                loss += torch.sum(
+                    (p - (self.sum_parameters[i].data / self.timesteps)) ** 2
+                )
 
-        self.params.append(current_params)
-        self.timestep = self.timestep + 1 if self.timestep < self.moving_average_length else self.timestep
+                self.sum_parameters[i] += p.data.clone()
 
-        return loss
+            self.timesteps += 1
+            loss *= self.lambd
+
+            return loss
