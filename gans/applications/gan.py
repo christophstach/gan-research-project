@@ -98,9 +98,9 @@ class GAN(pl.LightningModule):
             # Add instance noise: https://www.inference.vc/instance-noise-a-trick-for-stabilising-gan-training/
             if isinstance(x, list):
                 # msg enabled
-                x = [item + 0.1 * torch.randn_like(item) for item in x]
+                x = [item + torch.randn_like(item) for item in x]
             else:
-                x = x + 0.1 * torch.randn_like(x)
+                x = x + torch.randn_like(x)
 
         return x, y
 
@@ -484,7 +484,7 @@ class GAN(pl.LightningModule):
 
     def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
         # update discriminator opt every step
-        if optimizer_idx == 0:  optimizer.step()
+        if optimizer_idx == 0: optimizer.step()
         # update generator opt every {self.alternation_interval} steps
         if optimizer_idx == 1 and batch_idx % self.hparams.alternation_interval == 0: optimizer.step()
 
@@ -566,8 +566,8 @@ class GAN(pl.LightningModule):
         parser.add_argument("-in", "--instance-noise", action="store_true", help="Add instance noise")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-5, help="Learning rate of the discriminator optimizers")
-        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-5, help="Learning rate of the generator optimizers")
+        parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=4e-4, help="Learning rate of the discriminator optimizers")
+        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
         parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan", "ra-sgan"], default="ra-lsgan")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
