@@ -12,5 +12,6 @@ python gans/train_gan.py \
   --logger wandb \
   --loss-strategy ra-lsgan \
   --architecture hdcgan \
+  --multi-scale-gradient \
   --spectral-normalization \
   --instance-noise
