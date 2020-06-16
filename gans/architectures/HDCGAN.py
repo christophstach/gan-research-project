@@ -29,11 +29,8 @@ class FirstHDCGANBlock(nn.Module):
         self.norm = bb.PixelNorm()
 
     def forward(self, x):
-        # x = self.norm(x)    
-
         x = self.conv1(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-        # x = self.norm(x)
 
         x = self.conv2(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
@@ -65,7 +62,7 @@ class UpsampleHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        # self.norm = bb.PixelNorm()
+        self.norm = bb.PixelNorm()
 
     def forward(self, x):
         x = F.interpolate(
