@@ -27,7 +27,7 @@ class FirstHDCGANBlock(nn.Module):
         )
 
         # self.norm = bb.PixelNorm()
-        self.swNorm = bb.SwitchNorm2d(filter, using_bn=False)
+        self.swNorm = bb.SwitchNorm2d(filters, using_bn=False)
 
     def forward(self, x):
         x = self.conv1(x)
