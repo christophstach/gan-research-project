@@ -26,7 +26,8 @@ class FirstHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        self.norm = bb.PixelNorm()
+        # self.norm = bb.PixelNorm()
+        self.swNorm = bb.SwitchNorm2d(filter, using_bn=False)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -34,8 +35,9 @@ class FirstHDCGANBlock(nn.Module):
 
         x = self.conv2(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-        
-        x = self.norm(x)
+
+        # x = self.norm(x)
+        x = self.swNorm(x)
 
         return x
 
@@ -62,7 +64,9 @@ class UpsampleHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        self.norm = bb.PixelNorm()
+        # self.norm = bb.PixelNorm()
+        self.swNorm1 = bb.SwitchNorm2d(out_channels, using_bn=False)
+        self.swNorm2 = bb.SwitchNorm2d(out_channels, using_bn=False)
 
     def forward(self, x):
         x = F.interpolate(
@@ -77,11 +81,48 @@ class UpsampleHDCGANBlock(nn.Module):
 
         x = self.conv1(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-        x = self.norm(x)
+        # x = self.norm(x)
+        x = self.swNorm1(x)
 
         x = self.conv2(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-        x = self.norm(x)
+        # x = self.norm(x)
+        x = self.swNorm2(x)
+
+        return x
+
+
+class DownsampleHDCGANBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, bias=False):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(
+            in_channels,
+            in_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=bias
+        )
+
+        self.conv2 = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=bias
+        )
+
+        self.avgPool = nn.AvgPool2d(2, 2)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+        x = self.conv2(x)
+        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+
+        x = self.avgPool(x)
 
         return x
 
@@ -126,40 +167,5 @@ class LastHDCGANBlock(nn.Module):
         x = self.conv2(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
         x = self.validator(x)
-
-        return x
-
-
-class DownsampleHDCGANBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias=False):
-        super().__init__()
-
-        self.conv1 = nn.Conv2d(
-            in_channels,
-            in_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=bias
-        )
-
-        self.conv2 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=bias
-        )
-
-        self.avgPool = nn.AvgPool2d(2, 2)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-        x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-
-        x = self.avgPool(x)
 
         return x
