@@ -17,7 +17,7 @@ from gans.datasets import CelebAHQ
 from gans.losses import HistoricalAverageLoss
 from gans.optim import OAdam
 from gans.regularization import orthogonal_regularization
-from ..helpers import inception_score
+from ..utils import inception_score
 
 
 class GAN(pl.LightningModule):

@@ -27,7 +27,7 @@ class FirstHDCGANBlock(nn.Module):
         )
 
         # self.norm = bb.PixelNorm()
-        self.swNorm = bb.SwitchNorm2d(filters, using_bn=False)
+        self.swNorm = bb.SparseSwitchNorm2d(filters)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -65,8 +65,8 @@ class UpsampleHDCGANBlock(nn.Module):
         )
 
         # self.norm = bb.PixelNorm()
-        self.swNorm1 = bb.SwitchNorm2d(out_channels, using_bn=False)
-        self.swNorm2 = bb.SwitchNorm2d(out_channels, using_bn=False)
+        self.swNorm1 = bb.SparseSwitchNorm2d(out_channels)
+        self.swNorm2 = bb.SparseSwitchNorm2d(out_channels)
 
     def forward(self, x):
         x = F.interpolate(
