@@ -21,16 +21,24 @@ def sparsestmax(v, rad_in=0, u_in=None):
     if max(w) - min(w) == 1:
         return w
     
-    ind = torch.tensor(w > 0).float()
+    # Pytorch warning fix
+    # ind = torch.tensor(w > 0).float()
+    ind = (w > 0).clone().detach().float()
     u = ind / torch.sum(ind)
+
     if u_in is None:
         rad = rad_in
     else:
         rad = sqrt(rad_in ** 2 - torch.sum((u - u_in) ** 2))
+
     distance = torch.norm(w - u)
+
     if distance >= rad:
         return w
+
     p = rad * (w - u) / distance + u
+
     if min(p) < 0:
         return sparsestmax(p, rad, u)
+
     return p.clamp_(min=0, max=1)
