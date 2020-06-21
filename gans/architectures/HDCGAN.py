@@ -96,8 +96,10 @@ class DownsampleHDCGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
 
+        self.miniBatchStdDev = bb.MinibatchStdDev()
+
         self.conv1 = nn.Conv2d(
-            in_channels,
+            in_channels + 1,
             in_channels,
             kernel_size=3,
             stride=1,
@@ -117,8 +119,11 @@ class DownsampleHDCGANBlock(nn.Module):
         self.avgPool = nn.AvgPool2d(2, 2)
 
     def forward(self, x):
+        x = self.miniBatchStdDev(x)
+
         x = self.conv1(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+
         x = self.conv2(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
 
@@ -162,10 +167,13 @@ class LastHDCGANBlock(nn.Module):
 
     def forward(self, x):
         x = self.miniBatchStdDev(x)
+
         x = self.conv1(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+
         x = self.conv2(x)
         F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+
         x = self.validator(x)
 
         return x

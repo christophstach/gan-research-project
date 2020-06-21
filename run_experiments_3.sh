@@ -13,5 +13,4 @@ python gans/train_gan.py \
   --loss-strategy ra-hinge \
   --architecture hdcgan \
   --multi-scale-gradient \
-  --spectral-normalization \
-  --instance-noise
+  --spectral-normalization
