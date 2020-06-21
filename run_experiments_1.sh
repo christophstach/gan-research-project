@@ -8,7 +8,7 @@ python gans/train_gan.py \
   --discriminator-filters 3 \
   --batch-size 32 \
   --image-size 256 \
-  --noise-size 128 \
+  --noise-size 256 \
   --logger wandb \
   --loss-strategy ra-lsgan \
   --architecture hdcgan \

@@ -75,7 +75,7 @@ def main(hparams):
         min_epochs=hparams.min_epochs,
         max_epochs=hparams.max_epochs,
         gpus=hparams.gpus,
-        nb_gpu_nodes=hparams.nodes,
+        num_nodes=hparams.nodes,
         accumulate_grad_batches=hparams.accumulate_grad_batches,
         progress_bar_refresh_rate=20,
         early_stop_callback=False,
