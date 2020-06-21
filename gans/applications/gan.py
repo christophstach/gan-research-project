@@ -534,7 +534,8 @@ class GAN(pl.LightningModule):
             self.train_dataset,
             num_workers=self.hparams.dataloader_num_workers,
             batch_size=self.hparams.batch_size,
-            drop_last=True
+            drop_last=True,
+            pin_memory=True
         )
 
     @staticmethod
