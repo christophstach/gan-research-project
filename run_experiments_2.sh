@@ -10,8 +10,7 @@ python gans/train_gan.py \
   --image-size 256 \
   --noise-size 128 \
   --logger wandb \
-  --loss-strategy ra-sgan \
+  --loss-strategy ra-hinge \
   --architecture hdcgan \
   --multi-scale-gradient \
-  --spectral-normalization \
-  --instance-noise
+  --spectral-normalization
