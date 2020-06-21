@@ -4,8 +4,8 @@ python gans/train_gan.py \
   --dataset celeba_hq \
   --dataloader-num-workers 10 \
   --exponential-filter-multipliers \
-  --generator-filters 4 \
-  --discriminator-filters 4 \
+  --generator-filters 3 \
+  --discriminator-filters 3 \
   --batch-size 32 \
   --image-size 256 \
   --noise-size 128 \
@@ -13,5 +13,4 @@ python gans/train_gan.py \
   --loss-strategy ra-sgan \
   --architecture hdcgan \
   --multi-scale-gradient \
-  --spectral-normalization \
-  --instance-noise
+  --spectral-normalization
