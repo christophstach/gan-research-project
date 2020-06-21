@@ -145,15 +145,15 @@ class GAN(pl.LightningModule):
             real_loss = torch.relu(1.0 - relativistic_real_validity)
             fake_loss = torch.relu(1.0 + relativistic_fake_validity)
 
-            loss = real_loss.mean() + fake_loss.mean()
+            loss = (real_loss.mean() + fake_loss.mean()) / 2
         elif self.hparams.loss_strategy == "ra-lsgan":
             relativistic_real_validity = real_validity - fake_validity.mean()
             relativistic_fake_validity = fake_validity - real_validity.mean()
 
-            real_loss = (relativistic_real_validity - 1) ** 2
-            fake_loss = (relativistic_fake_validity + 1) ** 2
+            real_loss = (relativistic_real_validity - 1.0) ** 2
+            fake_loss = (relativistic_fake_validity + 1.0) ** 2
 
-            loss = fake_loss.mean() + real_loss.mean()
+            loss = (fake_loss.mean() + real_loss.mean()) / 2
         elif self.hparams.loss_strategy == "ra-sgan":
             relativistic_real_validity = real_validity - fake_validity.mean()
             relativistic_fake_validity = fake_validity - real_validity.mean()
@@ -161,11 +161,10 @@ class GAN(pl.LightningModule):
             real_label = torch.ones_like(real_validity)
             fake_label = torch.zeros_like(fake_validity)
 
-            loss = (
-                           F.binary_cross_entropy_with_logits(relativistic_real_validity, real_label)
-                           + F.binary_cross_entropy_with_logits(relativistic_fake_validity, fake_label)
-                   ) / 2.0
-
+            relativistic_real_probability = F.binary_cross_entropy_with_logits(relativistic_real_validity, real_label)
+            relativistic_fake_probability = F.binary_cross_entropy_with_logits(relativistic_fake_validity, fake_label)
+            
+            loss = (relativistic_real_probability + relativistic_fake_probability) / 2
         elif self.hparams.loss_strategy == "ns":
             real_loss = -torch.log(torch.sigmoid(real_validity))
             # noinspection PyTypeChecker
@@ -205,15 +204,15 @@ class GAN(pl.LightningModule):
             real_loss = torch.relu(1.0 - relativistic_fake_validity)
             fake_loss = torch.relu(1.0 + relativistic_real_validity)
 
-            loss = fake_loss.mean() + real_loss.mean()
+            loss = (fake_loss.mean() + real_loss.mean()) / 2
         elif self.hparams.loss_strategy == "ra-lsgan":
             relativistic_real_validity = real_validity - fake_validity.mean()
             relativistic_fake_validity = fake_validity - real_validity.mean()
 
-            real_loss = (relativistic_real_validity + 1) ** 2
-            fake_loss = (relativistic_fake_validity - 1) ** 2
+            real_loss = (relativistic_real_validity + 1.0) ** 2
+            fake_loss = (relativistic_fake_validity - 1.0) ** 2
 
-            loss = fake_loss.mean() + real_loss.mean()
+            loss = (fake_loss.mean() + real_loss.mean()) / 2
         elif self.hparams.loss_strategy == "ra-sgan":
             relativistic_real_validity = real_validity - fake_validity.mean()
             relativistic_fake_validity = fake_validity - real_validity.mean()
@@ -221,10 +220,10 @@ class GAN(pl.LightningModule):
             real_label = torch.ones_like(real_validity)
             fake_label = torch.zeros_like(fake_validity)
 
-            loss = (
-                           F.binary_cross_entropy_with_logits(relativistic_real_validity, fake_label)
-                           + F.binary_cross_entropy_with_logits(relativistic_fake_validity, real_label)
-                   ) / 2.0
+            relativistic_real_probability = F.binary_cross_entropy_with_logits(relativistic_real_validity, fake_label)
+            relativistic_fake_probability =  F.binary_cross_entropy_with_logits(relativistic_fake_validity, real_label)
+
+            loss = (relativistic_real_probability + relativistic_fake_probability) / 2
         elif self.hparams.loss_strategy == "ns":
             fake_loss = -torch.log(torch.sigmoid(fake_validity))
 
