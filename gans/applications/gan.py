@@ -237,11 +237,12 @@ class GAN(pl.LightningModule):
         for weight in self.discriminator.parameters():
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
-    def js_regularization(self, real_validity, fake_validity, real_inputs, fake_inputs):
+    def js_regularization(self, real_validity, fake_validity, real_images, fake_images):
         real_probabilities = torch.sigmoid(real_validity)
         fake_probabilities = torch.sigmoid(fake_validity)
 
-        real_gradients = torch.autograd.grad(outputs=real_validity, inputs=real_inputs)
+        real_gradients = torch.autograd.grad(outputs=real_validity, inputs=real_images)
+        fake_gradients = torch.autograd.grad(outputs=fake_validity, inputs=fake_images)
 
         regularization = 0
         return regularization
@@ -267,7 +268,8 @@ class GAN(pl.LightningModule):
             inputs_gradients = torch.autograd.grad(
                 outputs=interpolates_validity,
                 inputs=interpolates,
-                grad_outputs=torch.ones_like(interpolates_validity, device=real_images.device)
+                grad_outputs=torch.ones_like(interpolates_validity, device=real_images.device),
+                create_graph=True
             )
 
             inputs_gradients = [input_gradients.view(input_gradients.size(0), -1) for input_gradients in inputs_gradients]
