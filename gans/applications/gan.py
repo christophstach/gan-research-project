@@ -163,7 +163,7 @@ class GAN(pl.LightningModule):
 
             relativistic_real_probability = F.binary_cross_entropy_with_logits(relativistic_real_validity, real_label)
             relativistic_fake_probability = F.binary_cross_entropy_with_logits(relativistic_fake_validity, fake_label)
-            
+
             loss = (relativistic_real_probability + relativistic_fake_probability) / 2
         elif self.hparams.loss_strategy == "ns":
             real_loss = -torch.log(torch.sigmoid(real_validity))
@@ -221,7 +221,7 @@ class GAN(pl.LightningModule):
             fake_label = torch.zeros_like(fake_validity)
 
             relativistic_real_probability = F.binary_cross_entropy_with_logits(relativistic_real_validity, fake_label)
-            relativistic_fake_probability =  F.binary_cross_entropy_with_logits(relativistic_fake_validity, real_label)
+            relativistic_fake_probability = F.binary_cross_entropy_with_logits(relativistic_fake_validity, real_label)
 
             loss = (relativistic_real_probability + relativistic_fake_probability) / 2
         elif self.hparams.loss_strategy == "ns":
@@ -252,21 +252,21 @@ class GAN(pl.LightningModule):
             interpolates.requires_grad_()
 
             if self.hparams.multi_scale_gradient:
-                scaled_interpolates = self.to_scaled_images(interpolates)
-                interpolates_validity = self.discriminator(scaled_interpolates, y)
-            else:
-                interpolates_validity = self.discriminator(interpolates, y)
+                interpolates = self.to_scaled_images(interpolates)
 
-            gradients = torch.autograd.grad(
+            interpolates_validity = self.discriminator(interpolates, y)
+            inputs_gradients = torch.autograd.grad(
                 outputs=interpolates_validity,
                 inputs=interpolates,
                 grad_outputs=torch.ones_like(interpolates_validity, device=real_images.device),
                 create_graph=True
-            )[0]
+            )
 
-            gradients = gradients.view(gradients.size(0), -1)
+            inputs_gradients = [input_gradients.view(input_gradients.size(0), -1) for input_gradients in inputs_gradients]
+            gradients = torch.cat(inputs_gradients, dim=1)
+
             # gradients_norm = gradients.norm(dim=1)
-            gradients_norm  = gradients.pow(2).sum(dim=1).add(1e-8).sqrt()
+            gradients_norm = gradients.pow(2).sum(dim=1).add(1e-16).sqrt()
 
             if self.hparams.gradient_penalty_strategy == "0-gp":
                 # TODO https://openreview.net/forum?id=ByxPYjC5KQ
@@ -277,7 +277,7 @@ class GAN(pl.LightningModule):
                 # noinspection PyTypeChecker
                 penalties = torch.max(torch.tensor(0.0, device=real_images.device), gradients_norm - 1) ** self.hparams.gradient_penalty_power
             elif self.hparams.gradient_penalty_strategy == "div":
-                penalties = gradients_norm** self.hparams.gradient_penalty_power
+                penalties = gradients_norm ** self.hparams.gradient_penalty_power
             elif self.hparams.gradient_penalty_strategy == "ct":
                 penalties = (gradients_norm - 1) ** self.hparams.gradient_penalty_power
             else:
