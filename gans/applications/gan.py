@@ -362,7 +362,7 @@ class GAN(pl.LightningModule):
 
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
             consistency_term = self.consistency_term(scaled_real_images, self.y)
-            js_regularization_loss = self.js_regularization(real_validity, fake_validity, scaled_real_images, fake_images)
+            # js_regularization_loss = self.js_regularization(real_validity, fake_validity, scaled_real_images, fake_images)
         else:
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
@@ -371,7 +371,7 @@ class GAN(pl.LightningModule):
 
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
             consistency_term = self.consistency_term(self.real_images, self.y)
-            js_regularization_loss = self.js_regularization(real_validity, fake_validity, self.real_images, fake_images)
+            # js_regularization_loss = self.js_regularization(real_validity, fake_validity, self.real_images, fake_images)
 
         loss = self.discriminator_loss(real_validity, fake_validity)
         if self.hparams.weight_init == "orthogonal":
@@ -392,7 +392,7 @@ class GAN(pl.LightningModule):
         logs = {
             "d_loss": loss,
             "d_o_loss": orthogonal_loss,
-            "d_jsr_loss": js_regularization_loss,
+            # "d_jsr_loss": js_regularization_loss,
             "d_ha_loss": ha_loss,
             "gp": gradient_penalty,
             "ct": consistency_term,
