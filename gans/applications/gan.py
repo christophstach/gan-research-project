@@ -237,6 +237,15 @@ class GAN(pl.LightningModule):
         for weight in self.discriminator.parameters():
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
+    def js_regularization(self, real_validity, fake_validity, real_inputs, fake_inputs):
+        real_probabilities = torch.sigmoid(real_validity)
+        fake_probabilities = torch.sigmoid(fake_validity)
+
+        real_gradients = torch.autograd.grad(outputs=real_validity, inputs=real_inputs)
+
+        regularization = 0
+        return regularization
+
     # TODO: Need to check if gradient penalty works well with multi-scale gradient
     def gradient_penalty(self, real_images, fake_images, y):
         if self.hparams.gradient_penalty_coefficient != 0:
@@ -258,8 +267,7 @@ class GAN(pl.LightningModule):
             inputs_gradients = torch.autograd.grad(
                 outputs=interpolates_validity,
                 inputs=interpolates,
-                grad_outputs=torch.ones_like(interpolates_validity, device=real_images.device),
-                create_graph=True
+                grad_outputs=torch.ones_like(interpolates_validity, device=real_images.device)
             )
 
             inputs_gradients = [input_gradients.view(input_gradients.size(0), -1) for input_gradients in inputs_gradients]
@@ -465,7 +473,6 @@ class GAN(pl.LightningModule):
                     self.logger.experiment.log({
                         str(resolution.size(2)) + "x" + str(resolution.size(3)): grid
                     }, step=self.global_step)
-
 
             elif isinstance(self.logger, CometLogger):
                 grid_size = self.hparams.y_size if self.hparams.y_size > 1 else 5
