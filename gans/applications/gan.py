@@ -237,28 +237,12 @@ class GAN(pl.LightningModule):
         for weight in self.discriminator.parameters():
             weight.data.clamp_(-self.hparams.weight_clipping, self.hparams.weight_clipping)
 
-    def js_regularization(self, real_validity, fake_validity, real_images, fake_images):
-        real_probabilities = torch.sigmoid(real_validity)
-        fake_probabilities = torch.sigmoid(fake_validity)
-
-        real_gradients = torch.autograd.grad(outputs=real_validity, inputs=real_images)
-        fake_gradients = torch.autograd.grad(outputs=fake_validity, inputs=fake_images)
-
-        regularization = 0
-        return regularization
-
     # TODO: Need to check if gradient penalty works well with multi-scale gradient
     def gradient_penalty(self, real_images, fake_images, y):
         if self.hparams.gradient_penalty_coefficient != 0:
             alpha = torch.rand(real_images.size(0), 1, 1, 1, device=real_images.device)
 
-            if self.hparams.gradient_penalty_strategy == "div":
-                # noinspection PyTypeChecker
-                interpolates = alpha * fake_images + (1 - alpha) * real_images
-            else:
-                # noinspection PyTypeChecker
-                interpolates = alpha * real_images + (1 - alpha) * fake_images
-
+            interpolates = alpha * real_images + (1 - alpha) * fake_images
             interpolates.requires_grad_()
 
             if self.hparams.multi_scale_gradient:
@@ -319,13 +303,56 @@ class GAN(pl.LightningModule):
         if optimizer_idx == 1:  # Train generator
             return self.training_step_generator(batch)
 
+    def js_regularization(self, real_validity, fake_validity, real_images, fake_images):
+        # https://github.com/rothk/Stabilizing_GANs
+
+        real_probabilities = torch.sigmoid(real_validity).squeeze()
+        fake_probabilities = torch.sigmoid(fake_validity).squeeze()
+
+        for real_image in real_images:
+            real_image.requires_grad_(True)
+
+        for fake_image in fake_images:
+            fake_image.requires_grad_(True)
+
+        real_validity = self.discriminator(real_images, self.y)
+        fake_validity = self.discriminator(fake_images, self.y)
+
+        real_inputs_gradients = torch.autograd.grad(
+            outputs=real_validity,
+            inputs=real_images,
+            grad_outputs=torch.ones_like(real_validity, device=self.real_images.device),
+            create_graph=True
+        )
+
+        fake_inputs_gradients = torch.autograd.grad(
+            outputs=fake_validity,
+            inputs=fake_images,
+            grad_outputs=torch.ones_like(fake_validity, device=self.real_images.device),
+            create_graph=True
+        )
+
+        real_inputs_gradients = [input_gradients.view(input_gradients.size(0), -1) for input_gradients in real_inputs_gradients]
+        fake_inputs_gradients = [input_gradients.view(input_gradients.size(0), -1) for input_gradients in fake_inputs_gradients]
+
+        real_gradients = torch.cat(real_inputs_gradients, dim=1)
+        fake_gradients = torch.cat(fake_inputs_gradients, dim=1)
+
+        real_gradients_norm = real_gradients.pow(2).sum(dim=1).add(1e-16).sqrt()
+        fake_gradients_norm = fake_gradients.pow(2).sum(dim=1).add(1e-16).sqrt()
+
+        real_regularization = torch.mul(1.0 - real_probabilities, 1.0 - real_probabilities) * torch.mul(real_gradients_norm, real_gradients_norm)
+        fake_regularization = torch.mul(fake_probabilities, fake_probabilities) * torch.mul(fake_gradients_norm, fake_gradients_norm)
+
+        regularization = real_regularization + fake_regularization
+        return regularization.mean().unsqueeze(0)
+
     def training_step_discriminator(self, batch):
         self.real_images, self.y = batch
 
         noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
 
         if self.hparams.multi_scale_gradient:
-
             scaled_real_images = self.to_scaled_images(self.real_images)
 
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
@@ -333,9 +360,9 @@ class GAN(pl.LightningModule):
             real_validity = self.discriminator(scaled_real_images, self.y)
             fake_validity = self.discriminator(fake_images, self.y)
 
-            # TODO: Need to check if gradient penalty works well
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
             consistency_term = self.consistency_term(scaled_real_images, self.y)
+            js_regularization_loss = self.js_regularization(real_validity, fake_validity, scaled_real_images, fake_images)
         else:
             fake_images = [fake_image.detach() for fake_image in self.forward(noise, self.y)]
 
@@ -344,6 +371,7 @@ class GAN(pl.LightningModule):
 
             gradient_penalty = self.gradient_penalty(self.real_images, fake_images[-1], self.y)
             consistency_term = self.consistency_term(self.real_images, self.y)
+            js_regularization_loss = self.js_regularization(real_validity, fake_validity, self.real_images, fake_images)
 
         loss = self.discriminator_loss(real_validity, fake_validity)
         if self.hparams.weight_init == "orthogonal":
@@ -364,6 +392,7 @@ class GAN(pl.LightningModule):
         logs = {
             "d_loss": loss,
             "d_o_loss": orthogonal_loss,
+            "d_jsr_loss": js_regularization_loss,
             "d_ha_loss": ha_loss,
             "gp": gradient_penalty,
             "ct": consistency_term,
