@@ -265,8 +265,8 @@ class GAN(pl.LightningModule):
             )[0]
 
             gradients = gradients.view(gradients.size(0), -1)
-            gradients_norm = gradients.norm(dim=1)
-            # gradients_norm  = gradients.pow(2).sum(dim=1).add(1e-8).sqrt()
+            # gradients_norm = gradients.norm(dim=1)
+            gradients_norm  = gradients.pow(2).sum(dim=1).add(1e-8).sqrt()
 
             if self.hparams.gradient_penalty_strategy == "0-gp":
                 # TODO https://openreview.net/forum?id=ByxPYjC5KQ
