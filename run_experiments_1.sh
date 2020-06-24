@@ -11,7 +11,7 @@ python gans/train_gan.py \
   --noise-size 256 \
   --logger wandb \
   --loss-strategy wgan \
-  --gradient-penalty-strategy 1-gp \
+  --gradient-penalty-strategy 0-gp \
   --architecture hdcgan \
   --multi-scale-gradient \
   --spectral-normalization
