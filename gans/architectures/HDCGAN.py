@@ -91,8 +91,6 @@ class DownsampleHDCGANBlock(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
 
-        self.miniBatchStdDev = bb.MinibatchStdDev()
-
         self.conv1 = nn.Conv2d(
             in_channels + 1,
             in_channels,
@@ -114,8 +112,6 @@ class DownsampleHDCGANBlock(nn.Module):
         self.avgPool = nn.AvgPool2d(2, 2)
 
     def forward(self, x):
-        x = self.miniBatchStdDev(x)
-
         x = self.conv1(x)
         F.selu(x, inplace=True)
 
