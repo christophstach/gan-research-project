@@ -26,17 +26,15 @@ class FirstHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        # self.norm = bb.PixelNorm()
         self.swNorm = bb.SparseSwitchNorm2d(filters)
 
     def forward(self, x):
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+        F.selu(x, inplace=True)
 
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+        F.selu(x, inplace=True)
 
-        # x = self.norm(x)
         x = self.swNorm(x)
 
         return x
@@ -64,7 +62,6 @@ class UpsampleHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        # self.norm = bb.PixelNorm()
         self.swNorm1 = bb.SparseSwitchNorm2d(out_channels)
         self.swNorm2 = bb.SparseSwitchNorm2d(out_channels)
 
@@ -80,13 +77,11 @@ class UpsampleHDCGANBlock(nn.Module):
         )
 
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-        # x = self.norm(x)
+        F.selu(x, inplace=True)
         x = self.swNorm1(x)
 
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
-        # x = self.norm(x)
+        F.selu(x, inplace=True)
         x = self.swNorm2(x)
 
         return x
@@ -122,10 +117,10 @@ class DownsampleHDCGANBlock(nn.Module):
         x = self.miniBatchStdDev(x)
 
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+        F.selu(x, inplace=True)
 
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+        F.selu(x, inplace=True)
 
         x = self.avgPool(x)
 
@@ -169,10 +164,10 @@ class LastHDCGANBlock(nn.Module):
         x = self.miniBatchStdDev(x)
 
         x = self.conv1(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+        F.selu(x, inplace=True)
 
         x = self.conv2(x)
-        F.leaky_relu(x, negative_slope=0.2, inplace=True)  # F.selu(x, inplace=True)
+        F.selu(x, inplace=True)
 
         x = self.validator(x)
 
