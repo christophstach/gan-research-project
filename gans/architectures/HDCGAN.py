@@ -92,7 +92,7 @@ class DownsampleHDCGANBlock(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Conv2d(
-            in_channels + 1,
+            in_channels,
             in_channels,
             kernel_size=3,
             stride=1,
