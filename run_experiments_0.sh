@@ -4,14 +4,14 @@ python gans/train_gan.py \
   --dataset celeba_hq \
   --dataloader-num-workers 10 \
   --exponential-filter-multipliers \
-  --generator-filters 3 \
-  --discriminator-filters 3 \
+  --generator-filters 4 \
+  --discriminator-filters 4 \
   --batch-size 32 \
   --image-size 256 \
   --noise-size 256 \
   --logger wandb \
-  --loss-strategy ra-hinge \
-  --gradient-penalty-strategy 0-gp \
+  --loss-strategy wgan \
+  --gradient-penalty-strategy 1-gp \
   --architecture hdcgan \
   --multi-scale-gradient \
   --spectral-normalization
