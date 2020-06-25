@@ -8,6 +8,7 @@ from gans.architectures.HDCGAN import FirstHDCGANBlock, UpsampleHDCGANBlock
 from gans.architectures.PROGAN import FirstProGANBlock, UpsampleProGANBlock
 from gans.init import selu_weight_init, he_weight_init, orthogonal_weight_init
 
+
 class ZSkipConnector(nn.Module):
     def __init__(self, in_channels, out_channels, bias=False):
         super().__init__()
@@ -92,7 +93,7 @@ class Generator(nn.Module):
                     self.bias
                 )
             )
-          
+
             self.z_skip_connections.append(
                 self.z_skip_connection_fn(
                     self.hparams.noise_size // 64,
@@ -100,7 +101,7 @@ class Generator(nn.Module):
                     self.bias
                 )
             )
-       
+
         if self.hparams.weight_init == "he":
             self.apply(he_weight_init)
         elif self.hparams.weight_init == "selu":
@@ -141,7 +142,7 @@ class Generator(nn.Module):
 
         for block, to_rgb, z_skip in zip(self.blocks, self.to_rgb_converts, self.z_skip_connections):
             x = block(x)
-            
+
             # if x.size(2) >= 8 and x.size(3) >= 8:
             #    x = z_skip(x, z)
 
