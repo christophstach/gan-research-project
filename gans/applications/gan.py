@@ -98,11 +98,12 @@ class GAN(pl.LightningModule):
 
         if self.hparams.instance_noise:
             # Add instance noise: https://www.inference.vc/instance-noise-a-trick-for-stabilising-gan-training/
+            sigma = max((self.hparams.instance_noise_last_iteration - self.global_step) / self.hparams.instance_noise_last_iteration, 0.0)
             if isinstance(x, list):
                 # msg enabled
-                x = [item + torch.randn_like(item) for item in x]
+                x = [item + torch.randn_like(item) * sigma for item in x]
             else:
-                x = x + torch.randn_like(x)
+                x = x + torch.randn_like(x) * sigma
 
         return x, y
 
@@ -606,10 +607,11 @@ class GAN(pl.LightningModule):
         parser.add_argument("-is", "--image-size", type=int, default=128, help="Generated image size")
         parser.add_argument("-bs", "--batch-size", type=int, default=32, help="Batch size")
         parser.add_argument("-in", "--instance-noise", action="store_true", help="Add instance noise")
+        parser.add_argument("-inli", "--instance-noise-last-iteration", type=int, default=150000, help="Last iteration that applies annelead instance noise")
 
         # TTUR: https://arxiv.org/abs/1706.08500
-        parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=0.003, help="Learning rate of the discriminator optimizers")
-        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=0.003, help="Learning rate of the generator optimizers")
+        parser.add_argument("-clr", "--discriminator-learning-rate", type=float, default=1e-4, help="Learning rate of the discriminator optimizers")
+        parser.add_argument("-glr", "--generator-learning-rate", type=float, default=1e-4, help="Learning rate of the generator optimizers")
 
         parser.add_argument("-ls", "--loss-strategy", type=str, choices=["lsgan", "wgan", "mm", "hinge", "ns", "r-hinge", "ra-hinge", "ra-lsgan", "ra-sgan"], default="ra-lsgan")
         parser.add_argument("-gs", "--gradient-penalty-strategy", type=str, choices=[
