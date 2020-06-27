@@ -263,7 +263,7 @@ class GAN(pl.LightningModule):
             gradients = torch.cat(inputs_gradients, dim=1)
 
             # gradients_norm = gradients.norm(dim=1)
-            gradients_norm = gradients.pow(2).sum(dim=1).add(1e-16).sqrt()
+            gradients_norm = gradients.pow(2).sum(dim=1).add(1e-8).sqrt()
 
             if self.hparams.gradient_penalty_strategy == "0-gp":
                 # TODO https://openreview.net/forum?id=ByxPYjC5KQ
