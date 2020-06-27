@@ -8,6 +8,8 @@ import torch
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
+import torch.optim as optim
+
 import wandb
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 from torch.utils.data import DataLoader
@@ -530,8 +532,8 @@ class GAN(pl.LightningModule):
         optimizer.zero_grad()
 
     def configure_optimizers(self):
-        discriminator_optimizer = OAdam(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
-        generator_optimizer = OAdam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
+        discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=self.hparams.discriminator_learning_rate, betas=(self.hparams.discriminator_beta1, self.hparams.discriminator_beta2))
+        generator_optimizer = optim.Adam(self.generator.parameters(), lr=self.hparams.generator_learning_rate, betas=(self.hparams.generator_beta1, self.hparams.generator_beta2))
 
         return [discriminator_optimizer, generator_optimizer]
 
@@ -584,9 +586,9 @@ class GAN(pl.LightningModule):
         parser.add_argument("-maxe", "--max-epochs", type=int, default=1000, help="Maximum number of epochs to train")
         parser.add_argument("-agb", "--accumulate-grad-batches", type=int, default=1, help="Number of gradient batches to accumulate")
         parser.add_argument("-dnw", "--dataloader-num-workers", type=int, default=4, help="Number of workers the dataloader uses")
-        parser.add_argument("-cb1", "--discriminator-beta1", type=float, default=0.5, help="Momentum term beta1 of the discriminator optimizer")
+        parser.add_argument("-cb1", "--discriminator-beta1", type=float, default=0.0, help="Momentum term beta1 of the discriminator optimizer")
         parser.add_argument("-cb2", "--discriminator-beta2", type=float, default=0.999, help="Momentum term beta2 of the discriminator optimizer")
-        parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.5, help="Momentum term beta1 of the generator optimizer")
+        parser.add_argument("-gb1", "--generator-beta1", type=float, default=0.0, help="Momentum term beta1 of the generator optimizer")
         parser.add_argument("-gb2", "--generator-beta2", type=float, default=0.999, help="Momentum term beta2 of the generator optimizer")
         parser.add_argument("-v", "--score-iterations", type=int, default=0, help="Number of score iterations each epoch")
         parser.add_argument("-msg", "--multi-scale-gradient", action="store_true", help="Enable Multi-Scale Gradient")
@@ -598,7 +600,7 @@ class GAN(pl.LightningModule):
 
         parser.add_argument("-eqlr", "--equalized-learning-rate", action="store_true", help="Enable Equalized Learning Rate")
         parser.add_argument("-sn", "--spectral-normalization", action="store_true", help="Enable Spectral Normalization")
-        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "selu", "orthogonal", "default"], default="selu")
+        parser.add_argument("-wi", "--weight-init", type=str, choices=["he", "selu", "orthogonal", "default"], default="default")
 
         parser.add_argument("-ic", "--image-channels", type=int, default=3, help="Generated image shape channels")
         parser.add_argument("-is", "--image-size", type=int, default=128, help="Generated image size")
