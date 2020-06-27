@@ -26,7 +26,7 @@ class FirstHDCGANBlock(nn.Module):
             bias=bias
         )
 
-        self.norm = bb.SparseSwitchNorm2d(filters)
+        self.norm = bb.PixelNorm()
 
     def forward(self, x):
         x = self.conv1(x)
