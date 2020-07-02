@@ -353,7 +353,7 @@ class GAN(pl.LightningModule):
     def training_step_discriminator(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
+        noise = self.sample_z(self.real_images.size(0))
 
         if self.hparams.multi_scale_gradient:
             scaled_real_images = self.to_scaled_images(self.real_images)
@@ -406,7 +406,7 @@ class GAN(pl.LightningModule):
     def training_step_generator(self, batch):
         self.real_images, self.y = batch
 
-        noise = torch.randn(self.real_images.size(0), self.hparams.noise_size, device=self.real_images.device)
+        noise = self.sample_z(self.real_images.size(0))
 
         if self.hparams.multi_scale_gradient:
             scaled_real_images = self.to_scaled_images(self.real_images)
@@ -453,13 +453,18 @@ class GAN(pl.LightningModule):
             source_images
         ]
 
+
+    def sample_z(batch_size):
+        # Could add truncation trick here
+        return torch.rand(batch_size, self.hparams.noise_size, device=self.real_images.device)
+
     # Logs an image for each class defined as noise size
     def on_epoch_end(self):
         if self.logger:
             if self.hparams.score_iterations > 0:
                 outputs = []
                 for _ in range(self.hparams.score_iterations):
-                    noise = torch.randn(self.hparams.batch_size, self.hparams.noise_size, device=self.real_images.device)
+                    noise = self.sample_z(self.hparams.batch_size)
                     y = torch.randint(0, 9, (self.hparams.batch_size,), device=self.real_images.device)
 
                     fake_images = self.forward(noise, y)[-1].detach()
