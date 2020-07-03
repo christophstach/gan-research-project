@@ -14,4 +14,5 @@ python gans/train_gan.py \
   --gradient-penalty-strategy 0-gp \
   --architecture hdcgan \
   --multi-scale-gradient \
-  --spectral-normalization
+  --spectral-normalization \
+  --instance-noise
