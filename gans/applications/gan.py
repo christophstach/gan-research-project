@@ -454,7 +454,7 @@ class GAN(pl.LightningModule):
         ]
 
 
-    def sample_z(batch_size):
+    def sample_z(self, batch_size):
         # Could add truncation trick here
         return torch.rand(batch_size, self.hparams.noise_size, device=self.real_images.device)
 
