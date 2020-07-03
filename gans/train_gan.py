@@ -3,17 +3,14 @@ from argparse import ArgumentParser
 
 import numpy as np
 import torch
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.logging import CometLogger, TensorBoardLogger, WandbLogger
 
 from gans.applications import GAN
 from gans.models import Generator, Discriminator
 
-SEED = 1337
-torch.manual_seed(SEED)
-np.random.seed(SEED)
-
+seed_everything(1337)
 
 def main(hparams):
     generator = Generator(hparams)
