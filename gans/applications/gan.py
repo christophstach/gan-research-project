@@ -529,7 +529,8 @@ class GAN(pl.LightningModule):
                 )
                 self.logger.log_metrics({"ic_score_mean": ic_score_mean.item()})
 
-    def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None):
+    def optimizer_step(self, current_epoch, batch_idx, optimizer, optimizer_idx,
+                   second_order_closure, on_tpu, using_native_amp, using_lbfgs):
         # update discriminator opt every step
         if optimizer_idx == 0: optimizer.step()
         # update generator opt every {self.alternation_interval} steps
